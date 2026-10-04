@@ -1,0 +1,358 @@
+{
+  "Program skeleton": {
+    "prefix": "prog",
+    "description": "Complete TP program skeleton (header, /MN, /POS, /END)",
+    "body": [
+      "/PROG  ${1:${TM_FILENAME_BASE/(.*)/${1:/upcase}/}}",
+      "/ATTR",
+      "OWNER\t\t= MNEDITOR;",
+      "COMMENT\t\t= \"${2:comment}\";",
+      "PROG_SIZE\t= 0;",
+      "CREATE\t\t= DATE ${CURRENT_YEAR_SHORT}-${CURRENT_MONTH}-${CURRENT_DATE}  TIME ${CURRENT_HOUR}:${CURRENT_MINUTE}:${CURRENT_SECOND};",
+      "MODIFIED\t= DATE ${CURRENT_YEAR_SHORT}-${CURRENT_MONTH}-${CURRENT_DATE}  TIME ${CURRENT_HOUR}:${CURRENT_MINUTE}:${CURRENT_SECOND};",
+      "FILE_NAME\t= ;",
+      "VERSION\t\t= 0;",
+      "LINE_COUNT\t= 1;",
+      "MEMORY_SIZE\t= 0;",
+      "PROTECT\t\t= READ_WRITE;",
+      "TCD:  STACK_SIZE\t= 0,",
+      "      TASK_PRIORITY\t= 50,",
+      "      TIME_SLICE\t= 0,",
+      "      BUSY_LAMP_OFF\t= 0,",
+      "      ABORT_REQUEST\t= 0,",
+      "      PAUSE_REQUEST\t= 0;",
+      "DEFAULT_GROUP\t= ${3:1},*,*,*,*;",
+      "CONTROL_CODE\t= 00000000 00000000;",
+      "/MN",
+      "   1:  ${0:! } ;",
+      "/POS",
+      "/END"
+    ]
+  },
+  "Joint move": {
+    "prefix": "j",
+    "description": "Joint motion",
+    "body": "J P[${1:1}] ${2:100}% ${3|FINE,CNT100,CNT50,CNT0|}    ;"
+  },
+  "Linear move": {
+    "prefix": "l",
+    "description": "Linear motion",
+    "body": "L P[${1:1}] ${2:500}mm/sec ${3|FINE,CNT100,CNT50,CNT0|}    ;"
+  },
+  "Circular move": {
+    "prefix": "c",
+    "description": "Circular motion (via + destination)",
+    "body": [
+      "C P[${1:1}] ",
+      "    P[${2:2}] ${3:500}mm/sec ${4|FINE,CNT100|}    ;"
+    ]
+  },
+  "Circular arc move": {
+    "prefix": "a",
+    "description": "Circular arc (A) motion",
+    "body": "A P[${1:1}] ${2:500}mm/sec ${3|FINE,CNT100|}    ;"
+  },
+  "Joint move to PR": {
+    "prefix": "jpr",
+    "description": "Joint motion to position register",
+    "body": "J PR[${1:1}${2::Home}] ${3:100}% ${4|FINE,CNT100|}    ;"
+  },
+  "Linear move to PR": {
+    "prefix": "lpr",
+    "description": "Linear motion to position register",
+    "body": "L PR[${1:1}${2::Home}] ${3:500}mm/sec ${4|FINE,CNT100|}    ;"
+  },
+  "Linear move with offset": {
+    "prefix": "loff",
+    "description": "Linear motion with PR offset",
+    "body": "L P[${1:1}] ${2:500}mm/sec ${3|FINE,CNT100|} Offset,PR[${4:10}]    ;"
+  },
+  "Linear move with tool offset": {
+    "prefix": "ltoff",
+    "description": "Linear motion with tool offset",
+    "body": "L P[${1:1}] ${2:500}mm/sec ${3|FINE,CNT100|} Tool_Offset,PR[${4:10}]    ;"
+  },
+  "Linear move with vision offset": {
+    "prefix": "lvoff",
+    "description": "Linear motion with vision offset",
+    "body": "L P[${1:1}] ${2:500}mm/sec ${3|FINE,CNT100|} VOFFSET,VR[${4:1}]    ;"
+  },
+  "Comment": {
+    "prefix": "!",
+    "description": "Comment line",
+    "body": "!${1:comment} ;"
+  },
+  "Banner": {
+    "prefix": "banner",
+    "description": "Comment banner block",
+    "body": [
+      "!-------------------------------- ;",
+      "!${1:TITLE} ;",
+      "!-------------------------------- ;"
+    ]
+  },
+  "Label": {
+    "prefix": "lbl",
+    "description": "Label definition",
+    "body": "LBL[${1:1}${2::name}] ;"
+  },
+  "Jump": {
+    "prefix": "jmp",
+    "description": "Jump to label",
+    "body": "JMP LBL[${1:1}] ;"
+  },
+  "Call": {
+    "prefix": "call",
+    "description": "Call program",
+    "body": "CALL ${1:PROGRAM} ;"
+  },
+  "Call with arguments": {
+    "prefix": "callarg",
+    "description": "Call program with arguments",
+    "body": "CALL ${1:PROGRAM}(${2:1},${3:R[1]}) ;"
+  },
+  "Run": {
+    "prefix": "run",
+    "description": "Run program as separate task",
+    "body": "RUN ${1:PROGRAM} ;"
+  },
+  "If jump": {
+    "prefix": [
+      "ifjmp",
+      "if",
+      "if jmp"
+    ],
+    "description": "IF condition, JMP LBL",
+    "body": "IF ${1:R[1]}${2:=}${3:1},JMP LBL[${4:1}] ;"
+  },
+  "If call": {
+    "prefix": [
+      "ifcall",
+      "if",
+      "if call"
+    ],
+    "description": "IF condition, CALL program",
+    "body": "IF ${1:DI[1]}=${2|ON,OFF|},CALL ${3:PROGRAM} ;"
+  },
+  "If then block": {
+    "prefix": [
+      "ifthen",
+      "if",
+      "if then endif"
+    ],
+    "description": "IF ... THEN ... ENDIF (mixed logic)",
+    "body": [
+      "IF (${1:R[1]=1}) THEN ;",
+      "  ${0}",
+      "ENDIF ;"
+    ]
+  },
+  "If then else block": {
+    "prefix": [
+      "ifelse",
+      "if",
+      "if then else endif"
+    ],
+    "description": "IF ... THEN ... ELSE ... ENDIF",
+    "body": [
+      "IF (${1:R[1]=1}) THEN ;",
+      "  ${2}",
+      "ELSE ;",
+      "  ${3}",
+      "ENDIF ;"
+    ]
+  },
+  "Select": {
+    "prefix": [
+      "select",
+      "select case"
+    ],
+    "description": "SELECT register case list",
+    "body": [
+      "SELECT R[${1:1}]=${2:1},JMP LBL[${3:10}] ;",
+      "       =${4:2},JMP LBL[${5:20}] ;",
+      "       ELSE,JMP LBL[${6:999}] ;"
+    ]
+  },
+  "For loop": {
+    "prefix": [
+      "for",
+      "for endfor"
+    ],
+    "description": "FOR ... ENDFOR",
+    "body": [
+      "FOR R[${1:1}]=${2:1} TO ${3:10} ;",
+      "  ${0}",
+      "ENDFOR ;"
+    ]
+  },
+  "Wait condition": {
+    "prefix": "wait",
+    "description": "WAIT for I/O condition",
+    "body": "WAIT ${1:DI[1]}=${2|ON,OFF|} ;"
+  },
+  "Wait timeout": {
+    "prefix": "waitto",
+    "description": "WAIT with TIMEOUT to label",
+    "body": "WAIT ${1:DI[1]}=${2|ON,OFF|} TIMEOUT,LBL[${3:999}] ;"
+  },
+  "Wait time": {
+    "prefix": "waitsec",
+    "description": "WAIT fixed time",
+    "body": "WAIT ${1:0.5}(sec) ;"
+  },
+  "Register assign": {
+    "prefix": "r=",
+    "description": "Register assignment",
+    "body": "R[${1:1}${2::comment}]=${3:0} ;"
+  },
+  "Register increment": {
+    "prefix": "r++",
+    "description": "Increment register",
+    "body": "R[${1:1}]=R[${1:1}]+1 ;"
+  },
+  "Position register assign": {
+    "prefix": "pr=",
+    "description": "PR from current position",
+    "body": "PR[${1:1}${2::comment}]=LPOS ;"
+  },
+  "PR element assign": {
+    "prefix": "pr[",
+    "description": "PR element assignment",
+    "body": "PR[${1:1},${2|1,2,3,4,5,6|}]=${3:0} ;"
+  },
+  "String register assign": {
+    "prefix": "sr=",
+    "description": "String register assignment",
+    "body": "SR[${1:1}]='${2:text}' ;"
+  },
+  "DO on": {
+    "prefix": "do",
+    "description": "Digital output",
+    "body": "DO[${1:1}${2::comment}]=${3|ON,OFF,PULSE|} ;"
+  },
+  "DO pulse": {
+    "prefix": "dopulse",
+    "description": "Pulsed digital output",
+    "body": "DO[${1:1}]=PULSE,${2:0.5}sec ;"
+  },
+  "RO set": {
+    "prefix": "ro",
+    "description": "Robot output",
+    "body": "RO[${1:1}]=${2|ON,OFF|} ;"
+  },
+  "Flag set": {
+    "prefix": "flag",
+    "description": "Set flag",
+    "body": "F[${1:1}${2::comment}]=(${3|ON,OFF|}) ;"
+  },
+  "Group output": {
+    "prefix": "go",
+    "description": "Group output",
+    "body": "GO[${1:1}]=${2:R[1]} ;"
+  },
+  "UFRAME_NUM": {
+    "prefix": "uframe",
+    "description": "Set active user frame",
+    "body": "UFRAME_NUM=${1:1} ;"
+  },
+  "UTOOL_NUM": {
+    "prefix": "utool",
+    "description": "Set active tool frame",
+    "body": "UTOOL_NUM=${1:1} ;"
+  },
+  "Payload": {
+    "prefix": "payload",
+    "description": "Set payload schedule",
+    "body": "PAYLOAD[${1:1}] ;"
+  },
+  "Override": {
+    "prefix": "override",
+    "description": "Set speed override",
+    "body": "OVERRIDE=${1:100}% ;"
+  },
+  "Timer start": {
+    "prefix": "timer",
+    "description": "Timer control",
+    "body": "TIMER[${1:1}]=${2|START,STOP,RESET|} ;"
+  },
+  "User alarm": {
+    "prefix": "ualm",
+    "description": "Post user alarm",
+    "body": "UALM[${1:1}] ;"
+  },
+  "Message": {
+    "prefix": "message",
+    "description": "Message to user screen",
+    "body": "MESSAGE[${1:text}] ;"
+  },
+  "Abort": {
+    "prefix": "abort",
+    "description": "Abort program",
+    "body": "ABORT ;"
+  },
+  "Pause": {
+    "prefix": "pause",
+    "description": "Pause program",
+    "body": "PAUSE ;"
+  },
+  "End": {
+    "prefix": "end",
+    "description": "End program",
+    "body": "END ;"
+  },
+  "Skip condition": {
+    "prefix": "skip",
+    "description": "Skip condition and skip motion",
+    "body": [
+      "SKIP CONDITION ${1:DI[1]}=${2|ON,OFF|} ;",
+      "L P[${3:1}] ${4:100}mm/sec FINE Skip,LBL[${5:10}] ;"
+    ]
+  },
+  "Collision guard": {
+    "prefix": "colguard",
+    "description": "Collision guard adjust",
+    "body": "COL GUARD ADJUST ${1:100} ;"
+  },
+  "Vision run find": {
+    "prefix": "visrun",
+    "description": "iRVision run find + get offset",
+    "body": [
+      "VISION RUN_FIND '${1:VISION_PROCESS}' ;",
+      "VISION GET_OFFSET '${1:VISION_PROCESS}' VR[${2:1}] JMP LBL[${3:999}] ;"
+    ]
+  },
+  "Condition monitor": {
+    "prefix": "monitor",
+    "description": "Condition monitor start/stop",
+    "body": [
+      "MONITOR ${1:COND_PROG} ;",
+      "${0}",
+      "MONITOR END ${1:COND_PROG} ;"
+    ]
+  },
+  "Position entry": {
+    "prefix": "pos",
+    "description": "Cartesian position record for /POS section",
+    "body": [
+      "P[${1:1}]{",
+      "   GP1:",
+      "\tUF : ${2:0}, UT : ${3:1},\t\tCONFIG : '${4:N U T, 0, 0, 0}',",
+      "\tX =  ${5:0.000}  mm,\tY =  ${6:0.000}  mm,\tZ =  ${7:0.000}  mm,",
+      "\tW =  ${8:0.000} deg,\tP =  ${9:0.000} deg,\tR =  ${10:0.000} deg",
+      "};"
+    ]
+  },
+  "Joint position entry": {
+    "prefix": "posj",
+    "description": "Joint position record for /POS section",
+    "body": [
+      "P[${1:1}]{",
+      "   GP1:",
+      "\tUF : ${2:0}, UT : ${3:1},",
+      "\tJ1=  ${4:0.000} deg,\tJ2=  ${5:0.000} deg,\tJ3=  ${6:0.000} deg,",
+      "\tJ4=  ${7:0.000} deg,\tJ5=  ${8:0.000} deg,\tJ6=  ${9:0.000} deg",
+      "};"
+    ]
+  }
+}

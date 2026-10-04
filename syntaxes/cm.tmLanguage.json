@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "FANUC Command File",
+  "scopeName": "source.fanuc.cm",
+  "patterns": [
+    { "match": "^\\s*(!!|!|--).*$", "name": "comment.line.cm" },
+    { "match": "^\\s*(ABORT|APPEND|CD|CHDIR|CLEAR|CLRIO|CLRIOSIM|COMPRESS|CONTINUE|COPY|CREATE|DELETE|DIRECTORY|DIR|DISABLE|DISMOUNT|ENABLE|EXIT|FORMAT|HELP|HOLD|LOAD|LOGOUT|MOUNT|MOVE|PAUSE|PRINT|PURGE|RECORD|RENAME|RESET|RUN|SAVE|SET|SHOW|SIMULATE|SKIP|TRANSLATE|TYPE|UNHOLD|UNSIMULATE|WAIT|SETIOVAL|SETIOCMT|SETIOSIM|SETVAR|SETREG|SETPREG|SETSREG|CLEARIO|SAVEALL|LOADALL|MOVEALL|COMSET|GETIOVAL|GETVAR|SETPOS|CONFIG|ASSIGN|UNASSIGN|BACKUP|RESTORE|PROGRAM|VARIABLE|VARS|TASK|LANG|GROUP|DEFAULT|MASTER|FILE|FILES|SYSTEM)\\b", "captures": { "1": { "name": "keyword.control.cm" } } },
+    { "match": "\\b(ALL|PROGRAMS|VARIABLES|VARS|SYSTEM|TPP|KAREL|DEFAULT|ON|OFF|TRUE|FALSE|MASTER|GROUP|DIN|DOUT|GIN|GOUT|AIN|AOUT|RDI|RDO|UIN|UOUT|SIN|SOUT|FLG)\\b", "name": "constant.language.cm" },
+    { "match": "\\$[A-Za-z_][A-Za-z0-9_.\\[\\]$]*", "name": "variable.language.system.cm" },
+    { "match": "'[^']*'|\"[^\"]*\"", "name": "string.quoted.cm" },
+    { "match": "\\b[A-Za-z0-9_\\-]+\\.(ls|tp|pc|kl|va|vr|sv|dt|io|cm|cf|zip|txt|dg)\\b", "name": "string.other.filename.cm" },
+    { "match": "\\b\\d+(\\.\\d+)?\\b", "name": "constant.numeric.cm" },
+    { "match": "[A-Z][A-Z0-9_]*:", "name": "support.type.device.cm" }
+  ]
+}

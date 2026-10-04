@@ -1,0 +1,11 @@
+Notice: Unable to find 'robot.ini',
+Using basic KAREL support files.
+KTRANS Version V9.40 (Build 18   5/27/2022)
+Copyright (C) FANUC America Corporation, 1985 through 2022.
+All Rights Reserved.
+
+
+
+
+*** Translation successful, 82 bytes of p-code generated, checksum 56493. ***
+KTrans completed.

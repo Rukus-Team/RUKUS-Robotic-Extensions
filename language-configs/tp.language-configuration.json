@@ -1,0 +1,35 @@
+{
+  "comments": {
+    "lineComment": "//"
+  },
+  "brackets": [
+    ["[", "]"],
+    ["(", ")"],
+    ["{", "}"]
+  ],
+  "autoClosingPairs": [
+    { "open": "[", "close": "]" },
+    { "open": "(", "close": ")" },
+    { "open": "{", "close": "}" },
+    { "open": "'", "close": "'", "notIn": ["string", "comment"] },
+    { "open": "\"", "close": "\"", "notIn": ["string", "comment"] }
+  ],
+  "surroundingPairs": [
+    ["[", "]"],
+    ["(", ")"],
+    ["{", "}"],
+    ["'", "'"],
+    ["\"", "\""]
+  ],
+  "wordPattern": "(-?\\d*\\.\\d\\w*)|([^\\`\\~\\!\\@\\#\\%\\^\\&\\*\\(\\)\\-\\=\\+\\[\\{\\]\\}\\\\\\|\\;\\:\\'\\\"\\,\\.\\<\\>\\/\\?\\s]+)",
+  "folding": {
+    "markers": {
+      "start": "^\\s*\\d+:\\s*(IF .*THEN|FOR |!-{5,}|!\\*{5,}|!={5,})",
+      "end": "^\\s*\\d+:\\s*(ENDIF|ENDFOR)\\b"
+    }
+  },
+  "indentationRules": {
+    "increaseIndentPattern": "^\\s*\\d+:\\s*(IF .*THEN|FOR )",
+    "decreaseIndentPattern": "^\\s*\\d+:\\s*(ENDIF|ENDFOR|ELSE)\\b"
+  }
+}

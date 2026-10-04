@@ -1,0 +1,91 @@
+{
+  "Program skeleton": {
+    "prefix": "program",
+    "description": "Complete KAREL program skeleton",
+    "body": [
+      "PROGRAM ${1:${TM_FILENAME_BASE/(.*)/${1:/downcase}/}}",
+      "%NOLOCKGROUP",
+      "%NOPAUSE = ERROR + COMMAND + TPENABLE",
+      "%COMMENT = '${2:description}'",
+      "",
+      "VAR",
+      "  status : INTEGER",
+      "  ${3}",
+      "",
+      "BEGIN",
+      "  ${0}",
+      "END ${1}"
+    ]
+  },
+  "Routine": {
+    "prefix": "routine",
+    "description": "Routine (procedure) with body",
+    "body": [
+      "ROUTINE ${1:name}(${2:param : INTEGER})",
+      "VAR",
+      "  ${3}",
+      "BEGIN",
+      "  ${0}",
+      "END ${1}"
+    ]
+  },
+  "Function routine": {
+    "prefix": "function",
+    "description": "Routine returning a value",
+    "body": [
+      "ROUTINE ${1:name}(${2:param : INTEGER}) : ${3|INTEGER,REAL,BOOLEAN,STRING,POSITION,XYZWPR,JOINTPOS|}",
+      "BEGIN",
+      "  ${0}",
+      "  RETURN(${4:0})",
+      "END ${1}"
+    ]
+  },
+  "Routine declaration FROM": { "prefix": "from", "description": "External routine declaration", "body": "ROUTINE ${1:name}(${2:param : INTEGER}) FROM ${3:program}" },
+  "If": { "prefix": "if", "body": ["IF ${1:condition} THEN", "  ${0}", "ENDIF"] },
+  "If else": { "prefix": "ifelse", "body": ["IF ${1:condition} THEN", "  ${2}", "ELSE", "  ${3}", "ENDIF"] },
+  "For": { "prefix": "for", "body": ["FOR ${1:i} = ${2:1} TO ${3:10} DO", "  ${0}", "ENDFOR"] },
+  "For downto": { "prefix": "fordown", "body": ["FOR ${1:i} = ${2:10} DOWNTO ${3:1} DO", "  ${0}", "ENDFOR"] },
+  "While": { "prefix": "while", "body": ["WHILE ${1:condition} DO", "  ${0}", "ENDWHILE"] },
+  "Repeat": { "prefix": "repeat", "body": ["REPEAT", "  ${0}", "UNTIL ${1:condition}"] },
+  "Select": { "prefix": "select", "body": ["SELECT ${1:value} OF", "  CASE (${2:1}):", "    ${3}", "  CASE (${4:2}):", "    ${5}", "  ELSE:", "    ${6}", "ENDSELECT"] },
+  "Structure": { "prefix": "structure", "body": ["${1:name}_t = STRUCTURE", "  ${2:field} : ${3:INTEGER}", "ENDSTRUCTURE"] },
+  "Condition handler": {
+    "prefix": "condition",
+    "body": ["CONDITION[${1:1}]:", "  WHEN ${2:DIN[1]+} DO", "    ${0}", "ENDCONDITION", "ENABLE CONDITION[${1:1}]"]
+  },
+  "Write TP": { "prefix": "write", "body": "WRITE TPDISPLAY('${1:text}', CR)" },
+  "Write error": { "prefix": "writeerr", "body": "WRITE TPERROR('${1:text}', CR)" },
+  "Write file": { "prefix": "writef", "body": "WRITE ${1:file_var}('${2:text}', CR)" },
+  "Open file": { "prefix": "openfile", "body": ["OPEN FILE ${1:file_var}('${2|RW,RO,AP,UD|}', '${3:UD1:\\\\file.txt}')", "status = IO_STATUS(${1:file_var})"] },
+  "Get register": { "prefix": "getreg", "body": "GET_REG(${1:reg_no}, ${2:real_flag}, ${3:int_value}, ${4:real_value}, status)" },
+  "Set integer register": { "prefix": "setintreg", "body": "SET_INT_REG(${1:reg_no}, ${2:value}, status)" },
+  "Set real register": { "prefix": "setrealreg", "body": "SET_REAL_REG(${1:reg_no}, ${2:value}, status)" },
+  "Get position register": { "prefix": "getposreg", "body": "${1:pos} = GET_POS_REG(${2:reg_no}, status)" },
+  "Set position register": { "prefix": "setposreg", "body": "SET_POS_REG(${1:reg_no}, ${2:pos}, status)" },
+  "Get string register": { "prefix": "getstrreg", "body": "GET_STR_REG(${1:reg_no}, ${2:str_value}, status)" },
+  "Set string register": { "prefix": "setstrreg", "body": "SET_STR_REG(${1:reg_no}, ${2:str_value}, status)" },
+  "Get variable": { "prefix": "getvar", "body": "GET_VAR(${1:entry}, '${2:*SYSTEM*}', '${3:\\$var_name}', ${4:value}, status)" },
+  "Set variable": { "prefix": "setvar", "body": "SET_VAR(${1:entry}, '${2:*SYSTEM*}', '${3:\\$var_name}', ${4:value}, status)" },
+  "Post error": { "prefix": "posterr", "body": "POST_ERR(${1:error_code}, '${2:text}', ${3:0}, ${4|0,1,2|})" },
+  "Check status": { "prefix": "chkstat", "body": ["IF status <> 0 THEN", "  WRITE TPERROR('${1:operation} failed: ', status, CR)", "  ${0}", "ENDIF"] },
+  "Move to": { "prefix": "moveto", "body": "MOVE TO ${1:position}" },
+  "Move near": { "prefix": "movenear", "body": "MOVE NEAR ${1:position} BY ${2:100}" },
+  "With move": { "prefix": "withmove", "body": ["WITH \\$MOTYPE = ${1|LINEAR,JOINT,CIRCULAR|}, \\$SPEED = ${2:500}, \\$TERMTYPE = ${3|FINE,NOSETTLE,COARSE,NODECEL|}", "MOVE TO ${4:position}"] },
+  "Delay": { "prefix": "delay", "body": "DELAY ${1:1000}" },
+  "Wait for": { "prefix": "waitfor", "body": "WAIT FOR ${1:DIN[1]}" },
+  "Convert int to string": { "prefix": "cnvint", "body": "CNV_INT_STR(${1:int_value}, ${2:1}, ${3:0}, ${4:str_value})" },
+  "Convert string to int": { "prefix": "cnvstrint", "body": "CNV_STR_INT(${1:str_value}, ${2:int_value})" },
+  "Call program": { "prefix": "callprog", "body": "CALL_PROG('${1:PROGRAM}', ${2:prog_index})" },
+  "Run task": { "prefix": "runtask", "body": "RUN_TASK('${1:PROGRAM}', ${2:0}, ${3:FALSE}, ${4:FALSE}, ${5:1}, status)" },
+  "Header comment": {
+    "prefix": "header",
+    "body": [
+      "-- ============================================================",
+      "-- Program:     ${1:${TM_FILENAME_BASE}}",
+      "-- Description: ${2}",
+      "-- Author:      ${3}",
+      "-- Created:     ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+      "-- ============================================================"
+    ]
+  }
+}

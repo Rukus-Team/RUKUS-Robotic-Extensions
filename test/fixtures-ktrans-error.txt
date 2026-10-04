@@ -1,0 +1,26 @@
+Notice: Unable to find 'robot.ini',
+Using basic KAREL support files.
+KTRANS Version V9.40 (Build 18   5/27/2022)
+Copyright (C) FANUC America Corporation, 1985 through 2022.
+All Rights Reserved.
+
+
+
+C:\Users\you\AppData\Local\Temp\ktrans\ktbad.kl(10)
+  10 END ktbad
+     ^ ERROR
+Invalid statement or "ENDxxx" or "UNTIL" expected.
+
+C:\Users\you\AppData\Local\Temp\ktrans\ktbad.kl(10)
+  10 END ktbad
+     ^ ERROR
+Invalid statement or "ENDxxx" or "UNTIL" expected.
+
+C:\Users\you\AppData\Local\Temp\ktrans\ktbad.kl(10)
+  10 END ktbad
+         ^ ERROR
+Invalid statement. ";" or new line expected.
+
+
+===============Translation not successful===============
+Error executing KTrans: Error translating program: Code: 0xFFFFFFFF:  

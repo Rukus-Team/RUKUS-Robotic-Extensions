@@ -1,0 +1,63 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "FANUC Variable Dump",
+  "scopeName": "source.fanuc.va",
+  "patterns": [
+    {
+      "match": "^(\\[)([^\\]]+)(\\])(\\$?[A-Za-z_][A-Za-z0-9_]*)\\s+(Storage:)\\s*(\\w+)\\s+(Access:)\\s*(\\w+)\\s*(:)\\s*(.*?)\\s*(=)?\\s*(.*)$",
+      "captures": {
+        "1": { "name": "punctuation.bracket.va" },
+        "2": { "name": "entity.name.namespace.program.va" },
+        "3": { "name": "punctuation.bracket.va" },
+        "4": { "name": "entity.name.variable.va" },
+        "5": { "name": "keyword.other.va" },
+        "6": { "name": "constant.language.storage.va" },
+        "7": { "name": "keyword.other.va" },
+        "8": { "name": "constant.language.access.va" },
+        "9": { "name": "punctuation.separator.va" },
+        "10": { "name": "storage.type.va" },
+        "11": { "name": "keyword.operator.va" },
+        "12": { "patterns": [ { "include": "#value" } ] }
+      }
+    },
+    {
+      "match": "^\\s*(Field:)\\s*(\\$?[A-Za-z_][A-Za-z0-9_.$\\[\\],]*)\\s*(Access:)\\s*(\\w+)\\s*(:)\\s*(.*?)\\s*(=)?\\s*(.*)$",
+      "captures": {
+        "1": { "name": "keyword.other.va" },
+        "2": { "name": "variable.other.member.va" },
+        "3": { "name": "keyword.other.va" },
+        "4": { "name": "constant.language.access.va" },
+        "5": { "name": "punctuation.separator.va" },
+        "6": { "name": "storage.type.va" },
+        "7": { "name": "keyword.operator.va" },
+        "8": { "patterns": [ { "include": "#value" } ] }
+      }
+    },
+    {
+      "match": "^\\s*(\\[)([0-9, ]+)(\\])\\s*(=)\\s*(.*)$",
+      "captures": {
+        "1": { "name": "punctuation.bracket.va" },
+        "2": { "name": "constant.numeric.index.va" },
+        "3": { "name": "punctuation.bracket.va" },
+        "4": { "name": "keyword.operator.va" },
+        "5": { "patterns": [ { "include": "#value" } ] }
+      }
+    },
+    {
+      "match": "\\b(Group|Config|UF|UT|X|Y|Z|W|P|R|J[1-9]|EXT[1-3]|E[1-3])\\s*(:|=)",
+      "captures": { "1": { "name": "variable.other.field.va" }, "2": { "name": "keyword.operator.va" } }
+    },
+    { "include": "#value" }
+  ],
+  "repository": {
+    "value": {
+      "patterns": [
+        { "match": "'[^']*'", "name": "string.quoted.single.va" },
+        { "match": "\\b(TRUE|FALSE|ON|OFF|Uninitialized|\\*uninit\\*)\\b", "name": "constant.language.va" },
+        { "match": "-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?", "name": "constant.numeric.va" },
+        { "match": "\\b(mm|deg|inch|rad|sec|msec)\\b", "name": "keyword.other.unit.va" },
+        { "match": "\\b(ARRAY|OF|INTEGER|REAL|BOOLEAN|STRING|BYTE|SHORT|POSITION|XYZWPR|XYZWPREXT|JOINTPOS\\d?|VECTOR|Numeric Reg|Position Reg|String Reg)\\b", "name": "storage.type.va" }
+      ]
+    }
+  }
+}

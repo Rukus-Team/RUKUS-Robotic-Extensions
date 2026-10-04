@@ -1,0 +1,6 @@
+{
+  "date": "2026-09-18T14:30:00Z",
+  "source": { "kind": "backup", "path": "../backups/robotA_260915" },
+  "fileCount": 3,
+  "controller": { "name": "RobotA", "version": "V9.40", "fNumber": "F123456" }
+}

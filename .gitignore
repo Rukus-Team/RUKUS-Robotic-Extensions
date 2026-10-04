@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.vsix
+robot-code-notepadpp-*.zip
+.vscode-test/
+AGENTS.md
+probe-results/

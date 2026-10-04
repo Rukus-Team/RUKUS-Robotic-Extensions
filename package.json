@@ -1,0 +1,3033 @@
+{
+  "name": "robot-code",
+  "displayName": "Robot Code — FANUC TP & KAREL (Beta)",
+  "description": "BETA - in active development, not yet proven on a live cell. Full IDE support for FANUC robots: TP (.ls) and KAREL (.kl) with hover docs, go-to-definition, diagnostics, register/I-O comment resolution from controller backups, renumbering, call graphs, ktrans integration and more. Built to grow to other robot brands.",
+  "version": "26.109.2",
+  "publisher": "rukus-team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Scyllasis/RUKUS-Robotic-Extensions.git"
+  },
+  "private": true,
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Linters",
+    "Formatters",
+    "Themes"
+  ],
+  "keywords": [
+    "fanuc",
+    "robot",
+    "teach pendant",
+    "tp",
+    "karel",
+    "ls",
+    "kl",
+    "roboguide"
+  ],
+  "icon": "media/icon.png",
+  "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Language features work in untrusted folders. Running ktrans and scanning extra backup folders use workspace-trusted settings only.",
+      "restrictedConfigurations": [
+        "robotCode.karel.ktransPath",
+        "robotCode.data.backupFolders",
+        "robotCode.karel.compileOnSave"
+      ]
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "Controller data (.va) and ktrans need a real file system."
+    }
+  },
+  "activationEvents": [
+    "onLanguage:fanuc-tp",
+    "onLanguage:fanuc-karel",
+    "onLanguage:fanuc-cm",
+    "onLanguage:fanuc-cf",
+    "onLanguage:fanuc-va",
+    "onLanguage:fanuc-dt",
+    "onLanguage:fanuc-dg",
+    "onLanguage:fanuc-io",
+    "workspaceContains:**/*.{ls,LS,kl,KL,va,VA}",
+    "onUri"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "fanuc-tp",
+        "aliases": [
+          "FANUC TP"
+        ],
+        "extensions": [
+          ".ls",
+          ".LS"
+        ],
+        "configuration": "./language-configs/tp.language-configuration.json",
+        "icon": {
+          "light": "./media/file-icons/ls-light.svg",
+          "dark": "./media/file-icons/ls-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-tp-binary",
+        "aliases": [
+          "FANUC TP (compiled .tp)"
+        ],
+        "extensions": [
+          ".tp",
+          ".TP"
+        ],
+        "icon": {
+          "light": "./media/file-icons/tp-light.svg",
+          "dark": "./media/file-icons/tp-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-karel",
+        "aliases": [
+          "FANUC KAREL"
+        ],
+        "extensions": [
+          ".kl",
+          ".KL"
+        ],
+        "configuration": "./language-configs/karel.language-configuration.json",
+        "icon": {
+          "light": "./media/file-icons/kl-light.svg",
+          "dark": "./media/file-icons/kl-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-pc",
+        "aliases": [
+          "FANUC KAREL (compiled .pc)"
+        ],
+        "extensions": [
+          ".pc",
+          ".PC"
+        ],
+        "icon": {
+          "light": "./media/file-icons/pc-light.svg",
+          "dark": "./media/file-icons/pc-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-utx",
+        "aliases": [
+          "FANUC Dictionary Text"
+        ],
+        "extensions": [
+          ".utx",
+          ".UTX"
+        ],
+        "icon": {
+          "light": "./media/file-icons/utx-light.svg",
+          "dark": "./media/file-icons/utx-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-ftx",
+        "aliases": [
+          "FANUC Form Text"
+        ],
+        "extensions": [
+          ".ftx",
+          ".FTX"
+        ],
+        "icon": {
+          "light": "./media/file-icons/ftx-light.svg",
+          "dark": "./media/file-icons/ftx-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-cm",
+        "aliases": [
+          "FANUC Command File"
+        ],
+        "extensions": [
+          ".cm",
+          ".CM"
+        ],
+        "configuration": "./language-configs/cm.language-configuration.json",
+        "icon": {
+          "light": "./media/file-icons/cm-light.svg",
+          "dark": "./media/file-icons/cm-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-cf",
+        "aliases": [
+          "FANUC Command File (startup)"
+        ],
+        "extensions": [
+          ".cf",
+          ".CF"
+        ],
+        "configuration": "./language-configs/cm.language-configuration.json",
+        "icon": {
+          "light": "./media/file-icons/cf-light.svg",
+          "dark": "./media/file-icons/cf-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-va",
+        "aliases": [
+          "FANUC Variable Dump"
+        ],
+        "extensions": [
+          ".va",
+          ".VA"
+        ],
+        "configuration": "./language-configs/va.language-configuration.json",
+        "icon": {
+          "light": "./media/file-icons/va-light.svg",
+          "dark": "./media/file-icons/va-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-dt",
+        "aliases": [
+          "FANUC Data File"
+        ],
+        "extensions": [
+          ".dt",
+          ".DT"
+        ],
+        "configuration": "./language-configs/va.language-configuration.json",
+        "icon": {
+          "light": "./media/file-icons/dt-light.svg",
+          "dark": "./media/file-icons/dt-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-vr",
+        "aliases": [
+          "FANUC Variable File (binary .vr)"
+        ],
+        "extensions": [
+          ".vr",
+          ".VR"
+        ],
+        "icon": {
+          "light": "./media/file-icons/vr-light.svg",
+          "dark": "./media/file-icons/vr-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-sv",
+        "aliases": [
+          "FANUC System File (binary .sv)"
+        ],
+        "filenames": [
+          "cellio.sv",
+          "CELLIO.SV",
+          "iahand.sv",
+          "IAHAND.SV",
+          "mixlogic.sv",
+          "MIXLOGIC.SV",
+          "pmccfg.sv",
+          "PMCCFG.SV"
+        ],
+        "filenamePatterns": [
+          "sys*.sv",
+          "SYS*.SV",
+          "dcs*.sv",
+          "DCS*.SV"
+        ],
+        "icon": {
+          "light": "./media/file-icons/sv-light.svg",
+          "dark": "./media/file-icons/sv-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-df",
+        "aliases": [
+          "FANUC Default File (.df)"
+        ],
+        "extensions": [
+          ".df",
+          ".DF"
+        ],
+        "icon": {
+          "light": "./media/file-icons/df-light.svg",
+          "dark": "./media/file-icons/df-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-dg",
+        "aliases": [
+          "FANUC Diagnostic Dump"
+        ],
+        "extensions": [
+          ".dg",
+          ".DG"
+        ],
+        "configuration": "./language-configs/va.language-configuration.json",
+        "icon": {
+          "light": "./media/file-icons/dg-light.svg",
+          "dark": "./media/file-icons/dg-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-io",
+        "aliases": [
+          "FANUC I/O Configuration Dump"
+        ],
+        "extensions": [
+          ".io",
+          ".IO"
+        ],
+        "configuration": "./language-configs/va.language-configuration.json",
+        "icon": {
+          "light": "./media/file-icons/io-light.svg",
+          "dark": "./media/file-icons/io-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-vda",
+        "aliases": [
+          "FANUC Vision Data (ASCII .vda)"
+        ],
+        "extensions": [
+          ".vda",
+          ".VDA"
+        ],
+        "icon": {
+          "light": "./media/file-icons/vda-light.svg",
+          "dark": "./media/file-icons/vda-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-vd",
+        "aliases": [
+          "FANUC Vision Data (binary .vd)"
+        ],
+        "extensions": [
+          ".vd",
+          ".VD"
+        ],
+        "icon": {
+          "light": "./media/file-icons/vd-light.svg",
+          "dark": "./media/file-icons/vd-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-cam",
+        "aliases": [
+          "FANUC Camera Data (.cam)"
+        ],
+        "extensions": [
+          ".cam",
+          ".CAM"
+        ],
+        "icon": {
+          "light": "./media/file-icons/cam-light.svg",
+          "dark": "./media/file-icons/cam-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-pmc",
+        "aliases": [
+          "FANUC PMC Ladder (.pmc)"
+        ],
+        "extensions": [
+          ".pmc",
+          ".PMC"
+        ],
+        "icon": {
+          "light": "./media/file-icons/pmc-light.svg",
+          "dark": "./media/file-icons/pmc-dark.svg"
+        }
+      },
+      {
+        "id": "fanuc-stm",
+        "aliases": [
+          "FANUC Web Page (.stm)"
+        ],
+        "extensions": [
+          ".stm",
+          ".STM"
+        ],
+        "icon": {
+          "light": "./media/file-icons/stm-light.svg",
+          "dark": "./media/file-icons/stm-dark.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "fanuc-tp",
+        "scopeName": "source.fanuc.tp",
+        "path": "./syntaxes/tp.tmLanguage.json"
+      },
+      {
+        "language": "fanuc-karel",
+        "scopeName": "source.fanuc.karel",
+        "path": "./syntaxes/karel.tmLanguage.json"
+      },
+      {
+        "language": "fanuc-cm",
+        "scopeName": "source.fanuc.cm",
+        "path": "./syntaxes/cm.tmLanguage.json"
+      },
+      {
+        "language": "fanuc-cf",
+        "scopeName": "source.fanuc.cm",
+        "path": "./syntaxes/cm.tmLanguage.json"
+      },
+      {
+        "language": "fanuc-va",
+        "scopeName": "source.fanuc.va",
+        "path": "./syntaxes/va.tmLanguage.json"
+      },
+      {
+        "language": "fanuc-dt",
+        "scopeName": "source.fanuc.va",
+        "path": "./syntaxes/va.tmLanguage.json"
+      },
+      {
+        "language": "fanuc-dg",
+        "scopeName": "source.fanuc.va",
+        "path": "./syntaxes/va.tmLanguage.json"
+      },
+      {
+        "language": "fanuc-io",
+        "scopeName": "source.fanuc.va",
+        "path": "./syntaxes/va.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "fanuc-tp",
+        "path": "./snippets/tp.json"
+      },
+      {
+        "language": "fanuc-karel",
+        "path": "./snippets/karel.json"
+      }
+    ],
+    "themes": [
+      {
+        "label": "Robot Code Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code High Contrast",
+        "uiTheme": "hc-black",
+        "path": "./themes/robot-code-high-contrast-color-theme.json"
+      },
+      {
+        "label": "Robot Code Light High Contrast",
+        "uiTheme": "hc-light",
+        "path": "./themes/robot-code-light-high-contrast-color-theme.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "robotCode.tp.renumber",
+        "title": "Renumber Lines (controller format)",
+        "category": "FANUC TP",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "robotCode.tp.renumberOnes",
+        "title": "Renumber Lines to 1: (program or selection)",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.applyCustomStyle",
+        "title": "Apply Custom Line Style (program or selection)",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.applyControllerStyle",
+        "title": "Apply Controller Numbering (program or selection)",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.toggleAutoRenumber",
+        "title": "Toggle Automatic Line Renumbering",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.newProgram",
+        "title": "New TP Program…",
+        "category": "FANUC TP",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "robotCode.tp.insertBanner",
+        "title": "Insert Comment Banner",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.insertHeader",
+        "title": "Insert Program Header (customer template)…",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp.insertTemplate",
+        "title": "Insert Program Template at Cursor…",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp.toggleRemark",
+        "title": "Toggle Remark (//) on Selected Lines",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.convertMotion",
+        "title": "Convert Motion Type (J <-> L) on Selected Lines",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.scaleSpeeds",
+        "title": "Scale Motion Speeds on Selected Lines…",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.setTermination",
+        "title": "Set Termination (FINE/CNT) on Selected Lines…",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.stripPositions",
+        "title": "Copy Program Without Position Data",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.showCallGraph",
+        "title": "Show Program Call Graph",
+        "category": "FANUC TP",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "robotCode.tp.gotoLabel",
+        "title": "Go to Label…",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.karel.compile",
+        "title": "Compile with ktrans",
+        "category": "FANUC KAREL",
+        "icon": "$(play)"
+      },
+      {
+        "command": "robotCode.karel.precheck",
+        "title": "Check Before Compile",
+        "category": "FANUC KAREL",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "robotCode.tp.combinePrograms",
+        "title": "Combine Programs…",
+        "category": "FANUC TP",
+        "icon": "$(combine)"
+      },
+      {
+        "command": "robotCode.live.liveEdit",
+        "title": "Live Edit on Robot (send every save)",
+        "category": "Robot Code",
+        "icon": "$(broadcast)"
+      },
+      {
+        "command": "robotCode.karel.newProgram",
+        "title": "New KAREL Program…",
+        "category": "FANUC KAREL",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "robotCode.data.refresh",
+        "title": "Rescan Controller Data (.va files)",
+        "category": "Robot Code",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "robotCode.data.openRegisterTable",
+        "title": "Open Register & I/O Table",
+        "category": "Robot Code",
+        "icon": "$(table)"
+      },
+      {
+        "command": "robotCode.data.addBackupFolder",
+        "title": "Add Controller Backup Folder…",
+        "category": "Robot Code",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "robotCode.data.removeBackupFolder",
+        "title": "Remove from Backup Panel",
+        "category": "Robot Code",
+        "icon": "$(close)"
+      },
+      {
+        "command": "robotCode.data.restoreBackupFolders",
+        "title": "Show Removed Backups Again…",
+        "category": "Robot Code",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "robotCode.views.revealInEditor",
+        "title": "Reveal",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.live.addRobot",
+        "title": "Add Robot…",
+        "category": "Robot Code",
+        "icon": "$(add)"
+      },
+      {
+        "command": "robotCode.live.removeRobot",
+        "title": "Remove Robot",
+        "category": "Robot Code",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "robotCode.live.connect",
+        "title": "Connect to Robot",
+        "category": "Robot Code",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "robotCode.live.disconnect",
+        "title": "Disconnect Robot",
+        "category": "Robot Code",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "robotCode.live.refresh",
+        "title": "Refresh Robot Data Now",
+        "category": "Robot Code",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "robotCode.live.setPassword",
+        "title": "Set Robot FTP Password…",
+        "category": "Robot Code",
+        "icon": "$(key)"
+      },
+      {
+        "command": "robotCode.live.downloadFile",
+        "title": "Download (editable local copy)…",
+        "category": "Robot Code",
+        "icon": "$(desktop-download)"
+      },
+      {
+        "command": "robotCode.showFeatures",
+        "title": "What Can I Do Here? (all features and shortcuts)…",
+        "category": "Robot Code",
+        "icon": "$(question)"
+      },
+      {
+        "command": "robotCode.live.openRobotFile",
+        "title": "Open File from Robot…",
+        "category": "Robot Code",
+        "icon": "$(file)"
+      },
+      {
+        "command": "robotCode.live.compareWithRobot",
+        "title": "Compare Program with Robot Copy",
+        "category": "Robot Code",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "robotCode.live.pullBackup",
+        "title": "Download Backup from Robot…",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.live.openAsWorkspaceFolder",
+        "title": "Add Robot Device as Workspace Folder",
+        "category": "Robot Code",
+        "icon": "$(folder-library)"
+      },
+      {
+        "command": "robotCode.live.revealRunning",
+        "title": "Reveal Running Line",
+        "category": "Robot Code",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "robotCode.live.focusView",
+        "title": "Show Robots View",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.live.openTaskLine",
+        "title": "Open Task Line",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.live._state",
+        "title": "Dump Live State (debug)",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tools.diffBackups",
+        "title": "Compare Two Backups…",
+        "category": "Robot Code",
+        "icon": "$(diff-multiple)"
+      },
+      {
+        "command": "robotCode.tools.xrefReport",
+        "title": "Register & I/O Cross-Reference Report",
+        "category": "Robot Code",
+        "icon": "$(references)"
+      },
+      {
+        "command": "robotCode.tools.unusedPrograms",
+        "title": "Report: Programs Never Called",
+        "category": "Robot Code",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "robotCode.views.toggleLatestOnly",
+        "title": "Programs: Show Latest Backups Only / All Backups",
+        "category": "Robot Code",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "robotCode.tp.renumberLabels",
+        "title": "Renumber Labels (10, 20, 30…)…",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.syncCommentsFromController",
+        "title": "Sync Inline Comments from Controller…",
+        "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.live.manageRobots",
+        "title": "Robot Connections…",
+        "category": "Robot Code",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "robotCode.tp.showFlow",
+        "title": "Show Program Flow (flowchart)",
+        "category": "FANUC TP",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "robotCode.live.getInfo",
+        "title": "Get Controller Info",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.live.getOptions",
+        "title": "Get Controller Options",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.live.showOptions",
+        "title": "Show Controller Options…",
+        "category": "Robot Code",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "robotCode.live.getPosition",
+        "title": "Get Current Position",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.live.getTasks",
+        "title": "Get Program State",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.live.getRegisters",
+        "title": "Get Register Values",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.live.getIo",
+        "title": "Get I/O State",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.live.dashboard",
+        "title": "Robot Page",
+        "category": "Robot Code",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "robotCode.live.getFiles",
+        "title": "List Files on Robot",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.live.getAll",
+        "title": "Read Everything from Robot Now",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.live.getSection",
+        "title": "Get",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.live.toggleFilesShow",
+        "title": "Files: Show Programs Only / All Files",
+        "category": "Robot Code",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "robotCode.live.toggleAutoRefresh",
+        "title": "Toggle Auto-Refresh for Robot",
+        "category": "Robot Code",
+        "icon": "$(watch)"
+      },
+      {
+        "command": "robotCode.rukus.monitor",
+        "title": "Live Monitor in RUKUS",
+        "category": "RUKUS",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "robotCode.rukus.alarms",
+        "title": "Alarm History in RUKUS",
+        "category": "RUKUS",
+        "icon": "$(bell)"
+      },
+      {
+        "command": "robotCode.rukus.backup",
+        "title": "Backups and Schedules in RUKUS",
+        "category": "RUKUS",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.rukus.open",
+        "title": "Open RUKUS",
+        "category": "RUKUS",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "robotCode.rukus.openCluster",
+        "title": "Open Cluster as Workspace…",
+        "category": "RUKUS",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "robotCode.rukus.syncClusters",
+        "title": "Sync from RUKUS",
+        "category": "RUKUS",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "robotCode.rukus.exportCell",
+        "title": "Send Cell to RUKUS…",
+        "category": "RUKUS",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "robotCode.rukus.revealData",
+        "title": "Show RUKUS Data Folder",
+        "category": "RUKUS",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "robotCode.tp.teachPosition",
+        "title": "Teach Position from Current Position…",
+        "category": "Robot Code",
+        "icon": "$(record)"
+      },
+      {
+        "command": "robotCode.tp.teachFromPosReg",
+        "title": "Teach Position from PR[n]…",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp.recordPosition",
+        "title": "Record New Position from Current Position…",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.sync.fetchFile",
+        "title": "Fetch Current File from Robot",
+        "category": "Robot Code",
+        "icon": "$(repo-fetch)"
+      },
+      {
+        "command": "robotCode.sync.pullFile",
+        "title": "Pull Current File from Robot (overwrite local)",
+        "category": "Robot Code",
+        "icon": "$(repo-pull)"
+      },
+      {
+        "command": "robotCode.sync.pushFile",
+        "title": "Push Current File to Robot…",
+        "category": "Robot Code",
+        "icon": "$(repo-push)"
+      },
+      {
+        "command": "robotCode.sync.compareFile",
+        "title": "Compare with Snapshot",
+        "category": "Robot Code",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "robotCode.sync.revertFile",
+        "title": "Revert Working Copy from Snapshot",
+        "category": "Robot Code",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "robotCode.sync.pullToWorking",
+        "title": "Pull into Working Folder…",
+        "category": "Robot Code",
+        "icon": "$(repo-pull)"
+      },
+      {
+        "command": "robotCode.sync.diffOpen",
+        "title": "Diff Open File with Snapshot",
+        "category": "Robot Code",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "robotCode.sync.comparePositions",
+        "title": "Compare Positions with Snapshot…",
+        "category": "Robot Code",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "robotCode.sync.compareRegisters",
+        "title": "Compare Registers with Snapshot…",
+        "category": "Robot Code",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "robotCode.sync.history",
+        "title": "Snapshot History…",
+        "category": "Robot Code",
+        "icon": "$(history)"
+      },
+      {
+        "command": "robotCode.sync.errors",
+        "title": "Get Controller Errors",
+        "category": "Robot Code",
+        "icon": "$(warning)"
+      },
+      {
+        "command": "robotCode.tp.offsetPositions",
+        "title": "Offset Positions…",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp.setAxisValues",
+        "title": "Set / Add Axis Values on Positions… (e.g. E1=0 on P[1-9])",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp.comparePositions",
+        "title": "Compare Positions With…",
+        "category": "FANUC TP",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "robotCode.tp.remapRegister",
+        "title": "Renumber Register / I-O…",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp.extractProgram",
+        "title": "Extract Selection to New Program…",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp.inlineProgram",
+        "title": "Inline Called Program Here",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp._teachPlan",
+        "title": "Show Teach Plan (diagnostic)",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp.convertFrame",
+        "title": "Convert Positions to Another Frame…",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp.mirrorPositions",
+        "title": "Mirror Positions Across a Plane…",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp.relabelFrames",
+        "title": "Relabel Position Frames (keep the numbers)…",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.tp.cleanupPositions",
+        "title": "Clean Up Unused Positions…",
+        "category": "Robot Code",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "robotCode.containers.initCell",
+        "title": "Initialize Cell Container…",
+        "category": "Robot Code",
+        "icon": "$(home)"
+      },
+      {
+        "command": "robotCode.containers.initRobot",
+        "title": "Initialize Robot Container…",
+        "category": "Robot Code",
+        "icon": "$(add)"
+      },
+      {
+        "command": "robotCode.data.snapshotFromBackup",
+        "title": "Snapshot from Backup Folder…",
+        "category": "Robot Code",
+        "icon": "$(archive)"
+      },
+      {
+        "command": "robotCode.data.snapshotFromRobot",
+        "title": "Snapshot from Robot…",
+        "category": "Robot Code",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "robotCode.sync.fetchAll",
+        "title": "Fetch All (entire snapshot)",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.sync.fetchPrograms",
+        "title": "Fetch Programs",
+        "category": "Robot Code",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "robotCode.sync.fetchData",
+        "title": "Fetch Data & I/O",
+        "category": "Robot Code",
+        "icon": "$(database)"
+      },
+      {
+        "command": "robotCode.sync.fetchFolder",
+        "title": "Fetch Folder from Robot (update snapshot)",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.sync.pullFolder",
+        "title": "Pull Folder from Robot (overwrite local files)",
+        "category": "Robot Code",
+        "icon": "$(repo-pull)"
+      },
+      {
+        "command": "robotCode.sync.fetchProgram",
+        "title": "Fetch from Robot",
+        "category": "Robot Code",
+        "icon": "$(repo-fetch)"
+      },
+      {
+        "command": "robotCode.sync.fetchCompareAll",
+        "title": "Fetch & Compare All",
+        "category": "Robot Code",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "robotCode.containers.diffWithSnapshot",
+        "title": "Diff Working Copy with Snapshot",
+        "category": "Robot Code",
+        "icon": "$(diff)"
+      }
+    ],
+    "colors": [
+      {
+        "id": "robotCode.readOnlyFile",
+        "description": "A file that is on a controller (fanuc://): read-only. Used for its tab, its row under Files and its Explorer entry.",
+        "defaults": { "dark": "#d7a65f", "light": "#8a5a00", "highContrast": "#ffcc66", "highContrastLight": "#6b4500" }
+      },
+      {
+        "id": "robotCode.hintComment",
+        "description": "In-line hint colour for the controller comment of a register/IO written without one (drawn as a `{comment}` decoration, so no theme can tint its background).",
+        "defaults": { "dark": "#5f6f7f", "light": "#6b7280", "highContrast": "#d0d0d0", "highContrastLight": "#3c3c3c" }
+      },
+      {
+        "id": "robotCode.hintStateOn",
+        "description": "In-line hint colour for a bit/IO that read ON (muted; `workbench.colorCustomizations` can override).",
+        "defaults": { "dark": "#7fae8a", "light": "#5f8a63", "highContrast": "#b5f27a", "highContrastLight": "#1e6a12" }
+      },
+      {
+        "id": "robotCode.hintStateOff",
+        "description": "In-line hint colour for a bit/IO that read OFF.",
+        "defaults": { "dark": "#6b7280", "light": "#8a919b", "highContrast": "#d0d0d0", "highContrastLight": "#3c3c3c" }
+      },
+      {
+        "id": "robotCode.hintValue",
+        "description": "In-line hint colour for a numeric value (register, timer, group).",
+        "defaults": { "dark": "#b8935a", "light": "#9a7b3f", "highContrast": "#ffb86b", "highContrastLight": "#8a4200" }
+      },
+      {
+        "id": "robotCode.hintString",
+        "description": "In-line hint colour for a string value (string register).",
+        "defaults": { "dark": "#7fae8a", "light": "#5f8a63", "highContrast": "#b5f27a", "highContrastLight": "#1e6a12" }
+      },
+      {
+        "id": "robotCode.hintSim",
+        "description": "In-line hint colour for a simulated value (a point read as SIM).",
+        "defaults": { "dark": "#b0a45e", "light": "#8a7d2e", "highContrast": "#ffd23f", "highContrastLight": "#6b4d00" }
+      },
+      {
+        "id": "robotCode.hintStale",
+        "description": "In-line hint colour for a value read longer ago than robotCode.live.staleAfterSeconds.",
+        "defaults": { "dark": "#5a6472", "light": "#a3adb8", "highContrast": "#a0a0a0", "highContrastLight": "#5a5a5a" }
+      },
+      {
+        "id": "robotCode.hintFrameJoint",
+        "description": "In-line hint colour for a joint-representation position frame label.",
+        "defaults": { "dark": "#a08ab5", "light": "#7a5f90", "highContrast": "#e39dff", "highContrastLight": "#5c1a8a" }
+      },
+      {
+        "id": "robotCode.hintFrameCart",
+        "description": "In-line hint colour for a cartesian-representation position frame label.",
+        "defaults": { "dark": "#6f97b8", "light": "#5a7a9a", "highContrast": "#9ecbff", "highContrastLight": "#0f4a85" }
+      },
+      {
+        "id": "robotCode.hintFrameOther",
+        "description": "In-line hint colour for a position frame label that is neither joint nor cartesian.",
+        "defaults": { "dark": "#6b7280", "light": "#8a919b", "highContrast": "#d0d0d0", "highContrastLight": "#3c3c3c" }
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "robotCode.tp.renumber",
+        "key": "ctrl+alt+r",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.toggleRemark",
+        "key": "ctrl+/",
+        "when": "editorLangId == fanuc-tp && editorTextFocus && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.gotoLabel",
+        "key": "ctrl+alt+l",
+        "when": "editorLangId == fanuc-tp"
+      },
+      {
+        "command": "robotCode.karel.compile",
+        "key": "ctrl+shift+b",
+        "when": "editorLangId == fanuc-karel"
+      },
+      {
+        "command": "robotCode.karel.precheck",
+        "key": "ctrl+alt+shift+k",
+        "when": "editorLangId == fanuc-karel"
+      },
+      {
+        "command": "robotCode.tp.combinePrograms",
+        "key": "ctrl+alt+shift+m",
+        "when": "editorLangId =~ /^fanuc-/ || focusedView =~ /^robotCode\\./"
+      },
+      {
+        "command": "robotCode.live.liveEdit",
+        "key": "ctrl+alt+shift+e",
+        "when": "editorLangId == fanuc-tp && resourceScheme == file && robotCode.liveConnected"
+      },
+      {
+        "command": "robotCode.tp.showFlow",
+        "key": "ctrl+alt+f",
+        "when": "editorLangId == fanuc-tp"
+      },
+      {
+        "command": "robotCode.tp.teachPosition",
+        "key": "ctrl+alt+t",
+        "when": "editorLangId == fanuc-tp && !editorReadonly && config.robotCode.experimental.robotConnections"
+      },
+      {
+        "command": "robotCode.tp.comparePositions",
+        "key": "ctrl+alt+p",
+        "when": "editorLangId == fanuc-tp"
+      },
+      {
+        "command": "robotCode.tp.cleanupPositions",
+        "key": "ctrl+alt+d",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.syncCommentsFromController",
+        "key": "ctrl+alt+s",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.offsetPositions",
+        "key": "ctrl+alt+o",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.showFeatures",
+        "key": "ctrl+alt+h",
+        "when": "editorLangId =~ /^fanuc-/ || focusedView =~ /^robotCode\\./"
+      },
+      {
+        "command": "robotCode.tp.newProgram",
+        "key": "ctrl+alt+n",
+        "when": "editorLangId =~ /^fanuc-/ || focusedView =~ /^robotCode\\./"
+      },
+      {
+        "command": "robotCode.tp.showCallGraph",
+        "key": "ctrl+alt+g",
+        "when": "editorLangId == fanuc-tp"
+      },
+      {
+        "command": "robotCode.tools.xrefReport",
+        "key": "ctrl+alt+x",
+        "when": "editorLangId =~ /^fanuc-/ || focusedView =~ /^robotCode\\./"
+      },
+      {
+        "command": "robotCode.data.openRegisterTable",
+        "key": "ctrl+alt+a",
+        "when": "editorLangId =~ /^fanuc-/ || focusedView =~ /^robotCode\\./"
+      },
+      {
+        "command": "robotCode.sync.compareFile",
+        "key": "ctrl+alt+c",
+        "when": "robotCode.fileInContainer"
+      },
+      {
+        "command": "robotCode.live.downloadFile",
+        "key": "ctrl+alt+w",
+        "when": "resourceScheme == fanuc"
+      },
+      {
+        "command": "robotCode.sync.fetchFile",
+        "key": "ctrl+alt+shift+f",
+        "when": "robotCode.fileInContainer"
+      },
+      {
+        "command": "robotCode.sync.pullFile",
+        "key": "ctrl+alt+shift+d",
+        "when": "robotCode.fileInContainer"
+      },
+      {
+        "command": "robotCode.sync.pushFile",
+        "key": "ctrl+alt+shift+u",
+        "when": "editorLangId == fanuc-tp && resourceScheme == file"
+      },
+      {
+        "command": "robotCode.tp.insertBanner",
+        "key": "ctrl+alt+b",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.insertTemplate",
+        "key": "ctrl+alt+i",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.convertMotion",
+        "key": "ctrl+alt+m",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.setTermination",
+        "key": "ctrl+alt+e",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.scaleSpeeds",
+        "key": "ctrl+alt+v",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.recordPosition",
+        "key": "ctrl+alt+shift+t",
+        "when": "editorLangId == fanuc-tp && !editorReadonly && config.robotCode.experimental.robotConnections"
+      },
+      {
+        "command": "robotCode.tp.renumberLabels",
+        "key": "ctrl+alt+shift+l",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.toggleAutoRenumber",
+        "key": "ctrl+alt+shift+r",
+        "when": "editorLangId == fanuc-tp"
+      },
+      {
+        "command": "robotCode.tp.offsetPositions",
+        "key": "ctrl+alt+shift+o",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.mirrorPositions",
+        "key": "ctrl+alt+shift+h",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.convertFrame",
+        "key": "ctrl+alt+shift+c",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.tp.cleanupPositions",
+        "key": "ctrl+alt+shift+p",
+        "when": "editorLangId == fanuc-tp && !editorReadonly"
+      },
+      {
+        "command": "robotCode.sync.comparePositions",
+        "key": "ctrl+alt+shift+s",
+        "when": "editorLangId == fanuc-tp && robotCode.hasContainers"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "robotCode.live.downloadFile",
+          "when": "resourceScheme == fanuc",
+          "group": "navigation@0"
+        },
+        {
+          "command": "robotCode.sync.revertFile",
+          "when": "robotCode.fileInContainer && robotCode.syncModified",
+          "group": "navigation@0.1"
+        },
+        {
+          "command": "robotCode.sync.fetchFile",
+          "when": "robotCode.fileInContainer && config.robotCode.experimental.robotConnections",
+          "group": "navigation@0.2"
+        },
+        {
+          "command": "robotCode.sync.pullFile",
+          "when": "robotCode.fileInContainer && config.robotCode.experimental.robotConnections",
+          "group": "navigation@0.3"
+        },
+        {
+          "command": "robotCode.sync.pushFile",
+          "when": "robotCode.fileInContainer && editorLangId == fanuc-tp && config.robotCode.live.upload && robotCode.syncPushable && config.robotCode.experimental.robotConnections",
+          "group": "navigation@0.4"
+        },
+        {
+          "command": "robotCode.sync.compareFile",
+          "when": "robotCode.fileInContainer",
+          "group": "navigation@0.5"
+        },
+        {
+          "command": "robotCode.sync.history",
+          "when": "robotCode.fileInContainer",
+          "group": "navigation@0.6"
+        },
+        {
+          "command": "robotCode.tp.showFlow",
+          "when": "editorLangId == fanuc-tp",
+          "group": "navigation@0.7"
+        },
+        {
+          "command": "robotCode.karel.precheck",
+          "when": "editorLangId == fanuc-karel",
+          "group": "navigation@0.8"
+        },
+        {
+          "command": "robotCode.karel.compile",
+          "when": "editorLangId == fanuc-karel",
+          "group": "navigation@0.9"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "robotCode.live.downloadFile",
+          "when": "resourceScheme == fanuc",
+          "group": "1_robot@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "robotCode.menu",
+          "when": "resourceScheme == fanuc || (resourceScheme == file && robotCode.hasContainers) || editorLangId == fanuc-tp",
+          "group": "1_modification@8"
+        }
+      ],
+      "robotCode.menu": [
+        {
+          "command": "robotCode.live.downloadFile",
+          "when": "resourceScheme == fanuc && explorerResourceIsFolder != true",
+          "group": "a@0"
+        },
+        {
+          "submenu": "robotCode.sync.submenu",
+          "when": "resourceScheme == file && explorerResourceIsFolder != true && robotCode.hasContainers && resourceExtname =~ /^\\.(ls|kl|tp|pc|va|sv|dg|dt|io)$/i",
+          "group": "b@0"
+        },
+        {
+          "command": "robotCode.sync.fetchFolder",
+          "when": "explorerResourceIsFolder && robotCode.hasContainers && config.robotCode.experimental.robotConnections",
+          "group": "c@1"
+        },
+        {
+          "command": "robotCode.sync.pullFolder",
+          "when": "explorerResourceIsFolder && robotCode.hasContainers && config.robotCode.experimental.robotConnections",
+          "group": "c@2"
+        },
+        {
+          "command": "robotCode.data.snapshotFromBackup",
+          "when": "explorerResourceIsFolder && robotCode.hasContainers",
+          "group": "d@1"
+        },
+        {
+          "command": "robotCode.data.snapshotFromRobot",
+          "when": "explorerResourceIsFolder && robotCode.hasContainers",
+          "group": "d@2"
+        },
+        {
+          "command": "robotCode.tools.diffBackups",
+          "when": "explorerResourceIsFolder",
+          "group": "e@1"
+        },
+        {
+          "submenu": "robotCode.tp.submenu",
+          "when": "editorLangId == fanuc-tp",
+          "group": "f@0"
+        }
+      ],
+      "robotCode.sync.submenu": [
+        {
+          "command": "robotCode.sync.fetchFile",
+          "when": "config.robotCode.experimental.robotConnections",
+          "group": "a@1"
+        },
+        {
+          "command": "robotCode.sync.pullFile",
+          "when": "config.robotCode.experimental.robotConnections",
+          "group": "a@2"
+        },
+        {
+          "command": "robotCode.sync.pushFile",
+          "when": "((editorLangId == fanuc-tp || resourceExtname == .ls) && config.robotCode.live.upload) && config.robotCode.experimental.robotConnections",
+          "group": "a@3"
+        },
+        {
+          "command": "robotCode.sync.compareFile",
+          "group": "b@1"
+        },
+        {
+          "command": "robotCode.sync.revertFile",
+          "group": "b@2"
+        },
+        {
+          "command": "robotCode.sync.comparePositions",
+          "when": "editorLangId == fanuc-tp || resourceExtname == .ls",
+          "group": "b@0"
+        },
+        {
+          "command": "robotCode.sync.compareRegisters",
+          "when": "resourceExtname == .va",
+          "group": "b@0"
+        },
+        {
+          "command": "robotCode.sync.history",
+          "group": "b@3"
+        }
+      ],
+      "robotCode.tp.submenu": [
+        {
+          "command": "robotCode.tp.renumber",
+          "when": "!editorReadonly",
+          "group": "a@1"
+        },
+        {
+          "command": "robotCode.tp.renumberOnes",
+          "when": "!editorReadonly",
+          "group": "a@2"
+        },
+        {
+          "command": "robotCode.tp.applyCustomStyle",
+          "when": "!editorReadonly",
+          "group": "a@3"
+        },
+        {
+          "command": "robotCode.tp.applyControllerStyle",
+          "when": "!editorReadonly",
+          "group": "a@4"
+        },
+        {
+          "command": "robotCode.tp.renumberLabels",
+          "when": "!editorReadonly",
+          "group": "a@1b"
+        },
+        {
+          "command": "robotCode.tp.syncCommentsFromController",
+          "when": "!editorReadonly",
+          "group": "b@9"
+        },
+        {
+          "command": "robotCode.tp.toggleRemark",
+          "when": "!editorReadonly",
+          "group": "a@2"
+        },
+        {
+          "command": "robotCode.tp.insertBanner",
+          "when": "!editorReadonly",
+          "group": "a@3"
+        },
+        {
+          "command": "robotCode.tp.convertMotion",
+          "when": "!editorReadonly",
+          "group": "b@1"
+        },
+        {
+          "command": "robotCode.tp.scaleSpeeds",
+          "when": "!editorReadonly",
+          "group": "b@2"
+        },
+        {
+          "command": "robotCode.tp.setTermination",
+          "when": "!editorReadonly",
+          "group": "b@3"
+        },
+        {
+          "command": "robotCode.tp.stripPositions",
+          "group": "c@1"
+        },
+        {
+          "command": "robotCode.tp.showCallGraph",
+          "group": "c@2"
+        },
+        {
+          "command": "robotCode.tp.showFlow",
+          "group": "c@1b"
+        },
+        {
+          "command": "robotCode.tp.teachPosition",
+          "when": "!editorReadonly && config.robotCode.experimental.robotConnections",
+          "group": "3_position@1"
+        },
+        {
+          "command": "robotCode.tp.recordPosition",
+          "when": "!editorReadonly && config.robotCode.experimental.robotConnections",
+          "group": "3_position@2"
+        },
+        {
+          "command": "robotCode.tp.teachFromPosReg",
+          "when": "!editorReadonly",
+          "group": "3_position@3"
+        },
+        {
+          "command": "robotCode.tp.offsetPositions",
+          "when": "!editorReadonly",
+          "group": "3_position@4"
+        },
+        {
+          "command": "robotCode.tp.setAxisValues",
+          "when": "!editorReadonly",
+          "group": "3_position@5"
+        },
+        {
+          "command": "robotCode.tp.comparePositions",
+          "group": "3_position@9"
+        },
+        {
+          "command": "robotCode.tp.extractProgram",
+          "when": "!editorReadonly",
+          "group": "4_refactor@1"
+        },
+        {
+          "command": "robotCode.tp.inlineProgram",
+          "when": "!editorReadonly",
+          "group": "4_refactor@2"
+        },
+        {
+          "command": "robotCode.tp.remapRegister",
+          "when": "!editorReadonly",
+          "group": "4_refactor@3"
+        },
+        {
+          "command": "robotCode.tp.convertFrame",
+          "when": "!editorReadonly",
+          "group": "3_position@5"
+        },
+        {
+          "command": "robotCode.tp.mirrorPositions",
+          "when": "!editorReadonly",
+          "group": "3_position@6"
+        },
+        {
+          "command": "robotCode.tp.relabelFrames",
+          "when": "!editorReadonly",
+          "group": "3_position@7"
+        },
+        {
+          "command": "robotCode.tp.cleanupPositions",
+          "when": "!editorReadonly",
+          "group": "3_position@8"
+        },
+        {
+          "command": "robotCode.tp.insertHeader",
+          "when": "!editorReadonly",
+          "group": "a@3b"
+        },
+        {
+          "command": "robotCode.tp.insertTemplate",
+          "when": "!editorReadonly",
+          "group": "a@3c"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "robotCode.tp.newProgram",
+          "when": "view == robotCode.programs",
+          "group": "navigation@0"
+        },
+        {
+          "command": "robotCode.karel.newProgram",
+          "when": "view == robotCode.pcPrograms",
+          "group": "navigation@0"
+        },
+        {
+          "command": "robotCode.showFeatures",
+          "when": "view == robotCode.programs || view == robotCode.robots",
+          "group": "navigation@9"
+        },
+        {
+          "command": "robotCode.showFeatures",
+          "when": "view =~ /^robotCode\\./ && view != robotCode.programs && view != robotCode.robots",
+          "group": "9_help@1"
+        },
+        {
+          "command": "robotCode.data.refresh",
+          "when": "view == robotCode.registers || view == robotCode.programs || view == robotCode.pcPrograms || view == robotCode.macros || view == robotCode.snapshot",
+          "group": "navigation@1"
+        },
+        {
+          "command": "robotCode.data.openRegisterTable",
+          "when": "view == robotCode.registers",
+          "group": "navigation@2"
+        },
+        {
+          "command": "robotCode.data.addBackupFolder",
+          "when": "view == robotCode.snapshot || view == robotCode.registers",
+          "group": "navigation@3"
+        },
+        {
+          "command": "robotCode.data.restoreBackupFolders",
+          "when": "view == robotCode.registers",
+          "group": "1_backups@1"
+        },
+        {
+          "command": "robotCode.tp.showCallGraph",
+          "when": "view == robotCode.programs || view == robotCode.pcPrograms",
+          "group": "navigation@2"
+        },
+        {
+          "command": "robotCode.live.addRobot",
+          "when": "view == robotCode.robots",
+          "group": "navigation@1"
+        },
+        {
+          "command": "robotCode.live.refresh",
+          "when": "view == robotCode.robots",
+          "group": "navigation@2"
+        },
+        {
+          "command": "robotCode.tools.xrefReport",
+          "when": "view == robotCode.registers",
+          "group": "navigation@4"
+        },
+        {
+          "command": "robotCode.tools.unusedPrograms",
+          "when": "view == robotCode.programs",
+          "group": "navigation@4"
+        },
+        {
+          "command": "robotCode.rukus.syncClusters",
+          "when": "view == robotCode.rukusClusters",
+          "group": "navigation@1"
+        },
+        {
+          "command": "robotCode.rukus.exportCell",
+          "when": "view == robotCode.rukusClusters && robotCode.rukusAvailable",
+          "group": "navigation@2"
+        },
+        {
+          "command": "robotCode.rukus.revealData",
+          "when": "view == robotCode.rukusClusters && robotCode.rukusAvailable",
+          "group": "navigation@3"
+        },
+        {
+          "command": "robotCode.rukus.open",
+          "when": "view == robotCode.rukusClusters && robotCode.rukusAvailable",
+          "group": "navigation@4"
+        },
+        {
+          "command": "robotCode.views.toggleLatestOnly",
+          "when": "view == robotCode.programs || view == robotCode.pcPrograms",
+          "group": "navigation@5"
+        },
+        {
+          "command": "robotCode.tp.combinePrograms",
+          "when": "view == robotCode.programs",
+          "group": "navigation@6"
+        },
+        {
+          "command": "robotCode.tools.diffBackups",
+          "when": "view == robotCode.snapshot",
+          "group": "navigation@3"
+        },
+        {
+          "command": "robotCode.containers.initRobot",
+          "when": "view == robotCode.snapshot",
+          "group": "navigation@4"
+        },
+        {
+          "command": "robotCode.sync.fetchAll",
+          "when": "view == robotCode.snapshot && config.robotCode.experimental.robotConnections",
+          "group": "navigation@0"
+        },
+        {
+          "command": "robotCode.sync.fetchPrograms",
+          "when": "view == robotCode.snapshot && config.robotCode.experimental.robotConnections",
+          "group": "navigation@0b"
+        },
+        {
+          "command": "robotCode.sync.fetchData",
+          "when": "view == robotCode.snapshot && config.robotCode.experimental.robotConnections",
+          "group": "navigation@0c"
+        },
+        {
+          "command": "robotCode.sync.fetchCompareAll",
+          "when": "view == robotCode.programs && config.robotCode.experimental.robotConnections",
+          "group": "navigation@0b"
+        },
+        {
+          "command": "robotCode.live.manageRobots",
+          "when": "view == robotCode.robots",
+          "group": "navigation@3"
+        },
+        {
+          "command": "robotCode.rukus.open",
+          "when": "view == robotCode.robots",
+          "group": "navigation@4"
+        },
+        {
+          "command": "robotCode.live.getAll",
+          "when": "view == robotCode.robots",
+          "group": "1_get@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "robotCode.live.liveEdit",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.addRobot",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.removeRobot",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.connect",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.disconnect",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.refresh",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.setPassword",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.downloadFile",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.openRobotFile",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.compareWithRobot",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.pullBackup",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.openAsWorkspaceFolder",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.revealRunning",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.focusView",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.manageRobots",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.getInfo",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.getOptions",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.getPosition",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.getTasks",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.getRegisters",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.getIo",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.dashboard",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.getFiles",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.getAll",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.toggleFilesShow",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.toggleAutoRefresh",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.data.snapshotFromRobot",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.containers.diffWithSnapshot",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.sync.diffOpen",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.views.revealInEditor",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.live.openTaskLine",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.live._state",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.live.getSection",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.tp.teachPosition",
+          "when": "editorLangId == fanuc-tp && config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.tp.recordPosition",
+          "when": "editorLangId == fanuc-tp && config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.tp.teachFromPosReg",
+          "when": "editorLangId == fanuc-tp"
+        },
+        {
+          "command": "robotCode.sync.fetchFile",
+          "when": "resourceScheme == file && robotCode.liveConnected && config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.sync.pullFile",
+          "when": "resourceScheme == file && robotCode.liveConnected && config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.sync.pushFile",
+          "when": "editorLangId == fanuc-tp && robotCode.liveConnected && config.robotCode.live.upload && config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.sync.revertFile",
+          "when": "resourceScheme == file"
+        },
+        {
+          "command": "robotCode.sync.history",
+          "when": "resourceScheme == file"
+        },
+        {
+          "command": "robotCode.sync.comparePositions",
+          "when": "resourceScheme == file && robotCode.hasContainers"
+        },
+        {
+          "command": "robotCode.sync.compareRegisters",
+          "when": "resourceScheme == file && robotCode.hasContainers"
+        },
+        {
+          "command": "robotCode.tp.offsetPositions",
+          "when": "editorLangId == fanuc-tp"
+        },
+        {
+          "command": "robotCode.tp.setAxisValues",
+          "when": "editorLangId == fanuc-tp"
+        },
+        {
+          "command": "robotCode.tp.remapRegister",
+          "when": "editorLangId == fanuc-tp"
+        },
+        {
+          "command": "robotCode.tp.extractProgram",
+          "when": "editorLangId == fanuc-tp"
+        },
+        {
+          "command": "robotCode.tp.inlineProgram",
+          "when": "editorLangId == fanuc-tp"
+        },
+        {
+          "command": "robotCode.tp._teachPlan",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.tp.convertFrame",
+          "when": "editorLangId == fanuc-tp"
+        },
+        {
+          "command": "robotCode.tp.mirrorPositions",
+          "when": "editorLangId == fanuc-tp"
+        },
+        {
+          "command": "robotCode.tp.relabelFrames",
+          "when": "editorLangId == fanuc-tp"
+        },
+        {
+          "command": "robotCode.tp.cleanupPositions",
+          "when": "editorLangId == fanuc-tp"
+        },
+        {
+          "command": "robotCode.tp.insertHeader",
+          "when": "editorLangId == fanuc-tp"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "robotCode.live.downloadFile",
+          "when": "view == robotCode.robots && viewItem == robot-file",
+          "group": "inline@1"
+        },
+        {
+          "command": "robotCode.live.downloadFile",
+          "when": "view == robotCode.robots && viewItem == robot-file",
+          "group": "a@1"
+        },
+        {
+          "command": "robotCode.data.snapshotFromBackup",
+          "when": "view == robotCode.snapshot && viewItem == robot-container",
+          "group": "inline@1"
+        },
+        {
+          "command": "robotCode.data.removeBackupFolder",
+          "when": "view == robotCode.registers && viewItem == backup",
+          "group": "inline@9"
+        },
+        {
+          "command": "robotCode.data.removeBackupFolder",
+          "when": "view == robotCode.registers && viewItem == backup",
+          "group": "9_remove@1"
+        },
+        {
+          "command": "robotCode.data.snapshotFromRobot",
+          "when": "view == robotCode.snapshot && viewItem == robot-container && config.robotCode.experimental.robotConnections",
+          "group": "inline@2"
+        },
+        {
+          "command": "robotCode.sync.fetchAll",
+          "when": "view == robotCode.snapshot && viewItem == robot-container && config.robotCode.experimental.robotConnections",
+          "group": "inline@3"
+        },
+        {
+          "command": "robotCode.sync.fetchAll",
+          "when": "view == robotCode.snapshot && viewItem == robot-container && config.robotCode.experimental.robotConnections",
+          "group": "snapshotSync@0"
+        },
+        {
+          "command": "robotCode.sync.fetchPrograms",
+          "when": "view == robotCode.snapshot && viewItem =~ /^(robot-container|snapshot-scope-programs)$/ && config.robotCode.experimental.robotConnections",
+          "group": "snapshotSync@1"
+        },
+        {
+          "command": "robotCode.sync.fetchData",
+          "when": "view == robotCode.snapshot && viewItem =~ /^(robot-container|snapshot-scope-data)$/ && config.robotCode.experimental.robotConnections",
+          "group": "snapshotSync@2"
+        },
+        {
+          "command": "robotCode.sync.pullFolder",
+          "when": "view == robotCode.snapshot && viewItem == robot-container && config.robotCode.experimental.robotConnections",
+          "group": "snapshotSync@3"
+        },
+        {
+          "command": "robotCode.sync.fetchFolder",
+          "when": "view == robotCode.snapshot && viewItem =~ /^snapshot-(scope|dir)/ && config.robotCode.experimental.robotConnections",
+          "group": "snapshotFile@6"
+        },
+        {
+          "command": "robotCode.sync.pullFolder",
+          "when": "view == robotCode.snapshot && viewItem =~ /^snapshot-(scope|dir)/ && config.robotCode.experimental.robotConnections",
+          "group": "snapshotFile@7"
+        },
+        {
+          "command": "robotCode.sync.pullToWorking",
+          "when": "view == robotCode.snapshot && (viewItem == snapshot-only-program || viewItem == snapshot-file)",
+          "group": "snapshotFile@0"
+        },
+        {
+          "command": "robotCode.sync.fetchFile",
+          "when": "view == robotCode.snapshot && viewItem == snapshot-file && config.robotCode.experimental.robotConnections",
+          "group": "snapshotFile@1"
+        },
+        {
+          "command": "robotCode.sync.pullFile",
+          "when": "view == robotCode.snapshot && viewItem == snapshot-file && config.robotCode.experimental.robotConnections",
+          "group": "snapshotFile@2"
+        },
+        {
+          "command": "robotCode.sync.compareFile",
+          "when": "view == robotCode.snapshot && viewItem == snapshot-file",
+          "group": "snapshotFile@3"
+        },
+        {
+          "command": "robotCode.sync.revertFile",
+          "when": "view == robotCode.snapshot && viewItem == snapshot-file",
+          "group": "snapshotFile@4"
+        },
+        {
+          "command": "robotCode.sync.history",
+          "when": "view == robotCode.snapshot && viewItem == snapshot-file",
+          "group": "snapshotFile@5"
+        },
+        {
+          "command": "robotCode.sync.compareFile",
+          "when": "(view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/",
+          "group": "syncProgram@0"
+        },
+        {
+          "command": "robotCode.sync.fetchProgram",
+          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/) && config.robotCode.experimental.robotConnections",
+          "group": "syncProgram@1"
+        },
+        {
+          "command": "robotCode.sync.pullFile",
+          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/) && config.robotCode.experimental.robotConnections",
+          "group": "syncProgram@2"
+        },
+        {
+          "command": "robotCode.sync.revertFile",
+          "when": "(view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/",
+          "group": "syncProgram@3"
+        },
+        {
+          "command": "robotCode.sync.comparePositions",
+          "when": "view == robotCode.programs && viewItem =~ /^program(-modified)?$/",
+          "group": "syncProgram@4"
+        },
+        {
+          "command": "robotCode.sync.history",
+          "when": "(view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/",
+          "group": "syncProgram@5"
+        },
+        {
+          "command": "robotCode.sync.fetchCompareAll",
+          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem == robot-folder) && config.robotCode.experimental.robotConnections",
+          "group": "syncRobot@0"
+        },
+        {
+          "command": "robotCode.sync.fetchPrograms",
+          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem == robot-folder) && config.robotCode.experimental.robotConnections",
+          "group": "syncRobot@1"
+        },
+        {
+          "command": "robotCode.sync.fetchFolder",
+          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem == robot-folder) && config.robotCode.experimental.robotConnections",
+          "group": "syncRobot@2"
+        },
+        {
+          "command": "robotCode.sync.pullFolder",
+          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem == robot-folder) && config.robotCode.experimental.robotConnections",
+          "group": "syncRobot@3"
+        },
+        {
+          "command": "robotCode.sync.compareFile",
+          "when": "(view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/",
+          "group": "inline@9"
+        },
+        {
+          "command": "robotCode.live.getSection",
+          "when": "view == robotCode.robots && viewItem =~ /^section-(controller|position|tasks|registers|io|files)(-loaded)?$/",
+          "group": "inline@0"
+        },
+        {
+          "command": "robotCode.live.toggleFilesShow",
+          "when": "view == robotCode.robots && viewItem =~ /^section-files(-loaded)?$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "robotCode.live.dashboard",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "group": "inline@0"
+        },
+        {
+          "command": "robotCode.live.manageRobots",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "group": "inline@0"
+        },
+        {
+          "command": "robotCode.live.connect",
+          "when": "view == robotCode.robots && viewItem == robot-disconnected",
+          "group": "inline@1"
+        },
+        {
+          "command": "robotCode.live.disconnect",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "group": "inline@1"
+        },
+        {
+          "command": "robotCode.live.refresh",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "group": "inline@2"
+        },
+        {
+          "command": "robotCode.live.getAll",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "group": "a@0"
+        },
+        {
+          "command": "robotCode.live.toggleAutoRefresh",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "group": "a@0b"
+        },
+        {
+          "command": "robotCode.live.pullBackup",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "group": "a@1"
+        },
+        {
+          "command": "robotCode.live.openRobotFile",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "group": "a@2"
+        },
+        {
+          "command": "robotCode.live.showOptions",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "group": "a@2b"
+        },
+        {
+          "command": "robotCode.live.openAsWorkspaceFolder",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "group": "a@3"
+        },
+        {
+          "command": "robotCode.rukus.monitor",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "group": "c@1"
+        },
+        {
+          "command": "robotCode.rukus.alarms",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "group": "c@2"
+        },
+        {
+          "command": "robotCode.rukus.backup",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "group": "c@3"
+        },
+        {
+          "command": "robotCode.live.setPassword",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "group": "b@1"
+        },
+        {
+          "command": "robotCode.live.removeRobot",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "group": "b@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "submenu": "robotCode.menu",
+          "when": "resourceScheme == fanuc || robotCode.hasContainers || explorerResourceIsFolder",
+          "group": "5_cutcopypaste@8"
+        }
+      ]
+    },
+    "submenus": [
+      {
+        "id": "robotCode.menu",
+        "label": "Robot Code"
+      },
+      {
+        "id": "robotCode.tp.submenu",
+        "label": "FANUC TP"
+      },
+      {
+        "id": "robotCode.sync.submenu",
+        "label": "Snapshot & Robot"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "robotCode",
+          "title": "Robot Code",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "robotCode": [
+        {
+          "id": "robotCode.rukusClusters",
+          "name": "RUKUS Clusters",
+          "icon": "media/activity.svg",
+          "contextualTitle": "RUKUS clusters"
+        },
+        {
+          "id": "robotCode.robots",
+          "name": "Controllers",
+          "icon": "media/activity.svg",
+          "contextualTitle": "Controllers",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "id": "robotCode.snapshot",
+          "name": "Snapshot",
+          "icon": "media/activity.svg",
+          "contextualTitle": "Snapshots"
+        },
+        {
+          "id": "robotCode.programs",
+          "name": "Programs",
+          "icon": "media/activity.svg",
+          "contextualTitle": "Programs"
+        },
+        {
+          "id": "robotCode.pcPrograms",
+          "name": "PC programs",
+          "icon": "media/activity.svg",
+          "contextualTitle": "PC programs"
+        },
+        {
+          "id": "robotCode.macros",
+          "name": "Macros",
+          "icon": "media/activity.svg",
+          "contextualTitle": "Macros"
+        },
+        {
+          "id": "robotCode.registers",
+          "name": "Data",
+          "icon": "media/activity.svg",
+          "contextualTitle": "Registers, payloads and I/O"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "robotCode.registers",
+        "contents": "No controller data loaded. Add a backup folder to load register comments, frames, and macros.\n[Add Backup Folder](command:robotCode.data.addBackupFolder)"
+      },
+      {
+        "view": "robotCode.robots",
+        "contents": "Live data from a FANUC controller, read only when you press Get.\n[Add Robot](command:robotCode.live.addRobot) [Open Dashboard](command:robotCode.live.dashboard)\nThe one write, Upload Program, always asks first."
+      },
+      {
+        "view": "robotCode.rukusClusters",
+        "when": "!robotCode.rukusAvailable",
+        "contents": "RUKUS was not found. With it, its clusters appear here.\n[Get RUKUS](command:robotCode.rukus.revealData) [Initialize Cell Container…](command:robotCode.containers.initCell)\nInstalled elsewhere? Set `robotCode.rukus.dataFolder`."
+      },
+      {
+        "view": "robotCode.snapshot",
+        "contents": "The snapshot is the robot's last known state; working copies are compared with it.\n[Initialize Robot Container…](command:robotCode.containers.initRobot)\nThen connect and **Fetch All**, or snapshot a backup folder."
+      },
+      {
+        "view": "robotCode.macros",
+        "contents": "The macro table comes from sysmacro.va in a backup folder."
+      },
+      {
+        "view": "robotCode.pcPrograms",
+        "contents": "KAREL sources (.kl) and compiled PC programs (.pc) found in the workspace and backup folders appear here."
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "robotCode.gettingStarted",
+        "title": "Robot Code: Getting Started",
+        "description": "Full IDE support for FANUC robots — TP (.ls) and KAREL (.kl) programs with hover docs, diagnostics, flow charts, and more.",
+        "icon": "media/icon.png",
+        "featuredFor": ["*.ls", "*.kl", "*.va"],
+        "steps": [
+          {
+            "id": "robotCode.walkthrough.addBackup",
+            "title": "Open a Controller Backup",
+            "description": "Robot Code reads registers, positions, macros, and payloads from `.va` files in a FANUC controller backup folder. Point the extension at one to get register comments, hover values, and diagnostics.",
+            "media": { "markdown": "media/walkthrough/step1-backup.md" },
+            "completionEvents": ["onCommand:robotCode.data.addBackupFolder"]
+          },
+          {
+            "id": "robotCode.walkthrough.sidebar",
+            "title": "Explore the Sidebar",
+            "description": "The **Robot Code** panel in the Activity Bar has six sections: **Controllers** (live robots), **Snapshot** (the robot's last known state), **Programs** (TP), **PC programs** (KAREL), **Macros**, and **Data** (registers and I/O).",
+            "media": { "markdown": "media/walkthrough/step2-sidebar.md" },
+            "completionEvents": ["onView:robotCode.robots"]
+          },
+          {
+            "id": "robotCode.walkthrough.tpEditor",
+            "title": "Open a TP Program",
+            "description": "Open any `.ls` file to see syntax highlighting, hover documentation for every instruction, register comments resolved from the backup, and CodeLens jump counts on labels.",
+            "media": { "markdown": "media/walkthrough/step3-tp-editor.md" },
+            "completionEvents": ["onLanguage:fanuc-tp"]
+          },
+          {
+            "id": "robotCode.walkthrough.shortcuts",
+            "title": "Learn the Shortcuts",
+            "description": "Key shortcuts for the most common operations: **Ctrl+Alt+R** renumber, **Ctrl+/** toggle remark, **Ctrl+Alt+L** go to label, **Ctrl+Alt+F** show flow chart, **Ctrl+Shift+B** compile KAREL.",
+            "media": { "markdown": "media/walkthrough/step4-shortcuts.md" },
+            "completionEvents": ["onCommand:workbench.action.showCommands"]
+          },
+          {
+            "id": "robotCode.walkthrough.liveRobot",
+            "title": "Connect to a Robot (experimental)",
+            "when": "config.robotCode.experimental.robotConnections",
+            "description": "Add a FANUC controller or ROBOGUIDE virtual controller by IP for live register, I/O, position, and program state. **Only Push writes to the robot.**",
+            "media": { "markdown": "media/walkthrough/step5-live-robot.md" },
+            "completionEvents": ["onCommand:robotCode.live.addRobot"]
+          },
+          {
+            "id": "robotCode.walkthrough.sync",
+            "title": "Keep Your Copy in Sync",
+            "description": "The snapshot is the robot's last known state: **Fetch** updates it, **Pull** brings it into your file, **Push** sends your file back - and a push is refused if the robot changed since the snapshot, so a pendant edit is never silently overwritten.",
+            "media": { "markdown": "media/walkthrough/step6-sync.md" },
+            "completionEvents": ["onCommand:robotCode.sync.fetchFile"]
+          }
+        ]
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "robot-code-icons",
+        "label": "Robot Code (Seti + FANUC file icons)",
+        "path": "./media/file-icons/robot-code-icon-theme.json"
+      }
+    ],
+    "configuration": {
+      "title": "Robot Code",
+      "properties": {
+        "robotCode.fileIcons.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the FANUC file icons - the extension in big coloured letters (`LS` `VA` `TP` `KL` ... and `TXT`) - by switching the file icon theme to **Robot Code** the first time the extension runs. It is Seti, the theme a fresh VS Code shows, with the FANUC types on top, so no other file loses its icon. Turn off to keep your own icon theme: the theme you had is put back. Picking another theme yourself is respected too; turn this off and on again to switch back."
+        },
+        "robotCode.tp.autoRenumber": {
+          "type": "string",
+          "enum": [
+            "on",
+            "off",
+            "custom",
+            "scaffold"
+          ],
+          "default": "on",
+          "enumDescriptions": [
+            "Renumber as you edit, in the controller's format: a 4-wide number field, \"  \" before the instruction, \" ;\" on every line (robotCode.tp.lineNumberWidth / autoSemicolon).",
+            "Do not renumber as you edit. Renumber TP Lines and Format Document still work, in the controller's format.",
+            "Renumber the lines you type in the style set by robotCode.tp.customRenumber. Existing numbered lines are left as they are; use Apply Custom Line Style to restyle a program or selection.",
+            "Scaffold new lines with a blank prefix (spaces matching the highest existing line number width + colon). Existing lines are not renumbered. LINE_COUNT still updates. Useful for large programs or when renumbering creates git noise."
+          ],
+          "markdownDescription": "Automatically renumber TP lines (and update `LINE_COUNT`) as you edit. `true` / `false` from older settings still mean on / off."
+        },
+        "robotCode.tp.customRenumber": {
+          "type": "object",
+          "default": {
+            "indent": "    ",
+            "width": 0,
+            "terminator": false,
+            "number": "show"
+          },
+          "properties": {
+            "indent": {
+              "type": "string",
+              "description": "Text before the line number. Default: four spaces."
+            },
+            "width": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 6,
+              "description": "Right-align the number in a field this wide; 0 = as many digits as the number needs."
+            },
+            "terminator": {
+              "type": "boolean",
+              "description": "Add \" ;\" to instruction lines that lack one. Off by default; a terminator already there is always kept."
+            },
+            "number": {
+              "type": "string",
+              "enum": [
+                "show",
+                "ones",
+                "spaces",
+                "none"
+              ],
+              "default": "show",
+              "enumDescriptions": [
+                "Write the line number and colon.",
+                "Write \"1:\" on every line - the number as a marker, not a count.",
+                "Write spaces where the digits would be and keep the colon, so the instruction column stays put: \"     :  R[1]=1\".",
+                "Write the indent and the colon, no number: \"    :  R[1]=1\"."
+              ],
+              "description": "Whether the line number is written. Without numbers, Renumber TP Lines with the mode set to \"on\" puts them back."
+            }
+          },
+          "additionalProperties": false,
+          "markdownDescription": "The line style written when `robotCode.tp.autoRenumber` is `custom`. The default writes `    12:  R[1]=1` - four spaces, the number as it is, a colon, no ` ;` added. Set `number` to `spaces` or `none` to edit without line numbers."
+        },
+        "robotCode.tp.autoSemicolon": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically terminate TP instruction lines with ' ;' when renumbering."
+        },
+        "robotCode.tp.continueComments": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enter at the end of a `!comment` line starts the next line as a `!` comment, and Enter at the end of an `--eg:` extended comment adds a `:` continuation line - the way the pendant's editor does. Enter on a comment with nothing in it ends the run. Needs `robotCode.tp.autoRenumber` on."
+        },
+        "robotCode.tp.extendedCommentWidth": {
+          "type": "number",
+          "default": 78,
+          "minimum": 0,
+          "markdownDescription": "Widest line, in columns, of an `--eg:` extended comment. Renumbering re-wraps a comment with a longer line between words to this width, as the pendant's comment editor does; a line over it is flagged. **78** is what a ROBOGUIDE controller wrote (65 characters after `--eg: ` on the first line, 71 after `:  ` on each continuation). `0` switches both off."
+        },
+        "robotCode.tp.lineNumberWidth": {
+          "type": "number",
+          "default": 4,
+          "minimum": 3,
+          "maximum": 6,
+          "description": "Column width of the line number field (FANUC uses 4)."
+        },
+        "robotCode.tp.inlineHints": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the in-line hints written on a program line - the controller comment for a register/IO written without one, the live value of a register/IO, and the frame label after `P[n]`. Each is wrapped in `{ }` so it never reads as code. Turn off for a clean program text (the finer `robotCode.tp.decorations.*` / `robotCode.live.inlayValues` settings still apply)."
+        },
+        "robotCode.tp.decorations.positions": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show what a `P[n]` in a motion instruction is - its representation and the frames it is written against - after the reference, tinted by representation. Choose which parts with `robotCode.tp.decorations.positionFields`."
+        },
+        "robotCode.tp.decorations.positionFields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "type",
+              "userFrame",
+              "userTool"
+            ]
+          },
+          "uniqueItems": true,
+          "default": [
+            "type",
+            "userFrame",
+            "userTool"
+          ],
+          "markdownDescription": "Which badges to draw after `P[n]`: **type** (`JNT`/`XYZ`/`POS`), **userFrame** (`UFn`) and **userTool** (`UTn`). The order is always type, frame, tool. Leave the list empty to show none (or turn off `robotCode.tp.decorations.positions`)."
+        },
+        "robotCode.tp.decorations.comments": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the controller comment for registers and I/O that are written without an inline comment (e.g. R[5])."
+        },
+        "robotCode.tp.diagnostics.unusedLabels": {
+          "type": "boolean",
+          "default": true,
+          "description": "Report labels that are never jumped to."
+        },
+        "robotCode.tp.diagnostics.unusedPositions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Report positions in /POS that are never used by a motion instruction."
+        },
+        "robotCode.tp.diagnostics.missingPrograms": {
+          "type": "boolean",
+          "default": true,
+          "description": "Report CALL/RUN targets that do not exist in the workspace."
+        },
+        "robotCode.tp.diagnostics.commentMismatch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Report registers/I-O whose inline comment differs from the controller comment or from other uses in the same file."
+        },
+        "robotCode.tp.codeLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show CodeLens on labels (jump count) and on the program header (call sites)."
+        },
+        "robotCode.karel.ktransPath": {
+          "type": "string",
+          "default": "",
+          "description": "Full path to ktrans.exe (from ROBOGUIDE / OLPC). Leave empty to search PATH and the default ROBOGUIDE install."
+        },
+        "robotCode.karel.compileOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run ktrans every time a .kl file is saved."
+        },
+        "robotCode.karel.diagnostics.identifierLength": {
+          "type": "boolean",
+          "default": true,
+          "description": "Report identifiers longer than the KAREL limit."
+        },
+        "robotCode.karel.coreVersion": {
+          "type": "string",
+          "enum": ["auto", "V9", "V7-V8", "V6"],
+          "enumDescriptions": [
+            "From the Version= line of robotCode.karel.ktransConfig; V9 when none is set (what ktrans uses without a robot.ini).",
+            "V9.x: names up to 36 characters, PROGRAM names too.",
+            "V7.x / V8.x: names up to 36 characters, but PROGRAM names only 12.",
+            "V6.40 and older: every name 12 characters."
+          ],
+          "default": "auto",
+          "markdownDescription": "Controller core version the KAREL name-length check follows. Measured on ktrans: V6.40 allows 12 characters for every name, V7.70/V8.30 allow 36 but only 12 for the `PROGRAM` name, V9.x allows 36 for all."
+        },
+        "robotCode.karel.maxIdentifierLength": {
+          "type": ["number", "null"],
+          "default": null,
+          "minimum": 8,
+          "maximum": 64,
+          "markdownDescription": "Overrides `robotCode.karel.coreVersion` with one limit for every name. Leave empty to follow the core version."
+        },
+        "robotCode.karel.diagnostics.lint": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Lint KAREL before ktrans sees it: C-isms (`==`, `!=`, `&&`, `//`, `ELSEIF`), declarations after BEGIN, directives after declarations, `%COMMENT` over 16 characters, strings over 254, integers over 32 bits, reserved words as names, duplicate declarations, assignment to a constant, calls with the wrong number of arguments, RETURN with or without a value, MOVE under `%NOLOCKGROUP` (and the hint to add it when there is no motion). **Check Before Compile** (Ctrl+Alt+Shift+K) runs it with the `%INCLUDE` check and gives a verdict."
+        },
+        "robotCode.karel.diagnostics.lintIgnore": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "markdownDescription": "Lint rules to keep quiet, by code: `cStyle`, `declAfterBegin`, `directivePlacement`, `commentLength`, `stringLength`, `integerRange`, `reservedName`, `duplicate`, `assignConst`, `argCount`, `returnValue`, `lockGroup`, `noBegin`, `elseif` (with or without the `karel.lint.` prefix)."
+        },
+        "robotCode.karel.diagnostics.unusedVariables": {
+          "type": "boolean",
+          "default": true,
+          "description": "Report declared variables, constants and routines that are never referenced."
+        },
+        "robotCode.data.backupFolders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "resource",
+          "markdownDescription": "Extra folders (outside the workspace) to scan for controller .va and .ls files. Read from **workspace** settings only, so a new window starts with none; in a window with no folder open, **Add Controller Backup Folder** keeps its list for as long as the window is open."
+        },
+        "robotCode.data.hiddenBackupFolders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "resource",
+          "markdownDescription": "Backups taken out of the Backup panel with **Remove from Backup Panel** - folders inside the workspace (or inside an added backup folder) that are not scanned. Workspace settings only. **Show Removed Backups Again…** on the Backup panel puts them back."
+        },
+        "robotCode.data.maxFiles": {
+          "type": "number",
+          "default": 5000,
+          "description": "Maximum number of program files to index for cross-program navigation."
+        },
+        "robotCode.containers.gitignoreSnapshot": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "When **Initialize Robot Container** creates `.robocode-robot/`, also write a `.gitignore` inside it that excludes `snapshot/` — a full backup is tens of MB of regenerable data. Delete that file to commit snapshots."
+        },
+        "robotCode.views.listLimit": {
+          "type": "number",
+          "enum": [10, 50, 100, 250, 0],
+          "enumItemLabels": ["10", "50", "100", "250", "All"],
+          "default": 100,
+          "markdownDescription": "How many entries a long group in the Registers view shows at a time (registers, position registers, I/O, ...). A **Show more…** row at the end of the group shows the next ones; All shows everything. The dashboard and the Controller Options page have their own **Show** picker under each list."
+        },
+        "robotCode.views.latestBackupsOnly": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "In the Programs, PC programs and Backup views, show only the robot folders under a RUKUS `Latest` folder and hide the dated backups. Robot folders are always listed Latest first, then newest first. When the workspace has no Latest folder everything is shown. The filter button on those views toggles this."
+        },
+        "robotCode.containers.guardUpload": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Before a push, fetch the program from the robot and compare it to the snapshot **verbatim**. If they differ, someone changed the program on the pendant since the last fetch; the push is refused until the snapshot is updated, so uncaptured robot changes are never silently overwritten."
+        },
+        "robotCode.containers.pullAfterPush": {
+          "type": "string",
+          "enum": [
+            "always",
+            "when-identical",
+            "never"
+          ],
+          "default": "always",
+          "enumDescriptions": [
+            "After an explicit Upload Program, overwrite the working file with the controller's read-back even when it differs from what you sent (it usually will - DATE/MODIFIED, line numbers, variable labels) - so working = snapshot = robot. The difference is reported.",
+            "Only overwrite the working file when the controller's read-back is identical to what you sent; otherwise keep your file and warn.",
+            "Never touch the working file on a push. The snapshot still advances to the controller's copy."
+          ],
+          "markdownDescription": "The last step of an explicit **Upload Program**: pull the controller's copy back so **working = snapshot = robot**. This never applies to a live-edit save (which never rewrites the file you are editing). `when-identical` keeps your file when the controller changed it (usually only metadata)."
+        },
+        "robotCode.containers.snapshotHistory": {
+          "type": "number",
+          "default": 50,
+          "minimum": 0,
+          "markdownDescription": "How many prior versions of snapshot files to keep in `.robocode-robot/snapshot-history/` (the sync reflog): the copy a fetch replaced, so a captured pendant edit stays recoverable after the next push. `0` keeps everything."
+        },
+        "robotCode.containers.gitAware": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "On a push, if the program has uncommitted changes in your own git repository, mention it and offer to open Source Control — the habit of not pushing to the robot before committing. Off by default; taught in the walkthrough."
+        },
+        "robotCode.sync.promptOnOpen": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "When you open a program that belongs to a robot container, connect that program's robot and offer to fetch the newest copy into the snapshot. Fetching never changes your working copy. Not offered when the container's snapshot was fetched in the last 5 minutes, nor twice for the same file in a session. Choosing **Don't Ask Again** on the prompt turns this off."
+        },
+        "robotCode.robots": {
+          "type": "array",
+          "default": [],
+          "description": "Robot controllers for live (read-only) data.",
+          "items": {
+            "type": "object",
+            "required": [
+              "host"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Display name (also the fanuc:// authority)."
+              },
+              "host": {
+                "type": "string",
+                "description": "IP address or host name."
+              },
+              "httpPort": {
+                "type": "number",
+                "default": 80
+              },
+              "ftpPort": {
+                "type": "number",
+                "default": 21
+              },
+              "ftpUser": {
+                "type": "string",
+                "default": "",
+                "description": "FTP user (password is stored via \"Set Robot FTP Password\")."
+              },
+              "device": {
+                "type": "string",
+                "default": "MD:",
+                "description": "Device holding programs and generated diagnostics."
+              },
+              "useFtp": {
+                "type": "boolean",
+                "default": false,
+                "description": "Read files over FTP instead of the web server."
+              },
+              "pollIntervalMs": {
+                "type": "number",
+                "default": 5000,
+                "minimum": 1000,
+                "description": "Interval used only while autoRefresh is on for this robot."
+              },
+              "autoConnect": {
+                "type": "boolean",
+                "default": false,
+                "description": "Check that the controller answers when VS Code opens. Reads no data."
+              },
+              "autoRefresh": {
+                "type": "boolean",
+                "default": false,
+                "description": "Re-read the panels you have already opened, on a timer. Off by default: the controller generates each diagnostic file on request, so this is continuous load on the robot."
+              }
+            }
+          }
+        },
+        "robotCode.controllers.scope": {
+          "type": "string",
+          "enum": ["workspace", "user"],
+          "default": "workspace",
+          "description": "Where new robot controller profiles are saved. 'workspace' stores them in the .robocode-cell/cell.json container (shared with the team). 'user' stores them in VS Code user settings (personal)."
+        },
+        "robotCode.live.inlayValues": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show register and I/O values after each reference, from the last time you read them off the robot (green ON, dim OFF, orange numbers, yellow when simulated). Hover to see how old the reading is. Nothing is fetched from the robot to draw these."
+        },
+        "robotCode.live.fetchOnConnect": {
+          "type": "array",
+          "default": [
+            "registers",
+            "io",
+            "files"
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "registers",
+              "io",
+              "files",
+              "position",
+              "tasks",
+              "info"
+            ],
+            "enumDescriptions": [
+              "R, PR and SR values and comments (NUMREG.VA, POSREG.VA, STRREG.VA)",
+              "I/O state and comments (IOSTATE.DG)",
+              "the file listing for the device",
+              "current position (CURPOS.DG)",
+              "program state and the running line (PRGSTATE.DG)",
+              "controller version and F number (VERSION.DG)"
+            ]
+          },
+          "markdownDescription": "Read these **once** when a robot connects. The defaults are what the editor itself uses — register and I/O values for hovers and completion, and the device listing. Position, program state and controller info are left out on purpose: they describe what the robot is doing *right now*, so they belong on a button. Set to `[]` to read nothing at all on connect. **Nothing here repeats** — that is `autoRefresh`, per robot."
+        },
+        "robotCode.live.markReadOnlyFiles": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Give a file that is **on a controller** (read-only) a colour and an `RO` badge on its tab, in the Files list and in the Explorer, so it is not mistaken for the editable copy in the workspace. The colour is `robotCode.readOnlyFile` in `workbench.colorCustomizations`."
+        },
+        "robotCode.live.staleAfterSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 5,
+          "description": "Values older than this are dimmed, so a stale reading never passes for a current one."
+        },
+        "robotCode.live.heartbeatSeconds": {
+          "type": "number",
+          "default": 10,
+          "minimum": 0,
+          "markdownDescription": "While a robot is connected, ping it this often (a static web page over HTTP, or a bare FTP login) so the status bar's connected glyph means *answering now* and not *was connected once*. The cheapest possible request - it never asks the controller to generate a file. **0 turns the heartbeat off** (the extension then never contacts the controller on its own)."
+        },
+        "robotCode.live.filesShow": {
+          "type": "string",
+          "enum": [
+            "programs",
+            "all"
+          ],
+          "default": "programs",
+          "enumDescriptions": [
+            "Every .ls on the device, and a .tp only where no .ls of that name exists.",
+            "Every program and data file on the device (.ls .tp .va .dg .kl .pc .cm .txt .dt .io)."
+          ],
+          "markdownDescription": "What the **Files** panel under a robot shows of the device listing. The filter icon on the panel header flips it. Display only: the full listing still resolves CALLs and feeds Download Backup."
+        },
+        "robotCode.rukus.dataFolder": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Where RUKUS keeps its data (`Clusters\\`, `Backups\\`, `AppSettings.json`). Empty = found from the installed RUKUS: `Documents\\RUKUS`, or a portable RUKUS's data folder from the `RUKUS.portable` marker beside its exe. Set it for a shared or unusual location."
+        },
+        "robotCode.experimental.robotConnections": {
+          "type": "boolean",
+          "default": false,
+          "order": 0,
+          "markdownDescription": "**Experimental.** Talk to robots: the **Controllers** view, connecting over FTP/HTTP, reading registers, I/O, position and files off a controller, teach and record from the current position, snapshot from robot, download a backup, upload and live edit. Off, nothing in Robot Code sends a single request to a controller; backups, the editors, diagnostics, reports and RUKUS clusters all work without it."
+        },
+        "robotCode.rukus.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the hand-off buttons that open RUKUS for live monitoring, alarm history and scheduled backups."
+        },
+        "robotCode.rukus.downloadUrl": {
+          "type": "string",
+          "default": "https://github.com/Scyllasis/Robotic-Utility-Kit-User-System/releases",
+          "description": "Where to send someone who does not have RUKUS installed."
+        },
+        "robotCode.live.upload": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Allow **Push to Robot** (Ctrl+Alt+Shift+U): the open `.ls` goes onto the connected robot's device over FTP and replaces the program of that name. It is the one command that writes to a controller; it always asks first, is refused if the robot changed since the snapshot, refuses a program the controller reports as running, and reads the program back afterwards. Off hides it."
+        },
+        "robotCode.tp.diagnostics.duplicatePositionTolerance": {
+          "type": "number",
+          "default": 0.5,
+          "minimum": 0,
+          "markdownDescription": "Flag two taught positions in the **same user frame** that are closer together than this many millimetres — usually a point that was touched up and its leftover copy. `0` switches the check off."
+        },
+        "robotCode.tp.diagnostics.commentLength": {
+          "type": "number",
+          "default": 32,
+          "minimum": 0,
+          "markdownDescription": "Underline the part of a `!comment` line that runs past this many characters. A TP comment line holds **32** (the longest of 26,000 in real backups is exactly 32); use an extended comment (`--eg:`) for more. `0` switches the check off."
+        },
+        "robotCode.tp.diagnostics.cntBeforeOperation": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Warn when a `CNT` move is followed by something that has to happen **at** the point (a process instruction, a pulsed output, a hand signal). A CNT move rounds the corner instead of stopping, so the robot is somewhere else when it fires."
+        },
+        "robotCode.tp.diagnostics.fineRequiredPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Extra regular expressions matching instructions that must happen at a stopped position, for the `CNT` check above — e.g. `\"^CALL SPOT\"` or `\"^DO\\[12[0-9]\\]\"`. Plant-specific, because what counts as work differs per cell."
+        },
+        "robotCode.tp.diagnostics.crossReference": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Report what the **rest of this robot's programs** do with a register or I/O point: an output driven from two programs, a register read here but never written anywhere, one written but never read. Computed from the workspace index, once per register, at its first use."
+        },
+        "robotCode.karel.detectTabWidth": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "KAREL files use ROBOGUIDE's layout by default: the Tab key puts in a real tab, drawn 7 spaces wide as ROBOGUIDE's editor does. A file that mixes tabs and spaces only lines up at the tab width it was written with, so for such a file the width that lines its indentation up is used instead (4 for files written in most other editors). Turn off to always use `editor.tabSize`."
+        },
+        "robotCode.karel.diagnostics.undeclared": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Report KAREL identifiers that are used but never declared. **ktrans does not check this**, so a mistyped name translates cleanly and misbehaves on the robot. The `%INCLUDE` files are read from disk (relative to the source, then the KAREL support folder of ktrans); a program whose includes cannot all be found is skipped."
+        },
+        "robotCode.karel.ktransConfig": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to a `robot.ini` for ktrans (`/config`). It selects the core version and the controller's KAREL support files. Leave empty and ktrans reports *\"Unable to find 'robot.ini', using basic KAREL support files\"* and compiles anyway — fine for syntax checking, but builtins added after the base version will not resolve. Replaces the old `karel.ktransVersion`, which never worked: `/ver` is a query that prints the version and exits, so passing it with a file failed every compile."
+        },
+        "robotCode.tp.headerTemplates": {
+          "type": "array",
+          "markdownDescription": "Program header templates for **Insert Program Header** and **New TP Program**. Each template is `{ name, lines }`; every line becomes one `!` comment line (the pendant shows 32 characters). `${PROGRAM}`, `${COMMENT}`, `${DATE}`, `${TIME}`, `${USER}`, `${ROBOT}` and `${RULE}` (a full-width rule) fill themselves in; any other `${FIELD}` is asked for when the header is inserted. Edit these, add your own, or delete the ones you do not use — the defaults are starting points, not customer specifications.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "lines"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "lines": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": [
+            {
+              "name": "Ford (GVOSS)",
+              "lines": [
+                "********************************",
+                "${DESCRIPTION}",
+                "",
+                " NOTE: This program has",
+                " ${GROUPS} motion",
+                "********************************"
+              ]
+            },
+            {
+              "name": "GM",
+              "lines": [
+                "--------------------------------",
+                "${PROGRAM}",
+                "${DESCRIPTION}",
+                "--------------------------------",
+                "CELL: ${CELL}  ROBOT: ${ROBOT}",
+                "BY: ${AUTHOR} ON ${DATE}",
+                "REV ${REV}: ${CHANGE}",
+                "--------------------------------"
+              ]
+            },
+            {
+              "name": "Stellantis",
+              "lines": [
+                "================================",
+                "PROG: ${PROGRAM}",
+                "FUNC: ${DESCRIPTION}",
+                "LINE: ${LINE}  STN: ${STATION}",
+                "ROBOT: ${ROBOT}",
+                "AUTH: ${AUTHOR}  ${DATE}",
+                "================================"
+              ]
+            },
+            {
+              "name": "Generic",
+              "lines": [
+                "${RULE}",
+                "${PROGRAM} - ${DESCRIPTION}",
+                "${AUTHOR} ${DATE}",
+                "${RULE}"
+              ]
+            }
+          ]
+        },
+        "robotCode.tp.programTemplates": {
+          "type": "array",
+          "markdownDescription": "Program templates for **New TP Program** and **Insert Program Template at Cursor**: the /MN body a plant standard starts every program from. Each is `{ name, description, header, lines }`; `lines` are body lines WITHOUT line numbers or ` ;` (comments carry their own `!`, a blank line is `\"\"`) - the renumber numbers and terminates them. `header` names the header template the style goes with (informational). The same `${FIELD}` placeholders as header templates: `${PROGRAM}`, `${COMMENT}`, `${DATE}`, `${TIME}`, `${USER}`, `${ROBOT}`, `${RULE}` fill themselves in; any other is asked for once.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "lines"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "header": {
+                "type": "string"
+              },
+              "lines": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": [
+            {
+              "name": "Empty",
+              "description": "the header only - start from nothing",
+              "lines": []
+            },
+            {
+              "name": "Main loop",
+              "description": "frames set, then a LBL[10] loop that runs until aborted",
+              "lines": [
+                "!${RULE}",
+                "!MAIN LOOP",
+                "!${RULE}",
+                "UFRAME_NUM=${UFRAME}",
+                "UTOOL_NUM=${UTOOL}",
+                "",
+                "LBL[10:MAIN LOOP]",
+                "!Put the cycle here",
+                "",
+                "JMP LBL[10]"
+              ]
+            }
+          ]
+        },
+        "robotCode.sysvars.referenceFile": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Path to a `SysVarsReference.json` (the file RUKUS ships in its `Assets` folder) for `$` system variable hovers and completion. Leave empty to use the copy from the RUKUS install on this PC, found through the `rukus://` registration; a subset (every described variable) is bundled with the extension and used when neither is available."
+        },
+        "robotCode.tp.decorations.callTargets": {
+          "type": "boolean",
+          "default": true,
+          "description": "Tint CALL / RUN / macro names by what they resolve to: amber TP program, blue PC program, teal macro, red-dotted when nothing resolves."
+        },
+        "robotCode.tp.decorations.extendedComments": {
+          "type": "boolean",
+          "default": true,
+          "description": "Shade every line of a --eg extended comment so its extent is visible."
+        },
+        "robotCode.tp.decorations.registerReads": {
+          "type": "boolean",
+          "default": true,
+          "description": "Dotted underline under registers and I/O points that are read (including inside parentheses)."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[fanuc-tp]": {
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "on",
+          "strings": "on"
+        },
+        "editor.suggest.snippetsPreventQuickSuggestions": false,
+        "editor.wordBasedSuggestions": "off"
+      },
+      "[fanuc-karel]": {
+        "editor.suggest.snippetsPreventQuickSuggestions": false,
+        "editor.insertSpaces": false,
+        "editor.tabSize": 7
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit -p .",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "test": "npm run check:boundaries && node esbuild.mjs --test && node dist/test.js",
+    "package": "npm run sysvars && npm run typecheck && npm run check:boundaries && npm run build -- --production && vsce package --no-dependencies",
+    "install-local": "npm run package && node scripts/install-local.mjs",
+    "smoke": "node esbuild.mjs && node test/runIntegration.mjs \"../reference-backup\" \".vscode-test\"",
+    "smoke:containers": "node esbuild.mjs && node test/runContainersSmoke.mjs \".vscode-test\"",
+    "smoke:live": "node esbuild.mjs && node test/runLiveSync.mjs",
+    "smoke:vim": "node esbuild.mjs && node test/runVim.mjs",
+    "smoke:shots": "node esbuild.mjs && node test/runIntegration.mjs \"../reference-backup\" \".vscode-test\" \".vscode-test/shots\" \"../Robotic Utility Kit/RUKUS.Tests/TestData/corpus/ir/irmath.kl\"",
+    "dev": "node scripts/run-dev-host.mjs",
+    "dev:debug": "node scripts/run-dev-host.mjs --debug",
+    "mock": "node test/mockRobot.mjs \"../reference-backup/S002R01_full_260823\" 18080 18021",
+    "sysvars": "node scripts/build-sysvars.mjs",
+    "release": "node scripts/release.mjs",
+    "version:id": "node scripts/version-id.mjs",
+    "notepadpp": "node scripts/make-notepadpp.mjs && node esbuild.mjs --npp"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
+  },
+  "preview": true,
+  "author": {
+    "name": "RUKUS Team"
+  }
+}
