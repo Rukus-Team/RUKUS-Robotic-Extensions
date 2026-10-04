@@ -85,7 +85,8 @@ export function run(check: (cond: unknown, msg: string) => void, lsFiles: string
     rows += edits.length;
     for (const e of edits.slice(0, 1)) bad.push(`${path.basename(f)}:${e.line + 1} ${JSON.stringify(text.split(/\r?\n/)[e.line])} -> ${JSON.stringify(e.newText)}`);
   }
-  check(files > 20, `position format corpus covered only ${files} files`);
+  // CI has no controller backups; only a local run must cover the corpus.
+  if (!process.env.CI) check(files > 20, `position format corpus covered only ${files} files`);
   check(rows === 0, `formatPositions rewrote ${rows} controller-written row(s):\n    ${bad.slice(0, 6).join('\n    ')}`);
   console.log(`  position format: ${files} controller files, ${rows} row(s) changed by Format Document`);
 }

@@ -28,7 +28,8 @@ export function run(check: (cond: unknown, msg: string) => void): void {
   const r2 = resolveDataRoot(stick, docs, mem({ [path.join(stick, 'RUKUS.portable')]: '# comment\n\n..\\Data\n' }));
   check(r2.portable && r2.root === path.resolve(stick, '..\\Data'), `relative marker path is relative to the exe (${r2.root})`);
   const r3 = resolveDataRoot(stick, docs, mem({ [path.join(stick, 'RUKUS.portable')]: 'D:\\Shared\\RUKUS' }));
-  check(r3.portable && r3.root === 'D:\\Shared\\RUKUS', 'absolute marker path is taken as it is');
+  // A drive-letter path is only absolute to Windows path rules.
+  if (process.platform === 'win32') check(r3.portable && r3.root === 'D:\\Shared\\RUKUS', 'absolute marker path is taken as it is');
   const r4 = resolveDataRoot(stick, docs, { exists: p => p.endsWith('RUKUS.portable'), readText: () => { throw new Error('locked'); } });
   check(r4.portable && r4.root === path.join(stick, 'RUKUS-Data'), 'an unreadable marker still means portable (the host PC is not written to)');
 
