@@ -20,3 +20,4 @@ probe-results/**
 data/tp-syntax-overrides.json
 data/tp-syntax-verified.json
 .github/**
+public/**
