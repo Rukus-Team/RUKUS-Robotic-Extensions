@@ -2,13 +2,17 @@
   "name": "robot-code",
   "displayName": "Robot Code — FANUC TP & KAREL (Beta)",
   "description": "BETA - in active development, not yet proven on a live cell. Full IDE support for FANUC robots: TP (.ls) and KAREL (.kl) with hover docs, go-to-definition, diagnostics, register/I-O comment resolution from controller backups, renumbering, call graphs, ktrans integration and more. Built to grow to other robot brands.",
-  "version": "26.109.2",
+  "version": "26.109.3",
   "publisher": "rukus-team",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Rukus-Team/RUKUS-Robotic-Extensions.git"
   },
+  "bugs": {
+    "url": "https://github.com/Rukus-Team/RUKUS-Robotic-Extensions/issues"
+  },
+  "homepage": "https://github.com/Rukus-Team/RUKUS-Robotic-Extensions#readme",
   "private": true,
   "engines": {
     "vscode": "^1.90.0"
@@ -573,6 +577,12 @@
         "title": "Remove from Backup Panel",
         "category": "Robot Code",
         "icon": "$(close)"
+      },
+      {
+        "command": "robotCode.reportIssue",
+        "title": "Report an Issue…",
+        "category": "Robot Code",
+        "icon": "$(report)"
       },
       {
         "command": "robotCode.data.restoreBackupFolders",
@@ -1732,6 +1742,11 @@
           "command": "robotCode.live.getAll",
           "when": "view == robotCode.robots",
           "group": "1_get@1"
+        },
+        {
+          "command": "robotCode.reportIssue",
+          "when": "view == robotCode.robots",
+          "group": "9_help@1"
         }
       ],
       "commandPalette": [

@@ -1,5 +1,19 @@
 # Changelog
 
+## 26.109.3 - 2026-10-04 - Report an Issue; public repository; beta badge
+
+### Added
+- **Robot Code: Report an Issue** (command palette, and the Robots view's `...` menu) opens the
+  bug report form on GitHub with the Robot Code, VS Code and OS versions already filled in.
+- **Bug report and feature request forms** on the public repository, with a reminder to keep
+  customer programs, plant names and IP addresses out of a public report.
+
+### Changed
+- The extension's home is now the public **Rukus-Team/RUKUS-Robotic-Extensions** repository: the
+  Marketplace page links its issues and README, and every release there carries the `.vsix`.
+- The Marketplace listing shows the **Preview** badge and "(Beta)" while Robot Code is in beta.
+- README: install steps (Marketplace or `.vsix`) and a "Feedback & issues" section.
+
 ## 26.109.2 - 2026-10-03 - Long lists capped; UX leftovers (#3); Robot Code with Vim (#19)
 
 ### Added
