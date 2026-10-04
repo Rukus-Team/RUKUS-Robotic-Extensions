@@ -1,0 +1,14 @@
+{
+  "name": "Test Cell",
+  "controllers": {
+    "RobotA": {
+      "host": "192.168.1.100",
+      "device": "MD:"
+    },
+    "RobotB": {
+      "host": "192.168.1.101",
+      "useFtp": true,
+      "ftpPort": 21
+    }
+  }
+}

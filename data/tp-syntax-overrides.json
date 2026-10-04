@@ -1,0 +1,307 @@
+{
+ "about": "Corrections to the manual-extracted TP syntax from real controllers: every line was loaded as a one-line .LS by scripts/tp-option-probe.mjs on two V9.40 ROBOGUIDE controllers (HandlingTool R-2000iC/210L with iRCalibration, Palletizing, Line Tracking, iRPickTool, iRVision; SpotTool+ R-2000iC/210L with Servo Gun, Force Control, Path Switching) on 2026-10-03. Applied by scripts/import-tp-syntax.mjs after the merge. 'probe' records what the controller did.",
+ "items": {
+  "instruction:DETECT POINT": {
+   "remove": true,
+   "reason": "'Detect Point[1] World[-X]' rejected (ASBN-031) on HandlingTool V9.40; the controller spells it Detect_Point - merged into instruction:DETECT_POINT"
+  },
+  "instruction:DETECT_POINT": {
+   "forms": [
+    "Detect_Point[<detect schedule>] <World|UFrame|UTool>[<+|-><X|Y|Z>]"
+   ],
+   "examples": [
+    "Detect_Point[1] UFrame[-X]",
+    "Detect_Point[1] UTool[-Z]",
+    "Detect_Point[1] World[-X]"
+   ],
+   "confidence": "high",
+   "probe": "accepted as written: Detect_Point[1] UTool[-Z] (SpotTool+), Detect_Point[1] World[-X] (HandlingTool)"
+  },
+  "instruction:UTOOL START": {
+   "remove": true,
+   "reason": "'UTool Start[1]' rejected (ASBN-092); the controller takes UTool_Start[n] / UTool_End[..] - instruction:UTOOL_START, instruction:UTOOL_END"
+  },
+  "instruction:UTOOL_START": {
+   "confidence": "high",
+   "probe": "accepted as written: UTool_Start[1]"
+  },
+  "instruction:UTOOL_END": {
+   "notes": [
+    "The bracket holds the calibration mode the program was created with, e.g. UTool_End[New_XYZWPR]; UTool_End[Cal-Plate] was rejected on V9.40 (ASBN-031)."
+   ],
+   "confidence": "high",
+   "probe": "accepted: UTool_End[New_XYZWPR]; rejected: UTool_End[Cal-Plate]"
+  },
+  "instruction:UFRAME START": {
+   "forms": [
+    "UFrame_Start[<schedule>]"
+   ],
+   "examples": [
+    "UFrame_Start[1]"
+   ],
+   "notes": [
+    "Spelled with an underscore in the program; 'UFrame Start[1]' is the pendant's display and is rejected by the loader. The matching end instruction was not confirmed (UFrame_End[Cal-Plate] was rejected)."
+   ],
+   "confidence": "high",
+   "probe": "accepted: UFrame_Start[1]; rejected: UFrame Start[1], UFrame_End[Cal-Plate]",
+   "keyword": "UFrame_Start[n]"
+  },
+  "instruction:CALIB START": {
+   "forms": [
+    "Calib_Start[<schedule>]",
+    "Calib_End[Calibration]",
+    "Calib_End[Recovery]"
+   ],
+   "examples": [
+    "Calib_Start[1]",
+    "Calib_End[Calibration]",
+    "Calib_End[Recovery]"
+   ],
+   "notes": [
+    "Spelled with an underscore in the program; 'Calib Start[1]' is rejected by the loader."
+   ],
+   "confidence": "high",
+   "probe": "accepted as written: Calib_Start[1], Calib_End[Calibration], Calib_End[Recovery]",
+   "keyword": "Calib_Start[n] / Calib_End[..]"
+  },
+  "instruction:DETECT CIRCLE": {
+   "forms": [
+    "Detect_Circle[<sched>](<xy offset>,<z offset>)<World|UFrame|UTool>[<+|-><X|Y|Z>]"
+   ],
+   "examples": [
+    "Detect_Circle[1]( 30.00, 10.00)World[-X]",
+    "Detect_Circle[1]( 30.00, 10.00)UFrame[-X]"
+   ],
+   "notes": [
+    "Spelled with an underscore in the program; 'Detect Circle[1]...' is rejected (ASBN-031)."
+   ],
+   "confidence": "high",
+   "probe": "accepted: Detect_Circle[1](30.00,10.00)World[-X] -> Detect_Circle[1]( 30.00, 10.00)World[-X]",
+   "keyword": "Detect_Circle[n]"
+  },
+  "instruction:DETECT JOINT": {
+   "forms": [
+    "Detect_Joint[<sched>] Axis(<axis>,<+|->)"
+   ],
+   "examples": [
+    "Detect_Joint[1] Axis(1,+)"
+   ],
+   "notes": [
+    "Spelled with an underscore in the program; 'Detect Joint[1] ...' is rejected (ASBN-031)."
+   ],
+   "confidence": "high",
+   "probe": "accepted as written: Detect_Joint[1] Axis(1,+)",
+   "keyword": "Detect_Joint[n]"
+  },
+  "instruction:UPDATE FRAME": {
+   "forms": [
+    "Update_Frame"
+   ],
+   "examples": [
+    "Update_Frame"
+   ],
+   "notes": [
+    "Spelled with an underscore; 'Update Frame' and 'Update_TCP' are rejected on V9.40 - the tool version is Update_Tool."
+   ],
+   "confidence": "high",
+   "probe": "accepted: Update_Frame; rejected: Update Frame, Update_TCP",
+   "keyword": "Update_Frame"
+  },
+  "instruction:UPDATE_TOOL": {
+   "confidence": "high",
+   "probe": "accepted as written: Update_Tool"
+  },
+  "instruction:END COND ON": {
+   "remove": true,
+   "reason": "'END COND ON' (the pendant menu's short name) rejected (ASBN-092); programs use END CONDITION ON/OFF - instruction:END CONDITION ON"
+  },
+  "instruction:END CONDITION ON": {
+   "forms": [
+    "END CONDITION ON",
+    "END CONDITION OFF"
+   ],
+   "notes": [
+    "'END COND' on the pendant's instruction menu is an abbreviation; the program line is END CONDITION ON/OFF (END COND ON is rejected)."
+   ],
+   "confidence": "high",
+   "probe": "accepted: END CONDITION OFF; rejected: END COND ON"
+  },
+  "instruction:TRQ ERROR ON": {
+   "remove": true,
+   "reason": "'TRQ ERROR OFF' rejected (ASBN-098); programs use TORQUE ERROR ON/OFF"
+  },
+  "instruction:GET DIAG DATA": {
+   "remove": true,
+   "reason": "'GET DIAG DATA' rejected (ASBN-092); programs use GET DIAGNOSIS DATA"
+  },
+  "motion-option:SOFT FLOAT[N] (MOTION OPTION)": {
+   "remove": true,
+   "reason": "'L P[1] 100mm/sec FINE Soft Float[1]' rejected (ASBN-092); the option is SOFTFLOAT[n] - motion-option SOFTFLOAT[n] (accepted)"
+  },
+  "instruction:IF PL": {
+   "forms": [
+    "IF PL[<i>]=[<row>,<column>,<layer>],JMP LBL[<n>]",
+    "IF PL[<i>]<>[<row>,<column>,<layer>],CALL <prog>"
+   ],
+   "examples": [
+    "IF PL[1]=[1,1,1],JMP LBL[1]",
+    "IF PL[2]<>[1,1,2],CALL SUB1"
+   ],
+   "notes": [
+    "A pallet register is compared with a [row,column,layer] element, not with R[]: 'IF PL[1]=R[2],JMP LBL[1]' is rejected on V9.40."
+   ],
+   "confidence": "high",
+   "probe": "accepted: IF PL[1]=[1,1,1],JMP LBL[1], IF PL[1]<>[1,1,2],JMP LBL[1], PL[1]=[1,1,1]; rejected: IF PL[1]=R[2],JMP LBL[1]"
+  },
+  "function:MIXED LOGIC EXPRESSION ( ... ) WITH !, AND, OR": {
+   "examples": [
+    "DO[1]=(DI[1] AND !DI[2])",
+    "IF (DI[1]),JMP LBL[1]",
+    "WAIT (DI[1])",
+    "R[1] = ((GI[1] + R[1]) * AI[1])"
+   ],
+   "notes": [
+    "A mixed-logic IF needs the comma before its action: IF (DI[1]),JMP LBL[1] - without it the line is rejected (ASBN-092)."
+   ],
+   "probe": "accepted: WAIT (DI[1]); rejected: IF (DI[1]) JMP LBL[1]"
+  },
+  "function:IF": {
+   "examples": [
+    "R[1] = (SIN[R[2]])",
+    "R[3] = (SIN[R[4]] + COS[R[5]])"
+   ],
+   "notes": [
+    "Math functions are only legal inside a mixed-logic expression in parentheses: R[1]=(ABS[R[2]]); R[1]=ABS[R[2]] is rejected."
+   ],
+   "probe": "accepted: R[1]=(ABS[R[1]]) and every function in parentheses; rejected without the parentheses"
+  },
+  "instruction:FORCE CTRL": {
+   "notes": [
+    "ErrorLBL[n] is required: FORCE CTRL[1] alone is rejected. The controller stores the label on a continuation line (FORCE CTRL[1:] then : ErrorLBL[0])."
+   ],
+   "confidence": "high",
+   "probe": "accepted: FORCE CTRL[1] ErrorLBL[0] -> 'FORCE CTRL[1:]' + ': ErrorLBL[0]'; rejected: FORCE CTRL[1]"
+  },
+  "instruction:PS": {
+   "notes": [
+    "Every PS form shown in the manual was rejected (ASBN-092) on a V9.40 SpotTool+ controller with Path Switching (J693) installed; the program-line spelling is unconfirmed."
+   ],
+   "confidence": "medium",
+   "probe": "rejected: PS -100mm +0.2sec,DO[1]=(ON) and 4 variants; the calling DB line was accepted"
+  },
+  "instruction:SPOT": {
+   "notes": [
+    "On a V9.40 SpotTool+ servo-gun controller the loader keeps only SPOT[S=n] (plus ANTIC=): SPOT[BU=*,P=M,S=2,BU=*] is stored as SPOT[S=2], on a continuation line after the motion. The BU/EP/P fields belong to other gun types."
+   ],
+   "probe": "accepted: L P[1] 500mm/sec FINE SPOT[BU=*,P=M,S=2,BU=*] -> L P[1] 500mm/sec FINE + :SPOT[S=2]"
+  },
+  "motion-option:ANTIC (ANTICIPATION OVERRIDE IN SPOT)": {
+   "notes": [
+    "On a V9.40 SpotTool+ servo-gun controller SPOT[BU=C,S=1,BU=O,ANTIC(B=300,G=150)] is stored as SPOT[S=1,ANTIC=150] - the gun value only."
+   ],
+   "probe": "accepted, stored as :SPOT[S=1,ANTIC=150]"
+  },
+  "motion-option:SPOT": {
+   "notes": [
+    "On a V9.40 SpotTool+ servo-gun controller the stored forms are SPOT[S=n,ANTIC=m] and BACKUP[B=OPEN|CLOSE,ANTIC=m], each on a continuation line after the motion."
+   ],
+   "probe": "accepted: SPOT[S=1,ANTIC=150], BACKUP[B=CLOSE,ANTIC=20]"
+  },
+  "instruction:PRESS_MOTN": {
+   "notes": [
+    "The controller writes it in capitals on a continuation line: L P[1] 2000mm/sec FINE then : PRESS_MOTN[SD=1,P=1,t=2.0]."
+   ],
+   "confidence": "high",
+   "probe": "accepted: L P[1] 2000mm/sec FINE Press_motn [SD=1,P=1,t=2.0] -> + :PRESS_MOTN[SD=1,P=1,t=2.0]"
+  },
+  "instruction:RESET WATER SAVER": {
+   "confidence": "high",
+   "probe": "accepted: J P[1] 50% FINE RESET WATER SAVER -> + :RESET WATER SAVER"
+  },
+  "instruction:TIPDRESS": {
+   "notes": [
+    "On a V9.40 SpotTool+ servo-gun controller TIPDRESS[SD=1,P=1,t=1,TD=1,ED=1] is stored as TIPDRESS[TD=1]."
+   ],
+   "probe": "accepted, stored as TIPDRESS[TD=1]"
+  },
+  "motion-option:BACKUP[B=...,ANTIC=M]": {
+   "confidence": "high",
+   "probe": "accepted as written: J P[4] 100% FINE BACKUP[B=CLOSE,ANTIC=20] (on a continuation line)"
+  },
+  "motion-option:BACKUP=OPEN/CLOSE, BACKUP[B=..] (MOTION OPTION)": {
+   "forms": [
+    "<motion> BACKUP[B=<OPEN|CLOSE|*>,ANTIC=<m>]"
+   ],
+   "notes": [
+    "BACKUP=OPEN / BACKUP=CLOSE are rejected (ASBN-021 Expecting a [) on a V9.40 SpotTool+ controller; write BACKUP[B=OPEN]."
+   ],
+   "probe": "rejected: BACKUP=CLOSE, BACKUP=OPEN; accepted: BACKUP[B=CLOSE,ANTIC=20]"
+  },
+  "instruction:BACKUP": {
+   "notes": [
+    "BACKUP=OPEN / BACKUP=CLOSE were rejected (ASBN-021 Expecting a [) on a V9.40 SpotTool+ servo-gun controller; BACKUP[B=CLOSE,ANTIC=20] was accepted."
+   ],
+   "confidence": "medium",
+   "probe": "rejected: BACKUP=OPEN, BACKUP=CLOSE"
+  },
+  "motion-option:GUN=ON (ASCII EXAMPLE)": {
+   "notes": [
+    "Rejected (ASBN-092) on a V9.40 SpotTool+ controller - an example from a manual for another application."
+   ],
+   "confidence": "medium",
+   "probe": "rejected: J P[2] 100% FINE Gun=ON"
+  },
+  "motion-option:UPDET_OFS": {
+   "confidence": "high",
+   "probe": "accepted: L P[1] 2000mm/sec CNT50 : SPOT[...] : UPDET_OFS=3.0mm -> + :SPOT[S=1] UPDET_OFS=3.0mm"
+  },
+  "instruction:ISO CONTACTOR": {
+   "notes": [
+    "On a V9.40 SpotTool+ servo-gun controller (one weld controller) WC= is dropped: ISO CONTACTOR[WC=1,OPEN] is stored as ISO CONTACTOR[OPEN]; [WC=1,CL] is rejected (expects OPEN or CLOSE)."
+   ],
+   "probe": "accepted: ISO CONTACTOR[WC=1,OPEN] -> ISO CONTACTOR[OPEN]; rejected: ISO CONTACTOR[WC=1,CL]"
+  },
+  "instruction:TORQUE ERROR ON": {
+   "forms": [
+    "TORQUE ERROR ON",
+    "TORQUE ERROR OFF"
+   ],
+   "notes": [
+    "TRQ ERROR on the pendant menu is an abbreviation; TRQ ERROR ON is rejected by the loader (ASBN-098)."
+   ],
+   "confidence": "high",
+   "probe": "accepted: TORQUE ERROR ON/OFF (SpotTool+); rejected: TRQ ERROR ON"
+  },
+  "instruction:GET DIAGNOSIS DATA": {
+   "forms": [
+    "GET DIAGNOSIS DATA"
+   ],
+   "notes": [
+    "GET DIAG DATA on the pendant menu is an abbreviation; it is rejected by the loader (ASBN-092)."
+   ],
+   "confidence": "high",
+   "probe": "accepted: GET DIAGNOSIS DATA (SpotTool+); rejected: GET DIAG DATA"
+  },
+  "instruction:SOFTFLOAT": {
+   "forms": [
+    "SOFTFLOAT[<schedule>]"
+   ],
+   "notes": [
+    "One word in the program: Soft Float[1] is rejected (ASBN-098)."
+   ],
+   "confidence": "high",
+   "probe": "accepted: SOFTFLOAT[1], SOFTFLOAT[10]; rejected: Soft Float[1]"
+  },
+  "instruction:SOFTFLOAT END": {
+   "forms": [
+    "SOFTFLOAT END"
+   ],
+   "confidence": "high",
+   "probe": "accepted: SOFTFLOAT END; rejected: Soft Float END"
+  },
+  "motion-option:SOFTFLOAT[N] (MOTION OPTION)": {
+   "confidence": "high",
+   "probe": "accepted: L P[1] 100mm/sec FINE SOFTFLOAT[1]"
+  }
+ }
+}

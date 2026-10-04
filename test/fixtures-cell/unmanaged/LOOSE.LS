@@ -1,0 +1,7 @@
+/PROG  LOOSE
+/ATTR
+LINE_COUNT	= 1;
+/MN
+   1:  R[1]=1 ;
+/POS
+/END

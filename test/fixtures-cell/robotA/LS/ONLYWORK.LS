@@ -1,0 +1,7 @@
+/PROG  ONLYWORK
+/ATTR
+LINE_COUNT	= 1;
+/MN
+   1:  R[10]=1 ;
+/POS
+/END

@@ -1,0 +1,4162 @@
+{
+ "about": "Which catalog items a real FANUC controller accepted, from scripts/tp-option-probe.mjs via tp-probe-verdicts.mjs. verdict: confirmed (loaded and kept word for word), respelled (loaded, stored as \"stored\"), option (keyword recognised, option not installed), setup (recognised, needs configuration). Only positive results are listed.",
+ "controllers": "V9.40 R-30iB Plus in ROBOGUIDE, 2026-10-03",
+ "date": "2026-10-03",
+ "items": {
+  "function:ABS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(ABS[R[1]])"
+  },
+  "function:ACOS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(ACOS[R[1]])"
+  },
+  "function:ASIN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(ASIN[R[1]])"
+  },
+  "function:ATAN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(ATAN[R[1]])"
+  },
+  "function:ATAN2": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(ATAN2[R[1],R[2]])"
+  },
+  "function:COS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(COS[R[1]])"
+  },
+  "function:EXP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(EXP[R[1]])"
+  },
+  "function:LN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(LN[R[1]])"
+  },
+  "function:MATH FUNCTIONS (SIN, COS, TAN, ASIN, ACOS, ATAN, ATAN2, SQRT, LN, EXP, ABS, TRUNC, ROUND)": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[6:Weld Sched2 Num]=(ABS[R[5]])"
+  },
+  "function:MIXED LOGIC EXPRESSION ( ... ) WITH !, AND, OR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "WAIT (DI[1:EXT RUN ENABLE])"
+  },
+  "function:MOD / DIV": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[1]=R[1] DIV 1"
+  },
+  "function:ROUND": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(ROUND[R[1]])"
+  },
+  "function:SIN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(SIN[R[1]])"
+  },
+  "function:SQRT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(SQRT[R[1]])"
+  },
+  "function:R": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[4:Weld Sched1 Num]=STRLEN SR[2]"
+  },
+  "function:SR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SR[1]=SUBSTR SR[1],R[2],R[3:Weld Retries]"
+  },
+  "function:TAN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(TAN[R[1]])"
+  },
+  "function:TRUNC": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[3:Weld Retries]=(TRUNC[R[1]])"
+  },
+  "instruction:--": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "--eg:APPROACH POSITION"
+  },
+  "instruction:!": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "!APPROACH POSITION"
+  },
+  "instruction://": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "//J P[1] 100% FINE"
+  },
+  "instruction:$": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[1]=$SHELL_CONFIG.$JOB_BASE"
+  },
+  "instruction:A P": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "A P[7] 50mm/sec CNT100"
+  },
+  "instruction:ABORT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "ABORT"
+  },
+  "instruction:ACCUTRIG LNSCH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "ACCUTRIG LNSCH[1]"
+  },
+  "instruction:AO": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "AO[1]=0"
+  },
+  "instruction:APPROACH_RATE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Approach_RATE[GP:1]=100%"
+  },
+  "instruction:APPROACH_STOP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Approach_STOP[1]=TMP_DISABLE"
+  },
+  "instruction:APPROACH_WAIT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Approach_WAIT[1]=ENABLE"
+  },
+  "instruction:AUTO TUNING ON": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "AUTO TUNING ON"
+  },
+  "instruction:BACKUP": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "instruction:CALIB START": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool"
+   ],
+   "stored": "Calib_Start[1]"
+  },
+  "instruction:CALL PROGRAM (WITH ARGUMENTS)": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SUB1"
+  },
+  "instruction:CALMATRIX": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:CLEAR_RESUME_PROG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CLEAR_RESUME_PROG"
+  },
+  "instruction:COL DETECT ON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "COL DETECT OFF"
+  },
+  "instruction:COL GUARD ADJUST": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "COL GUARD ADJUST"
+  },
+  "instruction:DETECT CIRCLE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool"
+   ],
+   "stored": "Detect_Circle[1]( 30.00, 10.00)UFrame[-X]"
+  },
+  "instruction:DETECT JOINT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool"
+   ],
+   "stored": "Detect_Joint[1] Axis(1,+)"
+  },
+  "instruction:DETECT_POINT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Detect_Point[1] UFrame[-X]"
+  },
+  "instruction:DIAG_REC_SEC": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "DIAG_REC_SEC[1,1.00]"
+  },
+  "instruction:DIAG_REC": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "DIAG_REC[1,1,500]"
+  },
+  "instruction:DO": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "DO[1:RUN INTRPT ACK]=ON"
+  },
+  "instruction:END": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "END"
+  },
+  "instruction:END CONDITION ON": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "END CONDITION ON"
+  },
+  "instruction:ENDFOR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "ENDFOR"
+  },
+  "instruction:ENTERZONE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "EnterZone[1]"
+  },
+  "instruction:ERROR_PROG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "ERROR_PROG=PRG"
+  },
+  "instruction:EXITZONE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "ExitZone[1]"
+  },
+  "instruction:FOLLOW UP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "FOLLOW UP"
+  },
+  "instruction:FOR R": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "FOR R[1]=1 TO 5"
+  },
+  "instruction:FORCE CTRL": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "FORCE CTRL[1:] :ErrorLBL[0]"
+  },
+  "instruction:GET DIAGNOSIS DATA": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "GET DIAGNOSIS DATA"
+  },
+  "instruction:GONE_TIME": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "GONE_TIME[10] LNSCH[1] PR[1] TRIG[20]"
+  },
+  "instruction:GUN ATTACH": {
+   "verdict": "option",
+   "on": [
+    "SpotTool+"
+   ]
+  },
+  "instruction:GUN CONTACTOR": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "GUN CONTACTOR[OPEN]"
+  },
+  "instruction:GUN DETACH": {
+   "verdict": "option",
+   "on": [
+    "SpotTool+"
+   ]
+  },
+  "instruction:GUN ZERO MASTER": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "Gun Zero Master[1]"
+  },
+  "instruction:IBGN START": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:IC COMB PAIR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "IC Comb Pair [1] Enable"
+  },
+  "instruction:IC HAND MODEL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "IC Hand Model [GP:1] = 0"
+  },
+  "instruction:IF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "IF R[1]=R[2],JMP LBL[1]"
+  },
+  "instruction:IF PL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool"
+   ],
+   "stored": "IF PL[1]=[1,1,1],JMP LBL[1]"
+  },
+  "instruction:ISO CONTACTOR": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "instruction:J P": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 100% FINE"
+  },
+  "instruction:JMP LBL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "JMP LBL[2]"
+  },
+  "instruction:JOINT_MAX_SPEED": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "JOINT_MAX_SPEED[3]=R[3:Weld Retries]"
+  },
+  "instruction:L P": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[2] 500mm/sec CNT100"
+  },
+  "instruction:LBL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "LBL[1]"
+  },
+  "instruction:LINE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "LINE[1] ON"
+  },
+  "instruction:LINEAR_MAX_SPEED": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "LINEAR_MAX_SPEED=100"
+  },
+  "instruction:LINECOUNT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "LINECOUNT[1] R[1]"
+  },
+  "instruction:LINERATE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "LINERATE[1] R[2]"
+  },
+  "instruction:LINESTOP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "LINESTOP[1] R[1]"
+  },
+  "instruction:LOCK PREG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "LOCK PREG"
+  },
+  "instruction:LOCK VREG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "LOCK VREG"
+  },
+  "instruction:MAINT_PROG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "MAINT_PROG[2]=WIRE_CUT"
+  },
+  "instruction:MESSAGE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "MESSAGE[ DI[1] NOT INPUT ]"
+  },
+  "instruction:MINUTE_OUTPUT_RQ": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:MONITOR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "MONITOR WRKFALL"
+  },
+  "instruction:OFFSET CONDITION PR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "OFFSET CONDITION PR[1:Home 1]"
+  },
+  "instruction:OVERRIDE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "OVERRIDE=100%"
+  },
+  "instruction:PALLETIZING-B_": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:PALLETIZING-BX_": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:PALLETIZING-E_": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:PALLETIZING-END_": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "PALLETIZING-END_3"
+  },
+  "instruction:PALLETIZING-EX_": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:PAUSE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "PAUSE"
+  },
+  "instruction:PAYLOAD": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "PAYLOAD[1:No Tool on Robot]"
+  },
+  "instruction:PL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "PL[1]=PL[3]"
+  },
+  "instruction:POWER_CONTROL": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:PR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "PR[1:Home 1]=LPOS"
+  },
+  "instruction:PRESS_MOTN": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 2000mm/sec FINE :PRESS_MOTN[SD=1,P=1,t=2.0]"
+  },
+  "instruction:PRESSURE STANDARD GUN": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "instruction:PRESSURE": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "instruction:R": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "R[1]=RI[3]"
+  },
+  "instruction:RCV R": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:RESET STEPPER": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "RESET STEPPER[WC=1,SN=1,SV=0]"
+  },
+  "instruction:RESET WATER SAVER": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 50% FINE :RESET WATER SAVER"
+  },
+  "instruction:RESET WELDER": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "RESET WELDER[WC=1]"
+  },
+  "instruction:RESUME_PROG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "RESUME_PROG=TOOL_PRE"
+  },
+  "instruction:RETURN_PATH_DSBL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "RETURN_PATH_DSBL"
+  },
+  "instruction:RSR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "RSR[2]=ENABLE"
+  },
+  "instruction:RUN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "RUN PROGRAM2"
+  },
+  "instruction:S": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "S P[2] 200mm/sec FINE"
+  },
+  "instruction:SAMPLE START": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "Sample End"
+  },
+  "instruction:SE": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 500mm/sec CNT100 SE"
+  },
+  "instruction:SEARCH END": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "instruction:SEARCH START": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "instruction:SELBOUND LNSCH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SELBOUND LNSCH[1] BOUND[1]"
+  },
+  "instruction:SELECT R": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SELECT R[1]=1,JMP LBL[1]"
+  },
+  "instruction:SEND R": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:SENSOR DIAGNOSIS": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "SENSOR DIAGNOSIS"
+  },
+  "instruction:SENSOR DISCONNECT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SENSOR DISCONNECT"
+  },
+  "instruction:SERVOTOOL": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "SERVOTOOL[1]"
+  },
+  "instruction:SETEXTRM LNSCH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SETEXTRM LNSCH[1] PR[1]"
+  },
+  "instruction:SETTRIG LNSCH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SETTRIG LNSCH[1] R[1]"
+  },
+  "instruction:SKIP CONDITION": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SKIP CONDITION DI[1:EXT RUN ENABLE]=ON"
+  },
+  "instruction:SOFTFLOAT END": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SOFTFLOAT END"
+  },
+  "instruction:SOFTFLOAT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SOFTFLOAT[1]"
+  },
+  "instruction:SPOT": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "instruction:SR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SR[1]=R[1]+SR[1]"
+  },
+  "instruction:SS": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 500mm/sec CNT100 SS[1]"
+  },
+  "instruction:STICK DETECT ON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "STICK DETECT ON"
+  },
+  "instruction:STITCH END": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:STITCH": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:STOP_TRACKING": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "STOP_TRACKING"
+  },
+  "instruction:SYNC_SCHED": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SYNC_SCHED[1]"
+  },
+  "instruction:SYNCZONE": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "SyncZone[?:512]"
+  },
+  "instruction:TC_ONLINE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "TC_ONLINE (DI[1:EXT RUN ENABLE] AND DI[2:EXT RN ENBLE RST])"
+  },
+  "instruction:TIMER": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "TIMER[1]=START"
+  },
+  "instruction:TIPDRESS": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:TOOL ATTACH": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "TOOL ATTACH[2]"
+  },
+  "instruction:TOOL DETACH": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "TOOL DETACH[1]"
+  },
+  "instruction:TOOL_OFFSET CONDITION PR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "TOOL_OFFSET CONDITION PR[1:Home 1]"
+  },
+  "instruction:TORQ_LIMIT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "TORQ_LIMIT   20.0 %"
+  },
+  "instruction:TORQUE ERROR ON": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "TORQUE ERROR ON"
+  },
+  "instruction:TOUCH OFFSET END": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "instruction:TOUCH OFFSET PR": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "instruction:TRACK END": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:TRKUFRAME LNSCH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "TRKUFRAME LNSCH[1] PR[1]"
+  },
+  "instruction:UALM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "UALM[1]"
+  },
+  "instruction:UFRAME_NUM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "UFRAME_NUM=1"
+  },
+  "instruction:UFRAME START": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool"
+   ],
+   "stored": "UFrame_Start[1]"
+  },
+  "instruction:UFRAME": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "UFRAME[3:ST CAM]=PR[2:Home 2]"
+  },
+  "instruction:UNLOCK VREG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "UNLOCK VREG"
+  },
+  "instruction:UPDATE FRAME": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool"
+   ],
+   "stored": "Update_Frame"
+  },
+  "instruction:UPDATE_TOOL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Update_Tool"
+  },
+  "instruction:UTOOL_END": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "UTool_End[New_XYZWPR]"
+  },
+  "instruction:UTOOL_START": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "UTool_Start[1]"
+  },
+  "instruction:VISION CAMERA_CALIB '": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "VISION CAMERA_CALIB 'CAMERA1' Request=1"
+  },
+  "instruction:VISION GET_NFOUND '": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "VISION GET_NFOUND 'VISION1' R[1]"
+  },
+  "instruction:VISION GET_OFFSET '": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "VISION GET_OFFSET 'DB_RACK_1' VR[1] JMP LBL[500]"
+  },
+  "instruction:VISION GET_PASSFAIL '": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "VISION GET_PASSFAIL 'VISION1' R[1]"
+  },
+  "instruction:VISION GET_READING '": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "VISION GET_READING '1' SR[1] R[1] JMP LBL[1]"
+  },
+  "instruction:VISION OVERRIDE '": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "VISION OVERRIDE 'EXPO' 40.0"
+  },
+  "instruction:VISION RUN_FIND '": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "VISION RUN_FIND 'IPC01.AIBL'"
+  },
+  "instruction:VISION SET_REFERENCE '": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "VISION SET_REFERENCE '1'"
+  },
+  "instruction:VISUFRAME LNSCH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "VISUFRAME LNSCH[1] PR[1]"
+  },
+  "instruction:VOFFSET CONDITION VR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "VOFFSET CONDITION VR[1]"
+  },
+  "instruction:WAIT ERR_NUM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "WAIT ERR_NUM=1"
+  },
+  "instruction:WAIT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "WAIT R[1]"
+  },
+  "instruction:WAITZONE": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "WaitZone[?:1]"
+  },
+  "instruction:WEAVE SINE": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:WEAVE CIRCLE": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:WEAVE CUST1": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:WEAVE END": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:WEAVE FIGURE 8": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:WEAVE L": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:WEAVE SINE 2": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:WIRE_CONTROL": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "instruction:WO": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "motion-option:ACC": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 50% FINE ACC80"
+  },
+  "motion-option:ANTIC (ANTICIPATION OVERRIDE IN SPOT)": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "motion-option:SPOT": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "J P[4] 100% FINE :BACKUP[B=CLOSE,ANTIC=20]"
+  },
+  "motion-option:BACKUP[B=...,ANTIC=M]": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "motion-option:BACKUP=OPEN/CLOSE, BACKUP[B=..] (MOTION OPTION)": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "motion-option:BREAK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 2000mm/sec CNT100 BREAK"
+  },
+  "motion-option:CNT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 50% CNT50"
+  },
+  "motion-option:COORD": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[2] 20mm/sec FINE COORD"
+  },
+  "motion-option:COORD (COORDINATED ARC MOTION)": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[12] 30mm/sec FINE COORD"
+  },
+  "motion-option:CRY (CORNER REGION)": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 2000mm/sec CR50"
+  },
+  "motion-option:CTV N (CONTINUOUS TURN)": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 100% FINE CTV50"
+  },
+  "motion-option:CTVI": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[2] 100% CNT100 CTV100"
+  },
+  "motion-option:DB": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[2] 1000mm/sec FINE DB  100.0mm,CALL A"
+  },
+  "motion-option:EV": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 50% FINE EV50%"
+  },
+  "motion-option:FINE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 50% FINE"
+  },
+  "motion-option:FPLIN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE FPLIN"
+  },
+  "motion-option:INC": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 50% FINE INC"
+  },
+  "motion-option:IND.EV": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 50% FINE Ind.EV50%"
+  },
+  "motion-option:INPOS[N] / PR_STRT[N] / PR_END[N] / PR_SYNC[N]": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE INPOS[1]"
+  },
+  "motion-option:J": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 100% FINE MROT"
+  },
+  "motion-option:OFFSET": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 50% FINE Offset"
+  },
+  "motion-option:ORNT_BASE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE ORNT_BASE"
+  },
+  "motion-option:PR_STRT[N] / PR_END[N] / PR_SYNC[N]": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE PR_STRT[1]"
+  },
+  "motion-option:PSPDXXX (PROCESS SPEED)": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE PSPD1"
+  },
+  "motion-option:PTH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE PTH"
+  },
+  "motion-option:RAMPTO(SPEED)": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "motion-option:RT_LD": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE AP_LD1"
+  },
+  "motion-option:RT_LD / AP_LD (LINEAR DISTANCE)": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE RT_LD1"
+  },
+  "motion-option:RTCP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE RTCP"
+  },
+  "motion-option:SEARCH[ ] (MOTION OPTION)": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "motion-option:SEARCH[DIR]": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "motion-option:SEARCH[DIR] (MOTION OPTION)": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "motion-option:SEARCH[DIR] (TOUCH SEARCH MOTION OPTION)": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "motion-option:SIGNAL OUTPUT MOTION OPTION (DO[]=... ON THE MOTION LINE)": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[2] 1000mm/sec CNT100 DO[1:RUN INTRPT ACK]=ON DO[2:RBT AT HOME]=ON"
+  },
+  "motion-option:SKIP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "J P[1] 50% FINE Skip,LBL[3]"
+  },
+  "motion-option:SKIP,LBL[N],PR[M]=LPOS (QUICK SKIP)": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE Skip,LBL[10],PR[5:Service Position]=LPOS"
+  },
+  "motion-option:SOFTFLOAT[N] (MOTION OPTION)": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[2] 100mm/sec FINE SOFTFLOAT[1]"
+  },
+  "motion-option:SPTCH_OFS": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE SPTCH_OFS=R[1]"
+  },
+  "motion-option:SPTCH_RSD": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 100mm/sec FINE SPTCH_RSD=R[1]"
+  },
+  "motion-option:TOOL_OFFSET": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[2] 500mm/sec FINE Tool_Offset"
+  },
+  "motion-option:UPDET_OFS": {
+   "verdict": "setup",
+   "on": [
+    "HandlingTool"
+   ]
+  },
+  "motion-option:VOFFSET": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 500mm/sec FINE VOFFSET,VR[1]"
+  },
+  "motion-option:WJNT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 50mm/sec FINE Wjnt"
+  },
+  "motion-option:WV[I] (WEAVE RAMPING)": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "motion-option:WV[N] (WEAVE RAMPING)": {
+   "verdict": "option",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ]
+  },
+  "program-call:BINPICK_CLEAR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BINPICK_CLEAR(1)"
+  },
+  "program-call:BINPICK_GETPICKPOS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BINPICK_GETPICKPOS(1,1,13,20,21,22)"
+  },
+  "program-call:BINPICK_POP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BINPICK_POP(1,11,12)"
+  },
+  "program-call:BINPICK_SEARCH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BINPICK_SEARCH(1,1,10)"
+  },
+  "program-call:BINPICK_SETSTAT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BINPICK_SETSTAT(1,22)"
+  },
+  "program-call:ACCU_START": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL ACCU_START"
+  },
+  "program-call:ACQVAMAP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL ACQVAMAP('SENSOR1')"
+  },
+  "program-call:ADJ_OFS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL ADJ_OFS(1,1,20,3)"
+  },
+  "program-call:APCT_ON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL APCT_ON"
+  },
+  "program-call:ARMLOCK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL ARMLOCK"
+  },
+  "program-call:ARMUNLOCK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL ARMUNLOCK"
+  },
+  "program-call:AT_KLTUN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL AT_KLTUN"
+  },
+  "program-call:BD_OFFLN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BD_OFFLN(1)"
+  },
+  "program-call:BD_ONLN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BD_ONLN(1)"
+  },
+  "program-call:BD_RSOFF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BD_RSOFF(1)"
+  },
+  "program-call:BD_RSON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BD_RSON(1)"
+  },
+  "program-call:BD_STCHK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BD_STCHK(1,1)"
+  },
+  "program-call:BG_": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BG_T201_T1"
+  },
+  "program-call:BPGETAABB": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BPGETAABB(1,1,2,3,4,10,1,1,11)"
+  },
+  "program-call:BPGETOBB": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL BPGETOBB(1,1,2,10,1,1,11)"
+  },
+  "program-call:CALB_START": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CALB_START"
+  },
+  "program-call:CALIBNBT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CALIBNBT(2,1)"
+  },
+  "program-call:CALTANG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CALTANG(1,1)"
+  },
+  "program-call:CB_PCDATA": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CB_PCDATA"
+  },
+  "program-call:CB_PCSTART": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CB_PCSTART('SIG_UT',1,1,1)"
+  },
+  "program-call:CB_PSTCP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CB_PSTCP('TCP_SHIFT',1)"
+  },
+  "program-call:CB_STFRM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CB_STFRM('SensFrame',0,0,0,0,0,0)"
+  },
+  "program-call:CB_TCHUP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CB_TCHUP('New_XYZWPR',1,1,90,0,0)"
+  },
+  "program-call:CG_": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CG_T201_001"
+  },
+  "program-call:CHK_POS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CHK_POS(1,0,1,1,2,0,1)"
+  },
+  "program-call:CLRVAMAP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CLRVAMAP('SENSOR2')"
+  },
+  "program-call:CLSKP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CLSKP(1,1,1,1)"
+  },
+  "program-call:CLSKP_CL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CLSKP_CL(99)"
+  },
+  "program-call:CN_CTS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CN_CTS(10,1,0,2)"
+  },
+  "program-call:CORE_START": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CORE_START"
+  },
+  "program-call:CT_": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CT_T201_001"
+  },
+  "program-call:CUST_WV": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CUST_WV1"
+  },
+  "program-call:DG_": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL DG_T201_001"
+  },
+  "program-call:DSP_WEBP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL DSP_WEBP(1)"
+  },
+  "program-call:DU_": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL DU_T201_001"
+  },
+  "program-call:DV_AROFF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL DV_AROFF(2,55)"
+  },
+  "program-call:DV_ARON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL DV_ARON(2,55)"
+  },
+  "program-call:DV_OFFLN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL DV_OFFLN(2,55)"
+  },
+  "program-call:DV_ONLN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL DV_ONLN(2,55,1)"
+  },
+  "program-call:DV_STCHK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL DV_STCHK(2,55,10)"
+  },
+  "program-call:FCNCH3CTP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FCNCH3CTP(1)"
+  },
+  "program-call:FCNCHCFR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FCNCHCFR(1,10,0)"
+  },
+  "program-call:FCNCHFCG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FCNCHFCG(0)"
+  },
+  "program-call:FCNCHOFF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FCNCHOFF"
+  },
+  "program-call:FCNCHPFN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FCNCHPF(1,3)"
+  },
+  "program-call:FS_GET_F": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FS_GET_F"
+  },
+  "program-call:FS_MOV_5DEG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FS_MOV_5DEG"
+  },
+  "program-call:FSGETHISDT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FSGETHISDT(1,1)"
+  },
+  "program-call:FSGRVINIT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[1] 200mm/sec CNT30 TB    .20sec,CALL FSGRVINIT"
+  },
+  "program-call:FSGRVMEAS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "L P[2] 200mm/sec CNT30 TB    .20sec,CALL FSGRVMEAS(Constant)"
+  },
+  "program-call:FSSETCLB": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FSSETCLB"
+  },
+  "program-call:FSSETFRC": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FSSETFRC"
+  },
+  "program-call:FSSETHAND": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FSSETHAND(Constant)"
+  },
+  "program-call:FSSETPRM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FSSETPRM(1,1)"
+  },
+  "program-call:FSSETSCHPRM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FSSETSCHPRM(1,1,25)"
+  },
+  "program-call:FSSETWORK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FSSETWORK(Constant)"
+  },
+  "program-call:GETBQCUR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL GETBQCUR(1)"
+  },
+  "program-call:GRID_UFRAME": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL GRID_UFRAME(\"Camera Data Name\"='CAMERA_DATA1',\"Grid Spacing[mm]\"=15,\"Robot Group Number to set\"=1,\"User Frame Number to set\"=1)"
+  },
+  "program-call:GRID_UTOOL": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL GRID_UTOOL(\"Camera Data Name\"='1',\"Grid Spacing[mm]\"=1,\"Robot Group Number to set\"=1,\"Tool Frame Number to set\"=1)"
+  },
+  "program-call:GRIP_SS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL GRIP_SS"
+  },
+  "program-call:HTCOLSET": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL HTCOLSET(1)"
+  },
+  "program-call:INVERSE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL INVERSE(40,50)"
+  },
+  "program-call:IRVBKLSH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVBKLSH(1)"
+  },
+  "program-call:IRVCALDATA": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVCALDATA(\"Data Name\"='CAL3DL',\"Camera Frame\"=1,\"Output PR\"=1,\"Status Reg\"=11)"
+  },
+  "program-call:IRVCAMCHK": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVCAMCHK(\"Camera Data\"='CAM1',\"Camera Power Reg\"=5,\"Status Reg\"=10)"
+  },
+  "program-call:IRVCAMOFF": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVCAMOFF(\"Camera Data\"='CAM1',\"Status Reg\"=10)"
+  },
+  "program-call:IRVCAMON": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVCAMON(\"Camera Data\"='CAM1',\"Status Reg\"=10)"
+  },
+  "program-call:IRVCLRAL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVCLRAL"
+  },
+  "program-call:IRVCLROF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVCLROF(1)"
+  },
+  "program-call:IRVDISPLAY4D": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVDISPLAY4D('VP1')"
+  },
+  "program-call:IRVFIND": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVFIND(\"Vision Process\"=1,\"Camera View\"=1,\"Image Reg.\"=1)"
+  },
+  "program-call:IRVGETMSL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVGETMSL('VISION1',R[2],3,4,5)"
+  },
+  "program-call:IRVGETMSR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVGETMSR('VISION1',2,1,5)"
+  },
+  "program-call:IRVGETOF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVGETOF(1,1)"
+  },
+  "program-call:IRVGS2EXE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVGS2EXE('RUN')"
+  },
+  "program-call:IRVHOMING": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVHOMING('CALIBLESS',1000)"
+  },
+  "program-call:IRVIZDT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVIZDT('TESTPROCESS',0)"
+  },
+  "program-call:IRVLODIR": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVLODIR(\"Image Reg.\"=1,\"Input Path\"='MC:\\IMREG1.ZIP')"
+  },
+  "program-call:IRVOVRDANYVP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVOVRDANYVP('EXPO',100)"
+  },
+  "program-call:IRVRGUTL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVRGUTL(1)"
+  },
+  "program-call:IRVRPOSCHK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVRPOSCHK(1)"
+  },
+  "program-call:IRVSAVIR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVSAVIR(1,'MC:\\IMREG1.ZIP')"
+  },
+  "program-call:IRVSAVPCD": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVSAVPCD(1,'C1:\\test.pcd',1)"
+  },
+  "program-call:IRVSNAP": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVSNAP(\"Vision Process\"=1,\"Camera View\"=1,\"Image Reg.\"=1)"
+  },
+  "program-call:IRVTRAIN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVTRAIN(1,1)"
+  },
+  "program-call:IRVWAITLOG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL IRVWAITLOG"
+  },
+  "program-call:LOADNOM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL LOADNOM(1,10,31)"
+  },
+  "program-call:M": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL M52(3)"
+  },
+  "program-call:MATRIX": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MATRIX(40,20,60)"
+  },
+  "program-call:MI_EQ_PL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MI_EQ_PL(1,0)"
+  },
+  "program-call:MIG_CRS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MIG_CRS"
+  },
+  "program-call:OFS_RJ3": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL OFS_RJ3(4,5,0,6,0,10,0)"
+  },
+  "program-call:P1HSET10": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL P1HSET10(1)"
+  },
+  "program-call:PK_MAIN1": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PK_INIT1"
+  },
+  "program-call:PKABO": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKABO"
+  },
+  "program-call:PKCOPYPR2POS": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKCOPYPR2POS(\"PR Num\"=1,\"Program Name\"=1,\"Position Num\"=1,\"Group Num\"=1)"
+  },
+  "program-call:PKCSACKQPRGR": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKCSACKQPRGR(\"CStn ID\"=1,\"Success\"=1)"
+  },
+  "program-call:PKCSACKQUE": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKCSACKQUE(\"CStn ID\"=1,\"Success\"=1)"
+  },
+  "program-call:PKCSCALWPOS": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKCSCALWPOS(\"CStn ID\"=1,\"Ref Pos PR\"=1,\"Offset VR\"=1,\"GetQ stat\"=1,\"Do WaitMove Reg\"=1,\"Wait Pos PR\"=1,\"NoMove Distance\"=1)"
+  },
+  "program-call:PKCSCHKPOS": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKCSCHKPOS(\"CStn ID\"=1,\"Offset VR\"=1,\"Ref Pos PR\"=1,\"Appr Ofst PR\"=1,\"Tool Offset\"=1,\"Stat Reg\"=1)"
+  },
+  "program-call:PKCSCLRACK": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKCSCLRACK(\"CStn ID\"=1)"
+  },
+  "program-call:PKCSCLRQUE": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKCSCLRQUE(\"CStn ID\"=1)"
+  },
+  "program-call:PKCSGENVRTRY": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKCSGENVRTRY(\"CStn ID\"=1,\"Stat Reg\"=1)"
+  },
+  "program-call:PKCSGETAPPR": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKCSGETAPPR(\"CStn ID\"=1,\"ApproachPR Reg\"=1)"
+  },
+  "program-call:PKCSGETDIST": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKCSGETDIST(\"CStn ID\"=1,\"Order\"=1,\"Consec Flag\"=1,\"Quantity\"=1,\"Distance Reg\"=1,\"Offset VR\"=1,\"Stat Reg\"=1)"
+  },
+  "program-call:PKCSGETENC": {
+   "verdict": "respelled",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CALL PKCSGETENC(\"CStn ID\"=1,\"Enc Num Reg\"=1)"
+  },
+  "program-call:PLCEDAINDEX": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PLCEDAINDEX"
+  },
+  "program-call:PLCEDAPART": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "IF R[40]=3,CALL PLCEDAPART"
+  },
+  "program-call:PM_MFOFF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PM_MFOFF(1,1)"
+  },
+  "program-call:PM_MFON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PM_MFON(1,1)"
+  },
+  "program-call:PM_OFFLN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PM_OFFLN(1,1)"
+  },
+  "program-call:PM_ONLN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PM_ONLN(1,1)"
+  },
+  "program-call:PM_STCHK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PM_STCHK(1,2,50)"
+  },
+  "program-call:PMADDQ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMADDQ(3)"
+  },
+  "program-call:PMBOXORI": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMBOXORI(0,78,79,153)"
+  },
+  "program-call:PMBOXREQ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMBOXREQ"
+  },
+  "program-call:PMCGRIP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCGRIP(AR[1])"
+  },
+  "program-call:PMCHGPLD": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCHGPLD(R[2],R[8],2)"
+  },
+  "program-call:PMCHKHOTSTRT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCHKHOTSTRT"
+  },
+  "program-call:PMCLMPOF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCLMPOF"
+  },
+  "program-call:PMCLMPON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCLMPON"
+  },
+  "program-call:PMCNVUL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCNVUL(101)"
+  },
+  "program-call:PMCOPYML": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCOPYML(1,1)"
+  },
+  "program-call:PMCOPYUL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCOPYUL(1,1)"
+  },
+  "program-call:PMCREATEINFEED": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCREATEINFEED(1)"
+  },
+  "program-call:PMCREATEML": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCREATEML(1)"
+  },
+  "program-call:PMCREATEPALLET": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCREATEPALLET(1)"
+  },
+  "program-call:PMCREATEUL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCREATEUL(131)"
+  },
+  "program-call:PMCUPDWN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCUPDWN"
+  },
+  "program-call:PMCUPSUP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCUPSUP"
+  },
+  "program-call:PMCYCEOB": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCYCEOB"
+  },
+  "program-call:PMCYCST": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMCYCST"
+  },
+  "program-call:PMDELETEINFEED": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMDELETEINFEED(1)"
+  },
+  "program-call:PMDELETEML": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMDELETEML(1)"
+  },
+  "program-call:PMDELETEPALLET": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMDELETEPALLET(1)"
+  },
+  "program-call:PMDELETEUL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMDELETEUL(1)"
+  },
+  "program-call:PMDISPPD": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMDISPPD"
+  },
+  "program-call:PMDROPTAB": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMDROPTAB"
+  },
+  "program-call:PMDSPSPD": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMDSPSPD"
+  },
+  "program-call:PMEXTEND": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMEXTEND"
+  },
+  "program-call:PMFIXMOV": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMFIXMOV"
+  },
+  "program-call:PMGEOBDT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMGEOBDT"
+  },
+  "program-call:PMGETTPTYPE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMGETTPTYPE"
+  },
+  "program-call:PMGETULX": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMGETULX"
+  },
+  "program-call:PMGETULZ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMGETULZ"
+  },
+  "program-call:PMGETVAR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMGETVAR(AR[1],AR[2],AR[3],AR[4],AR[5],AR[6],AR[7])"
+  },
+  "program-call:PMGETXYZ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMGETXYZ"
+  },
+  "program-call:PMGPCLR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMGPCLR(R[1])"
+  },
+  "program-call:PMOGRIP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMOGRIP(AR[1],AR[2],AR[3])"
+  },
+  "program-call:PMPALCTR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMPALCTR(R[28])"
+  },
+  "program-call:PMPALPOS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMPALPOS"
+  },
+  "program-call:PMPCPART": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "IF R[40]=4,CALL PMPCPART"
+  },
+  "program-call:PMPKAGN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMPKAGN"
+  },
+  "program-call:PMPLCLAY": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMPLCLAY"
+  },
+  "program-call:PMPLCST": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMPLCST"
+  },
+  "program-call:PMPLREM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMPLREM"
+  },
+  "program-call:PMPROCDT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMPROCDT(R[1])"
+  },
+  "program-call:PMPROF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMPROF(1)"
+  },
+  "program-call:PMPUSHOF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMPUSHOF"
+  },
+  "program-call:PMPUSHON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMPUSHON"
+  },
+  "program-call:PMRETRCT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMRETRCT"
+  },
+  "program-call:PMRINUSE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMRINUSE(AR[1])"
+  },
+  "program-call:PMRSTEOB": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMRSTEOB"
+  },
+  "program-call:PMRSTPAL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMRSTPAL(R[1],R[4:Weld Sched1 Num])"
+  },
+  "program-call:PMSEOBDT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMSEOBDT"
+  },
+  "program-call:PMSETDRP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMSETDRP(153,R[9])"
+  },
+  "program-call:PMSETPLD": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMSETPLD(R[1])"
+  },
+  "program-call:PMSETSPEED": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMSETSPEED(R[35])"
+  },
+  "program-call:PMSETVAR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMSETVAR(AR[1],AR[2],AR[3],AR[4],AR[5],AR[6],AR[7])"
+  },
+  "program-call:PMSLPCTR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMSLPCTR(R[28])"
+  },
+  "program-call:PMTLK2PP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMTLK2PP(AR[1],AR[2],AR[3],AR[4],AR[5],AR[6],AR[7])"
+  },
+  "program-call:PMUPDATE4D": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMUPDATE4D(1)"
+  },
+  "program-call:PMUPDATE4DINFEED": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMUPDATE4DINFEED(1)"
+  },
+  "program-call:PMUPDATE4DPALLET": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMUPDATE4DPALLET(1)"
+  },
+  "program-call:PMUPDATE4DSLIPSHEET": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMUPDATE4DSLIPSHEET"
+  },
+  "program-call:PMUPDATEULPATTERN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMUPDATEULPATTERN(131,1)"
+  },
+  "program-call:PMUPDCYC": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMUPDCYC"
+  },
+  "program-call:PMUPDVRS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMUPDVRS(R[1])"
+  },
+  "program-call:PMWCMON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PMWCMON"
+  },
+  "program-call:PR_OFFLN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PR_OFFLN(2)"
+  },
+  "program-call:PR_ONLN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PR_ONLN(2)"
+  },
+  "program-call:PRLOGMON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PRLOGMON(10,1,2,2,200,0)"
+  },
+  "program-call:PROC_ON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL PROC_ON1"
+  },
+  "program-call:RECD_VAL_POS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL RECD_CAL_POS"
+  },
+  "program-call:RELEASE_SS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL RELEASE_SS"
+  },
+  "program-call:RGETNREG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL RGETNREG('RC1',1,5,0)"
+  },
+  "program-call:RGETPREG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL RGETPREG('SERVER',10,2,20,1)"
+  },
+  "program-call:RSETNREG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL RSETNREG('SERVER',10,20,0)"
+  },
+  "program-call:RSETPREG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL RSETPREG('SERVER',10,2,20,1,0)"
+  },
+  "program-call:RSI_CREATE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL RSI_CREATE('fr:abc.xml')"
+  },
+  "program-call:RSI_OFF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL RSI_OFF()"
+  },
+  "program-call:RSI_ON": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL RSI_ON(1,1)"
+  },
+  "program-call:RSI_WRXML": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL RSI_WRXML('myRob','1')"
+  },
+  "program-call:SAVENOM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SAVENOM(1,10,31)"
+  },
+  "program-call:SET_COORD_FRAME": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SET_COORD_FRAME(1,2)"
+  },
+  "program-call:SET_WCG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SET_WCG(1)"
+  },
+  "program-call:SETSKCOL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL CLSKP_G1"
+  },
+  "program-call:SETWSCH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SETWSCH1(15,4,1,R[4:Weld Sched1 Num])"
+  },
+  "program-call:SFSPC": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SFSPC"
+  },
+  "program-call:SGKTCHCL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SGKTCHCL(1,1,1,1,1)"
+  },
+  "program-call:SGPRSCHK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SGPRSCHK(1,3)"
+  },
+  "program-call:SLTKDELQ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SLTKDELQ(1,1)"
+  },
+  "program-call:SLTKGTPP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SLTKGTPP(1,1,1)"
+  },
+  "program-call:SLTKINIT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SLTKINIT(1,1,2)"
+  },
+  "program-call:SLTKPOPQ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SLTKPOPQ(1,1,2)"
+  },
+  "program-call:SLTKPSHQ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SLTKPSHQ(1,1)"
+  },
+  "program-call:SLTKREST": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SLTKREST(1)"
+  },
+  "program-call:SLTKRSTQ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SLTKRSTQ(1)"
+  },
+  "program-call:SROUTSIG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SROUTSIG(1,1,2)"
+  },
+  "program-call:SRWRTCSV": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SRWRTCSV(1,2)"
+  },
+  "program-call:SS_IN_DISPENSER": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL SS_IN_DISPENSER"
+  },
+  "program-call:STDIDSTR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL STDIDSTR('$PALLETTOOL_UNIT_LOAD','DESCRIPTION',131,0,0,'description of ul131')"
+  },
+  "program-call:STVS1": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL STVS1(1,1,1,1,1)"
+  },
+  "program-call:TCHK_RQD": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TCHK_RQD"
+  },
+  "program-call:TCHK_SKP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TCHK_SKP"
+  },
+  "program-call:THK_SEV": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL THK_SEV(2)"
+  },
+  "program-call:THK_TOL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL THK_TOL(1,1)"
+  },
+  "program-call:TPTRQLIM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TPTRQLIM(1,7,70)"
+  },
+  "program-call:TRANSROT": {
+   "verdict": "respelled",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TRANSROT(\"Pick Pos PR\"=5,\"Original Ofs VR\"=1,\"Translation VR\"=2,\"Rotation VR\"=3,\"Status R\"=10)"
+  },
+  "program-call:TW_CHKTQ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TW_CHKTQ(1,1,1)"
+  },
+  "program-call:TW_MV2PT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TW_MV2PT(AR[1],1,10)"
+  },
+  "program-call:TW_MVGUN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TW_MVGUN(1,21)"
+  },
+  "program-call:TW_PRSRT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TW_PRSRT(1,500,2,4,1,10,5,15)"
+  },
+  "program-call:TW_SETUP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TW_SETUP(1)"
+  },
+  "program-call:TW_UPDAT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TW_UPDAT(1,0)"
+  },
+  "program-call:TWKCALC2": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKCALC2(1,1)"
+  },
+  "program-call:TWKFXTCH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKFXTCH(AR[1],10,21,AR[2])"
+  },
+  "program-call:TWKGPMSK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKGPMSK(AR[1],'TW_MVGUN')"
+  },
+  "program-call:TWKINCPH": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKINCPH(AR[1])"
+  },
+  "program-call:TWKINIT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKINIT(AR[1])"
+  },
+  "program-call:TWKRSCLB": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKRSCLB(10)"
+  },
+  "program-call:TWKRSMOV": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKRSMOV(1,10)"
+  },
+  "program-call:TWKRSWDN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKRSWDN"
+  },
+  "program-call:TWKSTCHK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKSTCHK(AR[1],10,AR[2])"
+  },
+  "program-call:TWKSTROK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKSTROK(0)"
+  },
+  "program-call:TWKTHOLD": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKTHOLD(AR[1],10,21)"
+  },
+  "program-call:TWKWRTPR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKWRTPR(AR[1],20,2)"
+  },
+  "program-call:TWKZRCLB": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWKZRCLB(AR[1],10,21)"
+  },
+  "program-call:TWREPAIR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TWREPAIR(1,R[1])"
+  },
+  "program-call:UPDATE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL UPDATE1"
+  },
+  "program-call:VL_EXP_DATE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VL_EXP_DATE(211030,'UD1:\\LOG')"
+  },
+  "program-call:VL_EXPORT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VL_EXPORT"
+  },
+  "program-call:VSTKACKQ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKACKQ('IN_AREA',1,1)"
+  },
+  "program-call:VSTKCLRQ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKCLRQ('IN_AREA')"
+  },
+  "program-call:VSTKENLB": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKENLB('1',1)"
+  },
+  "program-call:VSTKENSC": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKENSC('LINE1',11,3)"
+  },
+  "program-call:VSTKGETQ": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKGETQ('IN_AREA',1,100,2,R[3:Weld Retries])"
+  },
+  "program-call:VSTKGETT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKGETT('1',1,1)"
+  },
+  "program-call:VSTKNPRT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKNPRT('AREA1',11)"
+  },
+  "program-call:VSTKPFRT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKPFRT('AREA1',12)"
+  },
+  "program-call:VSTKSTLB": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKSTLB('LINE1',11,3,0,8)"
+  },
+  "program-call:VSTKSTOP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKSTOP"
+  },
+  "program-call:VSTKSTRT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKSTRT"
+  },
+  "program-call:VSTKSTTN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKSTTN(1,'TRAY2')"
+  },
+  "program-call:VSTKSTVN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VSTKSTVN(1,'1')"
+  },
+  "program-call:WDNRST": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL WDNRST(1,10)"
+  },
+  "program-call:WR_SETUP": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL WR_SETUP(1)"
+  },
+  "program-call:WR_UPDAT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL WR_UPDAT(1,0)"
+  },
+  "program-call:WTICAL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL WTICAL('WTICAL',3)"
+  },
+  "program-call:WTIDRSMSTEST": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL WTIDRSMSTEST(3,1,'WTIMATREM',R[4:Weld Sched1 Num])"
+  },
+  "program-call:WTIDRSPRTEST": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL WTIDRSPRTEST(3,1,'WTIDRESS')"
+  },
+  "program-call:WTIMAIN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL WTIMAIN(1)"
+  },
+  "program-call:WTINEWPRTEST": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL WTINEWPRTEST(3,1,'WTINEW')"
+  },
+  "program-call:WTIWEARTEST": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL WTIWEARTEST(3,1,'WTIWEAR',4)"
+  },
+  "program-call:XW_UPDAT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL XW_UPDAT(1,0)"
+  },
+  "program-call:CHECK NO PART": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Check No Part(1,2,3)"
+  },
+  "program-call:CLEAR TO PROCEED": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Clear to Proceed"
+  },
+  "program-call:CLEAR USER PAGE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Clear User Page"
+  },
+  "program-call:DSPWEBPG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL DSPWEBPG(AR[1])"
+  },
+  "program-call:FINORM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL FINORM"
+  },
+  "program-call:GESNDDAT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL GESNDDAT(AR[1],1,AR[2],AR[3],AR[4],AR[5],AR[6],AR[7],AR[8],AR[9])"
+  },
+  "program-call:GESNDEVT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL GESNDEVT(AR[1],1,AR[2])"
+  },
+  "program-call:GESNDSYS": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL GESNDSYS(AR[1],AR[2],AR[3],AR[4],AR[5],AR[6])"
+  },
+  "program-call:GET DATA": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Get Data(42,0,1,5)"
+  },
+  "program-call:GRIP PART": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Grip Part(1)"
+  },
+  "program-call:LIST MENU": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "List Menu(2,21)"
+  },
+  "program-call:MGETZONE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MGETZONE(2,16,9999999)"
+  },
+  "program-call:MHLISTMN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MHLISTMN(AR[1],AR[2])"
+  },
+  "program-call:MHOPERMN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MHOPERMN(AR[1],AR[2])"
+  },
+  "program-call:MHPRMPTM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MHPRMPTM(AR[1])"
+  },
+  "program-call:MHPRMPTY": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MHPRMPTY(AR[1],AR[2])"
+  },
+  "program-call:MHSTATPG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MHSTATPG(AR[1])"
+  },
+  "program-call:MHUSERCL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MHUSERCL"
+  },
+  "program-call:MHUSERPG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MHUSERPG"
+  },
+  "program-call:GET_HOME": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL GET_HOME(1,1)"
+  },
+  "program-call:MRELZONE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MRELZONE(2,16,9999999)"
+  },
+  "program-call:MREQZONE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MREQZONE(9,16,9999999)"
+  },
+  "program-call:MSYNC": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MSYNC(1,16,16,9999999,16,9999999,16,9999999,16,9999999)"
+  },
+  "program-call:MWAITEND": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MWAITEND(1,2,16,999999,16,9999999,16,9999999,16,9999999)"
+  },
+  "program-call:MWAITSTRT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL MWAITSTRT(1,2,16,9999999,16,9999999,16,9999999,16,9999999)"
+  },
+  "program-call:OP. ENTRY MENU": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Op. Entry Menu(1)"
+  },
+  "program-call:PART PRESENT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Part Present(1)"
+  },
+  "program-call:PREPARE TO PICK": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Prepare to Pick(1)"
+  },
+  "program-call:PROMPT BOX MSG": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Prompt Box Msg(2)"
+  },
+  "program-call:PROMPT BOX YN": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Prompt Box YN(2,2)"
+  },
+  "program-call:TW0THOLD": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TW0THOLD(1,10,20)"
+  },
+  "program-call:RELEASE PART": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Release Part(1,2)"
+  },
+  "program-call:REQUEST MENU": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Request Menu(42,0)"
+  },
+  "program-call:SEND DATA": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Send Data(42,0,0,'PARTS_ITEM3',R[1],5,6,7.1,8,'TOOL_ITEM1')"
+  },
+  "program-call:SEND EVENT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Send Event(5)"
+  },
+  "program-call:SEND SYSVAR": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Send SysVar(5,0,0,'$FAST_CLOCK')"
+  },
+  "program-call:SET CURRENTVALVE": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Set CurrentValve(1)"
+  },
+  "program-call:SET MH TOOL": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Set MH Tool(1)"
+  },
+  "program-call:CLR OF TRANSFER": {
+   "verdict": "confirmed",
+   "on": [
+    "SpotTool+"
+   ],
+   "stored": "CLR OF TRANSFER"
+  },
+  "program-call:STATUS MENU": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Status Menu(2)"
+  },
+  "program-call:TORCHMATE ADJUST": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL TM_ADJST"
+  },
+  "program-call:TURN OFF BLOWOFF": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Turn OFF Blowoff(1,2)"
+  },
+  "program-call:TURN OFF VACUUM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Turn OFF Vacuum(1,2)"
+  },
+  "program-call:TURN ON VACUUM": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "Turn ON Vacuum(1)"
+  },
+  "program-call:VTOFSTUT": {
+   "verdict": "confirmed",
+   "on": [
+    "HandlingTool",
+    "SpotTool+"
+   ],
+   "stored": "CALL VTOFSTUT"
+  }
+ }
+}

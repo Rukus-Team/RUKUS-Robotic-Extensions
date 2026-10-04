@@ -1,0 +1,3 @@
+[*NUMREG*]$NUMREG  Storage: SHADOW  Access: RW  : ARRAY[2] OF Numeric Reg
+  [1] = 100  'FROM SNAPSHOT' 
+  [2] = 200  'Part Count' 

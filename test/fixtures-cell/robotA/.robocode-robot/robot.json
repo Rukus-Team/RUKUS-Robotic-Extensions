@@ -1,0 +1,1 @@
+{ "name": "RobotA", "programs": ["LS"], "exclude": ["backups"], "controller": "RobotA" }

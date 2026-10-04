@@ -1,0 +1,10 @@
+{
+  "brackets": [["[", "]"]],
+  "folding": {
+    "markers": {
+      "start": "^\\[[^\\]]+\\]\\$?\\w+\\s+Storage:",
+      "end": "^\\s*$"
+    }
+  },
+  "wordPattern": "\\$?[A-Za-z_][A-Za-z0-9_]*"
+}
