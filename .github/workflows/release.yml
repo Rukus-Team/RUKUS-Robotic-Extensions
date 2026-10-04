@@ -1,0 +1,41 @@
+# Runs in the PUBLIC repo (copied there as .github/workflows/release.yml by public-sync).
+# When the sync pushes a version tag, builds the .vsix and attaches it to a GitHub release, with the
+# version's CHANGELOG section as the notes.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Package
+        run: |
+          v=$(node -p "require('./package.json').version")
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+          npm run package -- --out "robot-code-$v.vsix"
+      - name: Release notes
+        run: |
+          awk -v v="$VERSION" '/^## /{if(f)exit; if(index($0,"## " v " ")==1||$0=="## " v)f=1} f' CHANGELOG.md > notes.md
+          {
+            echo
+            echo '**Install:** download `robot-code-'"$VERSION"'.vsix` below, then in VS Code run'
+            echo '**Extensions: Install from VSIX...** (or `code --install-extension robot-code-'"$VERSION"'.vsix`).'
+          } >> notes.md
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "robot-code-$VERSION.vsix" \
+            --title "Robot Code $VERSION" --notes-file notes.md --verify-tag
