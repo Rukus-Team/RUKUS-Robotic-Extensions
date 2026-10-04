@@ -54,6 +54,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     title: 'In RUKUS', hint: 'its clusters are the cells; what needs a connection held open lives there',
     commands: ['robotCode.rukus.openCluster', 'robotCode.rukus.syncClusters', 'robotCode.rukus.exportCell', 'robotCode.rukus.revealData', 'robotCode.rukus.open', 'robotCode.rukus.monitor', 'robotCode.rukus.alarms', 'robotCode.rukus.backup'],
   },
+  { title: 'Help', hint: 'something wrong, or an idea? tell us', commands: ['robotCode.reportIssue'] },
 ];
 
 /** contributed, but not something a person runs by name: tree-row plumbing, test hooks, this picker itself */

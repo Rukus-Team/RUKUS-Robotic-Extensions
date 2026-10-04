@@ -11,9 +11,23 @@
 >
 > Nothing here writes to a controller. Every edit lands in the file, and undo puts it back.
 
-Private extension. Full editor support for FANUC robot programming, built to be
-installed from RUKUS and to grow to other robot brands (ABB RAPID, KUKA KRL,
-Yaskawa INFORM) by adding a module folder under `src/`.
+Full editor support for FANUC robot programming, from the RUKUS team. Install it from the
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=rukus-team.robot-code), or
+download the `.vsix` from [Releases](https://github.com/Rukus-Team/RUKUS-Robotic-Extensions/releases)
+(Extensions view -> `...` -> **Install from VSIX...**). It is built to grow to other robot brands
+(ABB RAPID, KUKA KRL, Yaskawa INFORM).
+
+## Feedback & issues
+
+This is a beta, so reports are very welcome:
+
+- **In VS Code:** run **Robot Code: Report an Issue** from the command palette (or the `...` menu of
+  the Robots view). It opens the bug form with your versions already filled in.
+- **On GitHub:** [open an issue](https://github.com/Rukus-Team/RUKUS-Robotic-Extensions/issues/new/choose)
+  (bug report or feature request).
+
+The repository is public: leave customer programs, plant names and IP addresses out of reports. A small
+made-up file that shows the problem is the most useful thing to attach.
 
 ## What it does
 

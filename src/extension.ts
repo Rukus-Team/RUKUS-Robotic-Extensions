@@ -23,6 +23,7 @@ import { registerContainerCommands } from '@core/containerCommands';
 import { registerSyncCommands, registerSyncOnOpen } from '@core/syncCommands';
 import { registerSnapshotDiffCommands } from '@fanuc/snapshotDiff';
 import { registerFeatureFinder } from '@core/views/featureFinder';
+import { registerReportIssue } from '@core/reportIssue';
 import { registerFileIcons } from '@core/fileIcons';
 import { registerRukusClusters } from '@core/rukus/clusters';
 import { windowFolders, setWindowFolders } from '@core/util';
@@ -59,6 +60,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   registerSyncOnOpen(ctx, s);
   registerSnapshotDiffCommands(ctx, s);
   registerFeatureFinder(ctx);
+  registerReportIssue(ctx);
   registerFileIcons(ctx);
 
   ctx.subscriptions.push(
