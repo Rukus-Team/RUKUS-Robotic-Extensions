@@ -12,6 +12,7 @@ import type { FanucServices } from '../services';
 import type { RobotManager } from '@core/live/robotManager';
 import { escapeHtml } from '@core/util';
 import { gated } from '@core/experimental';
+import { boundRobot, profileNamed } from '@core/robotBinding';
 import { WEBVIEW_BASE_CSS, LIST_LIMIT_JS, emptyState } from '@core/webviewStyle';
 import { ORDER_FILE, readControllerOptions, parseOrderFile, optionHighlights, type ControllerOption } from './controllerOptions';
 
@@ -36,6 +37,31 @@ export function registerOptionsView(ctx: vscode.ExtensionContext, s: FanucServic
     const src = await chooseSource(s, robots, nameOf(node));
     if (src) openPanel(ctx, robots, src);
   });
+
+  // The robot being edited: read its options when its file comes to the front, so the CALL list
+  // (tp/providers) knows which FANUC programs it has. A file from a robot (fanuc://) or in a
+  // container bound to one; only a connected robot is asked, and not again within a minute.
+  // A file in a backup folder needs nothing here - the CALL list reads that folder's orderfil.dat.
+  const readAt = new Map<string, number>();
+  const readActive = async () => {
+    const doc = vscode.window.activeTextEditor?.document;
+    if (!doc || (doc.languageId !== 'fanuc-tp' && doc.languageId !== 'fanuc-karel')) return;
+    const bound = boundRobot(s, doc.uri);
+    const c = bound ? profileNamed(robots.list(), bound.name) : undefined;
+    if (!c || c.state !== 'connected') return;
+    const key = c.profile.name.toUpperCase();
+    if (Date.now() - (readAt.get(key) ?? 0) < 60_000) return;
+    readAt.set(key, Date.now());
+    const options = await readControllerOptions(robots, c.profile, true);
+    if (options) robots.setOptions(c.profile.name, options, optionHighlights(options));
+    else readAt.delete(key);   // not read: ask again next time rather than wait out the minute
+  };
+  ctx.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(() => void readActive()),
+    // a robot that connects while its file is open
+    robots.onDidChange(name => { if (name && robots.get(name)?.state === 'connected' && !readAt.has(name.toUpperCase())) void readActive(); }),
+  );
+  void readActive();
 }
 
 async function pickConnected(robots: RobotManager): Promise<string | undefined> {

@@ -1,5 +1,29 @@
 # Changelog
 
+## 26.109.4 - 2026-10-05 - Color themes, RUKUS skin themes; CALL list by installed options
+
+### Added
+- **26 color themes** next to Robot Code Dark / Light / High Contrast / Light High Contrast:
+  - **Purple, Red, Blue and Green**, each as Dark and Light.
+  - One Dark and one Light per **RUKUS skin** - RUKUS, Phanook Flakes, All-Berry Bites, Kooka
+    Puffs, Ciao Crunch, Kowabunga Krispies, Halloween, Christmas and Pixel - in the skin's own
+    backgrounds, text, accent and error / warning / success colors.
+  The syntax colors are the same in every theme.
+- `robotCode.tp.completion.fanucPrograms`: `installed` (default) or `all` - which FANUC-supplied
+  programs the `CALL` / `RUN` name list offers.
+
+### Changed
+- The `CALL` / `RUN` name list offers a FANUC-supplied program only when the robot has the
+  option that installs it, instead of all ~490 from every option. The robot's options are read
+  from the robot when its file comes to the front (a program open from it, or in a container
+  bound to it; again when you switch to another robot's file, at most once a minute per robot),
+  else from the `orderfil.dat` of the backup folder the program is in. With neither, only the
+  programs every controller has are offered. Your own programs are listed as before.
+
+### Fixed
+- The `CALL` / `RUN` name list showed a program once per backup holding it when the workspace
+  had several backups. Each program is listed once now, from the copy nearest the file you edit.
+
 ## 26.109.3 - 2026-10-04 - Report an Issue; public repository; beta badge
 
 ### Added

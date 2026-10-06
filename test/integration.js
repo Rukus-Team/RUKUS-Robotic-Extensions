@@ -130,7 +130,8 @@ async function main() {
     let checked = false;
     for (const f of fs.readdirSync(folder).filter(x => /\.ls$/i.test(x))) {
       const t = fs.readFileSync(path.join(folder, f), 'latin1');
-      const m = /^(\s*\d+:\s*CALL\s+)([A-Z0-9_]+)/m.exec(t);
+      // [ \t], not \s: in a CRLF file ^ also matches between \r and \n, and \s* would then start the match on the line above
+      const m = /^([ \t]*\d+:[ \t]*CALL[ \t]+)([A-Z0-9_]+)/m.exec(t);
       if (!m) continue;
       if (!fs.existsSync(path.join(folder, m[2].toLowerCase() + '.ls'))) continue;
       const cdoc = await vscode.workspace.openTextDocument(path.join(folder, f));
@@ -348,7 +349,16 @@ async function main() {
     const progs = progComp?.items ?? [];
     const fanuc = progs.filter(i => /^FANUC/.test(typeof i.label === 'string' ? '' : i.label.description ?? ''));
     check('after CALL: workspace programs are offered', progs.some(i => i.kind === vscode.CompletionItemKind.Module), progs.length);
-    check('after CALL: programs installed by options are offered too, below them', fanuc.length > 50 && fanuc.every(i => (i.sortText ?? '').startsWith('1')), fanuc.length);
+    const dupes = progs.filter(i => i.kind !== vscode.CompletionItemKind.Snippet).map(labelOf).filter((n, i, a) => a.indexOf(n) !== i);
+    check('after CALL: each program once, however many backups hold it', dupes.length === 0, dupes.slice(0, 5).join(' '));
+    // an untitled program has no robot and no backup folder: its options are unknown, so only the
+    // programs every controller has; fanucPrograms = all offers the whole catalog
+    check('after CALL: FANUC programs below them, only the option-free ones when the options are unknown', fanuc.length > 0 && fanuc.every(i => (i.sortText ?? '').startsWith('1') && i.label.description === 'FANUC'), fanuc.length);
+    await robotCfg().update('tp.completion.fanucPrograms', 'all', vscode.ConfigurationTarget.Global);
+    const allComp = await vscode.commands.executeCommand('vscode.executeCompletionItemProvider', cdoc.uri, new vscode.Position(6, 12));
+    const allFanuc = (allComp?.items ?? []).filter(i => /^FANUC/.test(typeof i.label === 'string' ? '' : i.label.description ?? ''));
+    await robotCfg().update('tp.completion.fanucPrograms', undefined, vscode.ConfigurationTarget.Global);
+    check('... and fanucPrograms = all offers every program options install', allFanuc.length > 50 && allFanuc.length > fanuc.length, allFanuc.length);
     // "macro" at the start of a line: an entry that turns the next list into macros only
     const mComp = await vscode.commands.executeCommand('vscode.executeCompletionItemProvider', cdoc.uri, new vscode.Position(7, 9));
     const pick = (mComp?.items ?? []).find(i => labelOf(i) === 'Macro…');

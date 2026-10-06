@@ -15,7 +15,7 @@ import { execFile } from 'node:child_process';
 import { config } from '../util';
 
 export const RUKUS_SCHEME = 'rukus';
-export const RUKUS_DOWNLOAD_URL = 'https://github.com/Scyllasis/Robotic-Utility-Kit-User-System/releases';
+export const RUKUS_DOWNLOAD_URL = 'https://github.com/Rukus-Team/Robotic-Utility-Kit-User-System/releases';
 
 /** Pages RUKUS knows how to open. Keep in step with the RUKUS side. */
 export type RukusRoute = 'home' | 'monitor' | 'alarms' | 'backup' | 'diff' | 'schedule';
