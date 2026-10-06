@@ -11,6 +11,8 @@ import { FanucServices } from '../services';
 import { spanToRange, spanContains, config, md, programNameFromUri } from '@core/util';
 import { resolveProgram } from '@core/resolve';
 import { frameHover } from './frameHover';
+import { ORDER_FILE, parseOrderFile, catalogOptionInstalled, cachedOptionsForRobot, type ControllerOption } from '../live/controllerOptions';
+import { boundRobot } from '@core/robotBinding';
 
 const SEL = { language: 'fanuc-tp' };
 
@@ -548,9 +550,12 @@ class TpCompletion implements vscode.CompletionItemProvider {
       const replaceRange = new vscode.Range(pos.line, pos.character - cm[2].length, pos.line, pos.character);
       const scoped = this.s.index.list(doc.uri);
       const own = new Set<string>();
-      for (const p of scoped.length ? scoped : this.s.index.list()) {
-        if (p.name === programNameFromUri(doc.uri)) continue;
-        own.add(p.name.toUpperCase());
+      // one entry per name: several backups (or a working copy and its snapshot) hold the same
+      // program; the copy nearest the edited file stands for them
+      for (const q of scoped.length ? scoped : this.s.index.list()) {
+        if (q.name === programNameFromUri(doc.uri) || own.has(q.name.toUpperCase())) continue;
+        own.add(q.name.toUpperCase());
+        const p = this.s.index.get(q.name, doc.uri) ?? q;
         const it = new vscode.CompletionItem({ label: p.name, description: p.comment ?? (p.kind === 'binary' ? p.programType : undefined) }, p.kind === 'karel' ? vscode.CompletionItemKind.Class : p.kind === 'binary' ? vscode.CompletionItemKind.File : vscode.CompletionItemKind.Module);
         it.range = replaceRange; it.detail = vscode.workspace.asRelativePath(p.uri); it.filterText = `${p.name} ${p.comment ?? ''}`;
         it.sortText = `0${p.name}`;
@@ -558,8 +563,13 @@ class TpCompletion implements vscode.CompletionItemProvider {
       }
       // Programs an option installs on the controller (from the manuals): callable, never in the
       // workspace. Below the workspace's own programs; searchable by what they do as well as by name.
+      // Only the ones whose option this robot has (List 5, item 1) - the catalog is ~490 programs
+      // across every option; when the robot's options are not known, only the option-free ones.
+      const all = config<string>('tp.completion.fanucPrograms', 'installed', doc) === 'all';
+      const installed = all ? undefined : installedOptionsNear(this.s, doc.uri);
       for (const [name, f] of Object.entries(FANUC_PROGRAMS)) {
         if (own.has(name)) continue;
+        if (!all && f.option && !(installed && catalogOptionInstalled(f.option, installed))) continue;
         const it = new vscode.CompletionItem({ label: name, description: f.option ? `FANUC · ${f.option}` : 'FANUC' }, vscode.CompletionItemKind.Function);
         it.range = replaceRange; it.detail = f.option ? `Installed by ${f.option}` : 'Installed on the controller by FANUC';
         it.documentation = f.summary; it.filterText = `${name} ${f.summary}`; it.sortText = `1${name}`;
@@ -854,4 +864,33 @@ class TpFormatter implements vscode.DocumentFormattingEditProvider {
     for (const e of formatPositions(text)) if (!taken.has(e.line)) out.push(vscode.TextEdit.replace(doc.lineAt(e.line).range, e.newText));
     return out;
   }
+}
+
+/**
+ * The software options of the robot a program belongs to. First what was last read from that
+ * robot (MD:ORDERFIL.DAT) - a program open from the controller, or a file in a container bound to
+ * it; live/optionsView reads it when the file comes to the front. Then the orderfil.dat of the
+ * nearest backup folder at or above the file, inside the workspace. undefined when neither is known.
+ */
+const orderFileCache = new Map<string, { mtime: number; options: ControllerOption[] }>();
+function installedOptionsNear(s: FanucServices, uri: vscode.Uri): ControllerOption[] | undefined {
+  const bound = boundRobot(s, uri);
+  const live = bound ? cachedOptionsForRobot(bound.name) : undefined;
+  if (live || uri.scheme !== 'file') return live;
+  const root = vscode.workspace.getWorkspaceFolder(uri)?.uri.fsPath;
+  for (let dir = path.dirname(uri.fsPath), i = 0; i < 8; i++) {
+    try {
+      const f = fs.readdirSync(dir).find(n => n.toLowerCase() === ORDER_FILE.toLowerCase());
+      if (f) {
+        const file = path.join(dir, f), mtime = fs.statSync(file).mtimeMs;
+        let hit = orderFileCache.get(file);
+        if (!hit || hit.mtime !== mtime) orderFileCache.set(file, hit = { mtime, options: parseOrderFile(fs.readFileSync(file, 'latin1')) });
+        return hit.options.length ? hit.options : undefined;
+      }
+    } catch { /* unreadable folder: keep looking up */ }
+    const up = path.dirname(dir);
+    if (up === dir || !root || path.relative(root, dir) === '' || path.relative(root, dir).startsWith('..')) break;
+    dir = up;
+  }
+  return undefined;
 }

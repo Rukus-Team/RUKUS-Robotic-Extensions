@@ -2,7 +2,7 @@
   "name": "robot-code",
   "displayName": "Robot Code — FANUC TP & KAREL (Beta)",
   "description": "BETA - in active development, not yet proven on a live cell. Full IDE support for FANUC robots: TP (.ls) and KAREL (.kl) with hover docs, go-to-definition, diagnostics, register/I-O comment resolution from controller backups, renumbering, call graphs, ktrans integration and more. Built to grow to other robot brands.",
-  "version": "26.109.3",
+  "version": "26.109.4",
   "publisher": "rukus-team",
   "license": "MIT",
   "repository": {
@@ -438,6 +438,136 @@
         "label": "Robot Code Light High Contrast",
         "uiTheme": "hc-light",
         "path": "./themes/robot-code-light-high-contrast-color-theme.json"
+      },
+      {
+        "label": "Robot Code Purple Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-purple-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Red Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-red-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Blue Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-blue-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Green Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-green-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Purple Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-purple-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code Red Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-red-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code Blue Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-blue-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code Green Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-green-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code RUKUS Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-rukus-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code RUKUS Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-rukus-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code Phanook Flakes Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-phanook-flakes-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Phanook Flakes Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-phanook-flakes-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code All-Berry Bites Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-all-berry-bites-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code All-Berry Bites Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-all-berry-bites-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code Kooka Puffs Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-kooka-puffs-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Kooka Puffs Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-kooka-puffs-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code Ciao Crunch Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-ciao-crunch-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Ciao Crunch Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-ciao-crunch-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code Kowabunga Krispies Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-kowabunga-krispies-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Kowabunga Krispies Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-kowabunga-krispies-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code Halloween Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-halloween-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Halloween Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-halloween-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code Christmas Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-christmas-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Christmas Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-christmas-light-color-theme.json"
+      },
+      {
+        "label": "Robot Code Pixel Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/robot-code-pixel-dark-color-theme.json"
+      },
+      {
+        "label": "Robot Code Pixel Light",
+        "uiTheme": "vs",
+        "path": "./themes/robot-code-pixel-light-color-theme.json"
       }
     ],
     "commands": [
@@ -2467,6 +2597,16 @@
           "maximum": 6,
           "description": "Column width of the line number field (FANUC uses 4)."
         },
+        "robotCode.tp.completion.fanucPrograms": {
+          "type": "string",
+          "enum": ["installed", "all"],
+          "enumDescriptions": [
+            "Only the programs of options the robot has: its options are read from the robot (a program open from it, or in a container bound to it) or from the orderfil.dat of the backup folder the program is in. When neither is known, only the programs every controller has.",
+            "Every program in the FANUC catalog, whatever the robot has."
+          ],
+          "default": "installed",
+          "markdownDescription": "Which FANUC-supplied programs the `CALL` / `RUN` name list offers below the robot's own programs."
+        },
         "robotCode.tp.inlineHints": {
           "type": "boolean",
           "default": true,
@@ -2798,7 +2938,7 @@
         },
         "robotCode.rukus.downloadUrl": {
           "type": "string",
-          "default": "https://github.com/Scyllasis/Robotic-Utility-Kit-User-System/releases",
+          "default": "https://github.com/Rukus-Team/Robotic-Utility-Kit-User-System/releases",
           "description": "Where to send someone who does not have RUKUS installed."
         },
         "robotCode.live.upload": {

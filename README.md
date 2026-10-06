@@ -39,7 +39,7 @@ made-up file that shows the problem is the most useful thing to attach.
 | Hover | Every instruction and motion option explained. `$` system variables (TP, KAREL and `.va`) described from RUKUS's `SysVarsReference.json` — type, access, storage — using the RUKUS install's full copy when present, else the bundled subset. Registers and I/O show the **controller comment and value** from `numreg.va` / `posreg.va` / `strreg.va` / `diocfgsv.va`. `P[n]` shows the full taught position. `CALL X` shows the callee's comment, size and callers. Macro instructions resolve through `sysmacro.va`. |
 | Navigation | Ctrl+click `JMP LBL[n]` → label. `P[n]` → position data. `CALL`/`RUN` → program file — including programs that exist only as a compiled `.pc` / `.tp` in the backup. Macro name (the whole name) → macro program. Find All References for labels, positions, registers, I/O and program names (workspace-wide callers). |
 | Outline | Header, main program split by label regions (with calls, macros and motions inside), positions with UF/UT and coordinates. Workspace symbol search (`Ctrl+T`) lists every program. |
-| Completion | Instructions as snippets, labels after `JMP LBL[`, programs after `CALL `, registers/I-O **with their controller comments** after `R[`, `DI[` …, positions after `P[`, macro names. |
+| Completion | Instructions as snippets, labels after `JMP LBL[`, programs after `CALL ` (the robot's own, then the FANUC-supplied programs of the options it has installed), registers/I-O **with their controller comments** after `R[`, `DI[` …, positions after `P[`, macro names. |
 | In-line hints | Editor-drawn hints are wrapped in `{ }` so they never read as code: `P[1]{JNT}{UF1}{UT2}` (the representation and frames, one badge each - pick which with `robotCode.tp.decorations.positionFields`: type, user frame, user tool, or none), `R[15]{Speed}` (the controller comment for a register written without one - hover to **Insert it**), and the live value `R[151]{2}`. They're decorations, so no theme can tint them, and use a muted palette; `robotCode.tp.inlineHints` turns them off. Names written in code (`R[15:Speed]`) are part of the variable, not a comment. |
 | Diagnostics | Duplicate / undefined / unused labels, untaught or unused positions, `IF THEN`/`FOR` balance, speed and CNT ranges, CALL targets missing from the workspace, unknown macros, inline comments that disagree with the controller or with each other, header problems. Quick fixes included. |
 | CodeLens | Jump count on each label, caller count on the program header. |
@@ -175,7 +175,7 @@ With RUKUS installed there is nothing to set up: the **RUKUS Clusters** view lis
 
 ### Opens in RUKUS
 
-Live monitoring, alarm history and scheduled backups are cell management — [RUKUS](https://github.com/Scyllasis/Robotic-Utility-Kit-User-System)'s job, not the editor's. Each robot in the Robots view has buttons that open the real screens over a `rukus://` link instead of a weaker copy in a webview:
+Live monitoring, alarm history and scheduled backups are cell management — [RUKUS](https://github.com/Rukus-Team/Robotic-Utility-Kit-User-System)'s job, not the editor's. Each robot in the Robots view has buttons that open the real screens over a `rukus://` link instead of a weaker copy in a webview:
 
 - **Live monitor** → RUKUS Production Dashboard
 - **Alarm history** → RUKUS Error Watcher
@@ -277,6 +277,20 @@ snapshot file's previous version is kept in `.robocode-robot/snapshot-history/`.
 
 Syntax highlighting for `.va` / `.dt` / `.dg` / `.io` dumps and `.cm` / `.cf` command files.
 
+### Color themes
+
+Preferences ▸ Color Theme (`Ctrl+K Ctrl+T`), all under **Robot Code**:
+
+- **Dark**, **Light**, **High Contrast** and **Light High Contrast** — the originals.
+- **Purple**, **Red**, **Blue** and **Green**, each as Dark and Light — Robot Code Dark / Light
+  with that color as the accent and a tint of it in the editor and side bars.
+- One Dark and one Light per **RUKUS skin**, so the editor matches the app: **RUKUS**,
+  **Phanook Flakes**, **All-Berry Bites**, **Kooka Puffs**, **Ciao Crunch**, **Kowabunga Krispies**,
+  **Halloween**, **Christmas** and **Pixel**. Backgrounds, text, accent and the error / warning /
+  success colors are the skin's own; program, routine and label names take its heading color.
+
+The syntax colors are the same in every theme, so a program reads the same whichever you pick.
+
 ### File icons
 
 Every FANUC file type has its own icon in the Explorer, on editor tabs and in Quick Open. They
@@ -327,6 +341,10 @@ All under `robotCode.*`; see the Settings UI. The ones you will touch:
 - `tp.autoRenumber` / `tp.autoSemicolon` — on by default.
 - `tp.inlineHints` (all line hints on/off), `tp.decorations.positions`, `tp.decorations.positionFields` (which of type / userFrame / userTool show after `P[n]`), `tp.decorations.comments`, `live.inlayValues`.
 - `tp.diagnostics.*` — switch off individual checks.
+- `tp.completion.fanucPrograms` — the FANUC-supplied programs offered after `CALL ` / `RUN `:
+  `installed` (default) lists only those of options the robot has — read from the robot when its
+  file comes to the front (a program open from it, or in a container bound to it), else from the
+  `orderfil.dat` of the backup folder the program is in — or `all` for the whole catalog.
 - `karel.ktransPath`, `karel.ktransConfig` (a `robot.ini`; optional — ktrans compiles without one using its basic support files), `karel.compileOnSave`, `karel.maxIdentifierLength`.
 - `data.backupFolders` — extra folders scanned for `.va` and `.ls`.
 - `live.fetchOnConnect` — what one connect reads; `[]` for nothing.
@@ -366,8 +384,7 @@ the GitHub release `v<version>`, and in the RUKUS repo on GitLab as `Assets/VSCo
 (LFS), which is what RUKUS installs from. `npm run release` does both (`--dry-run` to see the
 commands; `--github-only` / `--rukus-only`; the RUKUS commit is not pushed unless `--push-rukus`).
 
-Themes: **Robot Code Dark**, **Robot Code Light**, **Robot Code High Contrast** and
-**Robot Code Light High Contrast** (Preferences ▸ Color Theme).
+Themes: see *Color themes* above.
 
 Press `F5` in VS Code to launch the Extension Development Host. The default config, **Launch Extension (F5: local dev host)**, builds, opens a dev host on the last workspace you used (else a scratch copy of `test/fixtures-cell` at `.vscode-test/debug-cell`, gitignored), and attaches to its inspector on `127.0.0.1:9229`. It exists because the built-in `extensionHost` debugger can time out attaching to the extension host on Windows: its target discovery races `127.0.0.1` and `[::1]` and treats the always-refused IPv6 side as fatal. Attaching with an explicit `address: "127.0.0.1"` avoids that race. **Attach to Running Extension Host (127.0.0.1)** attaches without launching (for `npm run dev:debug`); the built-in `Run Extension …` configs remain for a machine where that debugger works.
 

@@ -74,3 +74,33 @@ export function optionHighlights(options: ControllerOption[]): OptionHighlight[]
   out.push({ label: 'Socket Messaging', ok: has('R648'), detail: has('R648') ? 'R648 - KAREL can open TCP sockets' : 'No R648 - no KAREL socket messaging' });
   return out;
 }
+
+/**
+ * The options last read from a robot, by robot name - what the CALL list asks for a program
+ * open from the controller. Only what was already read; undefined when nothing was.
+ */
+export function cachedOptionsForRobot(name: string): ControllerOption[] | undefined {
+  const prefix = `${name}@`.toUpperCase();
+  for (const [key, options] of optionsCache) if (key.startsWith(prefix)) return options;
+  return undefined;
+}
+
+const NAME_NOISE = new Set(['the', 'of', 'and', 'for', 'function', 'package', 'interface', 'option', 'utility']);
+const words = (s: string) => s.toLowerCase().replace(/[^a-z0-9+]+/g, ' ').trim().split(' ').filter(w => w && !NAME_NOISE.has(w));
+
+/**
+ * Is the option a catalog entry names (syntaxCatalog's FANUC_PROGRAMS `option`, free text from
+ * the manuals) installed? By order code when the text has one ("R726 iRCalibration Signature",
+ * "iRVision (base: 2DV J901 / 3DL J902 / 3DV J914)": any of them); a code that is only a
+ * prerequisite or an aside - "(needs R648 ...)", "(with J950)", after a ";" - does not count.
+ * Without a code, by name: every word of one alternative ("A / B", "A or B") is in the name of
+ * an installed option ("Collision Guard (Collision Skip)" -> "Collision Guard Pack").
+ */
+export function catalogOptionInstalled(label: string, installed: ControllerOption[]): boolean {
+  const main = label.split(';')[0].replace(/\((needs|with|stated|north america|payload)[^)]*\)/gi, ' ');
+  const codes = [...main.matchAll(/\b([A-Z]\d{3})\b/g)].map(m => m[1]);
+  if (codes.length) return codes.some(c => hasOption(installed, c));
+  const names = installed.map(o => new Set(words(o.name)));
+  return main.replace(/\([^)]*\)/g, ' ').split(/\s\/\s|\s+or\s+/i).map(words).filter(w => w.length)
+    .some(alt => names.some(n => alt.every(w => n.has(w))));
+}

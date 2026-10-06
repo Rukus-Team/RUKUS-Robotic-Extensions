@@ -27,7 +27,7 @@ import { includedNames } from '@fanuc/karel/includes';
 import { detectTabWidth, indentWidth } from '@fanuc/karel/tabWidth';
 import { LIST_LIMIT_JS } from '@core/webviewStyle';
 import { convertUserFrame, convertToolFrame, toPose, fromPose, mirror, sameOrientation, IDENTITY } from '@fanuc/tp/frameMath';
-import { parseOrderFile, hasOption, canLoadAscii, optionHighlights, ASCII_UPLOAD } from '@fanuc/live/controllerOptions';
+import { parseOrderFile, hasOption, canLoadAscii, optionHighlights, ASCII_UPLOAD, catalogOptionInstalled } from '@fanuc/live/controllerOptions';
 import { connectionHint } from '@core/live/connectionHints';
 import { parseSysFrames, frameOrIdentity } from '@fanuc/data/sysFrameParser';
 import { usageFindings, accessOfRef } from '@fanuc/tools/xref';
@@ -2039,6 +2039,14 @@ if (backupDir) {
   check(byLabel('KAREL')?.ok === true && byLabel('PC Interface')?.ok === true && byLabel('Socket Messaging')?.ok === true, 'optionHighlights: KAREL, PC Interface, Socket Messaging found');
   const bare = optionHighlights(parseOrderFile('1A05B-2600-H552 ! HandlingTool         \r\n'));
   check(bare.find(h => h.label === 'Loads .LS programs')?.ok === false && bare.find(h => h.label === 'KAREL')?.ok === false, 'optionHighlights: missing options are marked missing');
+
+  // the CALL list shows a FANUC program only when its option is installed (List 5, item 1)
+  const optCell = parseOrderFile('1A05B-2600-H590 ! SpotTool+\r\n1A05B-2600-R902 ! 3DV Guidance Plus\r\n1A05B-2600-J684 ! Collision Guard Pack\r\n1A05B-2600-J753 ! DeviceNet Interface\r\n');
+  const inst = (l: string) => catalogOptionInstalled(l, optCell);
+  check(inst('R902 iRVision Bin Picking (3DV)') && !inst('R726 iRCalibration Signature'), 'catalogOptionInstalled: by order code');
+  check(inst('iRVision (base: 2DV J901 / 3DL J902 / 3DV J914)') === false && catalogOptionInstalled('iRVision (base: 2DV J901 / 3DL J902 / 3DV J914)', parseOrderFile('1A05B-2600-J902 ! 3DL Vision\r\n')), 'catalogOptionInstalled: any of several codes');
+  check(!inst('S521 iRPickTool/External Machine Vision Interface Add-on (needs R648 User Socket Messaging)') && !catalogOptionInstalled('S521 x (needs R648 y)', parseOrderFile('1A05B-2600-R648 ! User Socket Msg\r\n')), 'catalogOptionInstalled: a prerequisite code alone is not the option');
+  check(inst('Collision Guard (Collision Skip)') && inst('DeviceNet') && !inst('PalletTool') && !inst('Force Control Deburring package'), 'catalogOptionInstalled: by name when the text has no code');
 
   // --- connection hints: the likely cause of a failed robot request ---
   const http = { useFtp: false }, ftp = { useFtp: true };
