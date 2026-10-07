@@ -52,6 +52,7 @@ export function openDashboard(ctx: vscode.ExtensionContext, s: Services, robots:
         case 'toggleAuto': await vscode.commands.executeCommand('robotCode.live.toggleAutoRefresh', name); break;
         case 'edit': openRobotForm(ctx, s, robots, name); break;
         case 'backup': await vscode.commands.executeCommand('robotCode.live.pullBackup', name); break;
+        case 'snapshot': await vscode.commands.executeCommand('robotCode.data.snapshotFromRobot', name); break;
         case 'compare': await vscode.commands.executeCommand('robotCode.live.compareWithRobot'); break;
         case 'openFile': await vscode.commands.executeCommand('robotCode.live.openRobotFile', name, m.file); break;
         case 'registers': await vscode.commands.executeCommand('robotCode.data.openRegisterTable'); break;
@@ -144,6 +145,7 @@ function html(name: string): string {
     <button id="toggleAuto" title="Keep re-reading what is already loaded" aria-label="Toggle automatic re-reading">Auto</button>
     <button id="edit" title="Connection settings" aria-label="Edit connection settings">Edit…</button>
     <button id="backup" title="Download programs and data to a folder" aria-label="Back up programs and data to a folder">Backup…</button>
+    <button id="snapshot" title="Overwrite the robot container's snapshot from this controller, with its metadata" aria-label="Snapshot from the robot">Snapshot…</button>
     <button id="compare" title="Diff the open program against the robot's copy" aria-label="Compare the open program with the robot">Compare…</button>
     <button id="openFile" title="Open a file from the controller" aria-label="Open a file from the controller">Open file…</button>
   </div>
@@ -156,7 +158,7 @@ ${LIST_LIMIT_JS}
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   let st = null, ioQuery = '', ioKind = '', regQuery = '';
-  for (const id of ['refresh','edit','backup','openFile','getAll','toggleAuto','compare']) $(id).onclick = () => vscode.postMessage({ type: id });
+  for (const id of ['refresh','edit','backup','snapshot','openFile','getAll','toggleAuto','compare']) $(id).onclick = () => vscode.postMessage({ type: id });
   $('toggle').onclick = () => vscode.postMessage({ type: st && st.state === 'connected' ? 'disconnect' : 'connect' });
   const fmt = n => (Math.round(n * 100) / 100).toFixed(2);
   const ago = at => { const s = Math.round((Date.now() - at) / 1000); return s < 60 ? s + ' s ago' : s < 3600 ? Math.round(s / 60) + ' min ago' : Math.round(s / 3600) + ' h ago'; };
@@ -179,7 +181,7 @@ ${LIST_LIMIT_JS}
       + (st.error ? ' · <span class="err">' + esc(st.error) + '</span>' : '');
     $('toggle').textContent = st.state === 'connected' ? 'Disconnect' : st.state === 'connecting' ? 'Connecting…' : 'Connect';
     $('toggle').disabled = st.state === 'connecting';
-    for (const id of ['refresh','backup','openFile','getAll','toggleAuto','compare']) $(id).disabled = st.state !== 'connected';
+    for (const id of ['refresh','backup','snapshot','openFile','getAll','toggleAuto','compare']) $(id).disabled = st.state !== 'connected';
     $('toggleAuto').textContent = st.autoRefresh ? 'Auto ' + (st.poll / 1000).toFixed(0) + 's' : 'Auto off';
     $('toggleAuto').className = st.autoRefresh ? 'on' : '';
     if (st.state !== 'connected') { $('body').innerHTML = '<div class="rc-empty" role="status"><b>' + (st.state === 'connecting' ? 'Connecting…' : st.state === 'error' ? 'Connection problem' : 'Not connected') + '</b><p>' + esc(st.error ?? 'Press Connect to start.') + '</p></div>'; return; }

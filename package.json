@@ -2,7 +2,7 @@
   "name": "robot-code",
   "displayName": "Robot Code — FANUC TP & KAREL (Beta)",
   "description": "BETA - in active development, not yet proven on a live cell. Full IDE support for FANUC robots: TP (.ls) and KAREL (.kl) with hover docs, go-to-definition, diagnostics, register/I-O comment resolution from controller backups, renumbering, call graphs, ktrans integration and more. Built to grow to other robot brands.",
-  "version": "26.109.4",
+  "version": "26.109.5",
   "publisher": "rukus-team",
   "license": "MIT",
   "repository": {
@@ -685,6 +685,18 @@
         "icon": "$(new-file)"
       },
       {
+        "command": "robotCode.karel.showReference",
+        "title": "KAREL Reference…",
+        "category": "FANUC KAREL",
+        "icon": "$(book)"
+      },
+      {
+        "command": "robotCode.lookupAlarm",
+        "title": "Look Up Alarm Code…",
+        "category": "FANUC",
+        "icon": "$(warning)"
+      },
+      {
         "command": "robotCode.data.refresh",
         "title": "Rescan Controller Data (.va files)",
         "category": "Robot Code",
@@ -1154,22 +1166,10 @@
         "icon": "$(plug)"
       },
       {
-        "command": "robotCode.sync.fetchAll",
-        "title": "Fetch All (entire snapshot)",
+        "command": "robotCode.sync.fetch",
+        "title": "Fetch from Robot…",
         "category": "Robot Code",
         "icon": "$(cloud-download)"
-      },
-      {
-        "command": "robotCode.sync.fetchPrograms",
-        "title": "Fetch Programs",
-        "category": "Robot Code",
-        "icon": "$(file-code)"
-      },
-      {
-        "command": "robotCode.sync.fetchData",
-        "title": "Fetch Data & I/O",
-        "category": "Robot Code",
-        "icon": "$(database)"
       },
       {
         "command": "robotCode.sync.fetchFolder",
@@ -1184,14 +1184,8 @@
         "icon": "$(repo-pull)"
       },
       {
-        "command": "robotCode.sync.fetchProgram",
-        "title": "Fetch from Robot",
-        "category": "Robot Code",
-        "icon": "$(repo-fetch)"
-      },
-      {
         "command": "robotCode.sync.fetchCompareAll",
-        "title": "Fetch & Compare All",
+        "title": "Compare All with Robot",
         "category": "Robot Code",
         "icon": "$(sync)"
       },
@@ -1535,11 +1529,6 @@
           "group": "d@1"
         },
         {
-          "command": "robotCode.data.snapshotFromRobot",
-          "when": "explorerResourceIsFolder && robotCode.hasContainers",
-          "group": "d@2"
-        },
-        {
           "command": "robotCode.tools.diffBackups",
           "when": "explorerResourceIsFolder",
           "group": "e@1"
@@ -1839,19 +1828,9 @@
           "group": "navigation@4"
         },
         {
-          "command": "robotCode.sync.fetchAll",
+          "command": "robotCode.sync.fetch",
           "when": "view == robotCode.snapshot && config.robotCode.experimental.robotConnections",
           "group": "navigation@0"
-        },
-        {
-          "command": "robotCode.sync.fetchPrograms",
-          "when": "view == robotCode.snapshot && config.robotCode.experimental.robotConnections",
-          "group": "navigation@0b"
-        },
-        {
-          "command": "robotCode.sync.fetchData",
-          "when": "view == robotCode.snapshot && config.robotCode.experimental.robotConnections",
-          "group": "navigation@0c"
         },
         {
           "command": "robotCode.sync.fetchCompareAll",
@@ -2124,29 +2103,14 @@
           "group": "9_remove@1"
         },
         {
-          "command": "robotCode.data.snapshotFromRobot",
+          "command": "robotCode.sync.fetch",
           "when": "view == robotCode.snapshot && viewItem == robot-container && config.robotCode.experimental.robotConnections",
           "group": "inline@2"
         },
         {
-          "command": "robotCode.sync.fetchAll",
-          "when": "view == robotCode.snapshot && viewItem == robot-container && config.robotCode.experimental.robotConnections",
-          "group": "inline@3"
-        },
-        {
-          "command": "robotCode.sync.fetchAll",
+          "command": "robotCode.sync.fetch",
           "when": "view == robotCode.snapshot && viewItem == robot-container && config.robotCode.experimental.robotConnections",
           "group": "snapshotSync@0"
-        },
-        {
-          "command": "robotCode.sync.fetchPrograms",
-          "when": "view == robotCode.snapshot && viewItem =~ /^(robot-container|snapshot-scope-programs)$/ && config.robotCode.experimental.robotConnections",
-          "group": "snapshotSync@1"
-        },
-        {
-          "command": "robotCode.sync.fetchData",
-          "when": "view == robotCode.snapshot && viewItem =~ /^(robot-container|snapshot-scope-data)$/ && config.robotCode.experimental.robotConnections",
-          "group": "snapshotSync@2"
         },
         {
           "command": "robotCode.sync.pullFolder",
@@ -2199,7 +2163,7 @@
           "group": "syncProgram@0"
         },
         {
-          "command": "robotCode.sync.fetchProgram",
+          "command": "robotCode.sync.fetchFile",
           "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/) && config.robotCode.experimental.robotConnections",
           "group": "syncProgram@1"
         },
@@ -2229,7 +2193,7 @@
           "group": "syncRobot@0"
         },
         {
-          "command": "robotCode.sync.fetchPrograms",
+          "command": "robotCode.sync.fetch",
           "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem == robot-folder) && config.robotCode.experimental.robotConnections",
           "group": "syncRobot@1"
         },
@@ -2292,6 +2256,16 @@
           "command": "robotCode.live.toggleAutoRefresh",
           "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
           "group": "a@0b"
+        },
+        {
+          "command": "robotCode.data.snapshotFromRobot",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "group": "a@0c"
+        },
+        {
+          "command": "robotCode.sync.errors",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "group": "a@0d"
         },
         {
           "command": "robotCode.live.pullBackup",
@@ -2980,6 +2954,34 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "KAREL files use ROBOGUIDE's layout by default: the Tab key puts in a real tab, drawn 7 spaces wide as ROBOGUIDE's editor does. A file that mixes tabs and spaces only lines up at the tab width it was written with, so for such a file the width that lines its indentation up is used instead (4 for files written in most other editors). Turn off to always use `editor.tabSize`."
+        },
+        "robotCode.karel.hoverDetail": {
+          "type": "string",
+          "enum": [
+            "verbose",
+            "simple"
+          ],
+          "enumDescriptions": [
+            "Signature, description, what each parameter is for, notes and related entries. The parameter hints while typing a call describe each argument too.",
+            "Signature and a one-line description."
+          ],
+          "default": "verbose",
+          "markdownDescription": "How much a hover over a KAREL built-in (`GET_REG`, `CREATE_VAR`, `CNV_INT_STR` ...), statement, directive or data type shows. `verbose` adds each parameter's purpose, notes and related entries."
+        },
+        "robotCode.karel.diagnostics.environment": {
+          "type": "string",
+          "enum": [
+            "needed",
+            "all",
+            "off"
+          ],
+          "enumDescriptions": [
+            "Warn for the option groups ktrans cannot load by itself: iRVision (CVIS), robot-to-robot data transfer (RPCC), data monitoring (DAQ).",
+            "Also note (as information) every other group a called built-in belongs to - REGOPE, SYSTEM, UIF ... - though ktrans loads those by itself.",
+            "No %ENVIRONMENT check."
+          ],
+          "default": "needed",
+          "markdownDescription": "Check that the program header has the `%ENVIRONMENT` line for the built-ins it calls, with a quick fix that adds it. Picking an option group's built-in from completion adds the line too."
         },
         "robotCode.karel.diagnostics.undeclared": {
           "type": "boolean",

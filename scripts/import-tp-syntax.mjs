@@ -75,6 +75,7 @@ if (existsSync(ovPath)) {
     if (!it) { report.push(`override for unknown item ${id}`); continue; }
     if (o.remove) { merged.delete(id); applied++; continue; }
     if (o.keyword) it.keyword = clean(o.keyword);
+    if (o.summary) it.summary = clean(o.summary);
     if (o.forms) it.forms = o.forms.map(clean);
     if (o.examples) it.examples = o.examples.map(clean);
     if (o.notes) it.notes = [...o.notes.map(clean), ...it.notes.filter(n => !o.notes.includes(n))].slice(0, 5);

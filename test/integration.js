@@ -440,6 +440,52 @@ async function main() {
   // the built-in hover (beta list 2, item 11): a title naming what it is, then the signature as
   // a code block - not the one-line signature-plus-text it used to be
   check('karel hover on builtin', /built-in (routine|function)|KAREL statement/.test(kt) && /```karel/.test(kt), kt);
+  // robotCode.karel.hoverDetail: verbose (default) lists what the manual says each parameter is for
+  const regDoc = await vscode.workspace.openTextDocument({ language: 'fanuc-karel', content: 'PROGRAM demo\nVAR\n  f : BOOLEAN\n  i : INTEGER\n  r : REAL\n  st : INTEGER\nBEGIN\n  GET_REG(1, f, i, r, st)\nEND demo\n' });
+  const regHover = async () => hoverText(await vscode.commands.executeCommand('vscode.executeHoverProvider', regDoc.uri, new vscode.Position(7, 4)));
+  const verboseText = await regHover();
+  check('karel hover verbose: parameters from the manual', /\*\*Parameters\*\*/.test(verboseText) && /Specifies the register to get/.test(verboseText), verboseText);
+  const regSig = await vscode.commands.executeCommand('vscode.executeSignatureHelpProvider', regDoc.uri, new vscode.Position(7, 10), '(');
+  const p0 = regSig?.signatures?.[0]?.parameters?.[0]?.documentation;
+  check('karel signature help: parameter documentation', /register to get/.test(typeof p0 === 'string' ? p0 : p0?.value ?? ''), JSON.stringify(p0));
+  await vscode.workspace.getConfiguration('robotCode').update('karel.hoverDetail', 'simple', vscode.ConfigurationTarget.Global);
+  const simpleText = await regHover();
+  check('karel hover simple: no parameter list', !/\*\*Parameters\*\*/.test(simpleText) && /```karel/.test(simpleText), simpleText);
+  await vscode.workspace.getConfiguration('robotCode').update('karel.hoverDetail', undefined, vscode.ConfigurationTarget.Global);
+
+  // the rest of the manual's chapter: directives, statements; %ENVIRONMENT; alarm codes
+  const manDoc = await vscode.workspace.openTextDocument({ language: 'fanuc-karel', content: [
+    'PROGRAM mantest', '%NOABORT = ERROR + COMMAND', 'VAR', '  fl : FILE', '  st : INTEGER', 'BEGIN',
+    "  OPEN FILE fl ('RW', 'RD:X.DT')", "  RSET_INT_REG('RC1', 1, 2, st)", "  POST_ERR(2014, '', 0, 2)", '  -- SRVO-002 stops it', 'END mantest', ''].join('\n') });
+  const hoverAt = async (line, col) => hoverText(await vscode.commands.executeCommand('vscode.executeHoverProvider', manDoc.uri, new vscode.Position(line, col)));
+  const dirText = await hoverAt(1, 3);
+  check('karel hover: translator directive', /translator directive/.test(dirText) && /mask for aborting/.test(dirText), dirText);
+  const openText = await hoverAt(6, 4);
+  check('karel hover: statement (OPEN FILE)', /OPEN FILE/.test(openText) && /KAREL statement/.test(openText), openText);
+  const rsetText = await hoverAt(7, 4);
+  check('karel hover: needs %ENVIRONMENT RPCC', /Needs `%ENVIRONMENT RPCC`/.test(rsetText), rsetText);
+  check('karel hover: alarm number in POST_ERR', /FILE-014/.test(await hoverAt(8, 12)), await hoverAt(8, 12));
+  check('karel hover: alarm id in a comment', /SRVO-002/.test(await hoverAt(9, 7)), await hoverAt(9, 7));
+  let envDiag;
+  for (let i = 0; i < 20 && !envDiag; i++) { await sleep(250); envDiag = vscode.languages.getDiagnostics(manDoc.uri).find(d => d.code === 'karel.environment'); }
+  check('karel diagnostic: missing %ENVIRONMENT', !!envDiag && /RPCC/.test(envDiag.message), envDiag?.message);
+  if (envDiag) {
+    const actions = await vscode.commands.executeCommand('vscode.executeCodeActionProvider', manDoc.uri, envDiag.range);
+    check('karel quick fix: Add %ENVIRONMENT', (actions ?? []).some(a => a.title === 'Add %ENVIRONMENT RPCC'), (actions ?? []).map(a => a.title).join(', '));
+  }
+  const manComp = await vscode.commands.executeCommand('vscode.executeCompletionItemProvider', manDoc.uri, new vscode.Position(7, 3));
+  const rsetItem = manComp?.items?.find(i => (typeof i.label === 'string' ? i.label : i.label.label) === 'RSET_INT_REG');
+  check('karel completion: RPCC built-in brings %ENVIRONMENT', /%ENVIRONMENT RPCC/.test(rsetItem?.additionalTextEdits?.[0]?.newText ?? ''), JSON.stringify(rsetItem?.additionalTextEdits));
+  // environment = all: a core group (GET_REG -> REGOPE) is noted as information, not warned about
+  await vscode.workspace.getConfiguration('robotCode').update('karel.diagnostics.environment', 'all', vscode.ConfigurationTarget.Global);
+  await vscode.window.showTextDocument(regDoc, { preview: false });
+  let coreDiag;
+  for (let i = 0; i < 20 && !coreDiag; i++) { await sleep(250); coreDiag = vscode.languages.getDiagnostics(regDoc.uri).find(d => d.code === 'karel.environment'); }
+  check('karel diagnostic (all): core group noted as information', !!coreDiag && /REGOPE/.test(coreDiag.message) && coreDiag.severity === vscode.DiagnosticSeverity.Information, coreDiag?.message);
+  await vscode.workspace.getConfiguration('robotCode').update('karel.diagnostics.environment', undefined, vscode.ConfigurationTarget.Global);
+  let refOk = true;
+  try { await vscode.commands.executeCommand('robotCode.karel.showReference', 'GET_REG'); } catch (e) { refOk = false; }
+  check('KAREL Reference page opens', refOk);
   const ksyms = await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', kdoc.uri);
   check('karel document symbols', Array.isArray(ksyms) && ksyms.length > 0, ksyms?.map(s => s.name).slice(0, 8).join(','));
   await vscode.commands.executeCommand('workbench.view.explorer');

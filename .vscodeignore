@@ -19,5 +19,6 @@ data/tp-syntax.json
 probe-results/**
 data/tp-syntax-overrides.json
 data/tp-syntax-verified.json
+data/karel-reference.json
 .github/**
 public/**

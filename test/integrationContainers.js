@@ -22,7 +22,7 @@ exports.run = async function () {
   await ext.activate();
   const cmds = await vscode.commands.getCommands(true);
   for (const c of ['robotCode.containers.initCell', 'robotCode.containers.initRobot', 'robotCode.data.snapshotFromBackup', 'robotCode.data.snapshotFromRobot', 'robotCode.containers.diffWithSnapshot']) check('command registered: ' + c, cmds.includes(c));
-  for (const c of ['robotCode.sync.fetchFile', 'robotCode.sync.pullFile', 'robotCode.sync.pushFile', 'robotCode.sync.compareFile', 'robotCode.sync.comparePositions', 'robotCode.sync.compareRegisters', 'robotCode.sync.revertFile', 'robotCode.sync.pullToWorking', 'robotCode.sync.diffOpen', 'robotCode.sync.history', 'robotCode.sync.fetchAll', 'robotCode.sync.fetchPrograms', 'robotCode.sync.fetchData', 'robotCode.sync.fetchFolder', 'robotCode.sync.pullFolder', 'robotCode.sync.fetchCompareAll']) check('command registered: ' + c, cmds.includes(c));
+  for (const c of ['robotCode.sync.fetchFile', 'robotCode.sync.pullFile', 'robotCode.sync.pushFile', 'robotCode.sync.compareFile', 'robotCode.sync.comparePositions', 'robotCode.sync.compareRegisters', 'robotCode.sync.revertFile', 'robotCode.sync.pullToWorking', 'robotCode.sync.diffOpen', 'robotCode.sync.history', 'robotCode.sync.fetch', 'robotCode.sync.fetchFolder', 'robotCode.sync.pullFolder', 'robotCode.sync.fetchCompareAll']) check('command registered: ' + c, cmds.includes(c));
 
   // ---- the Snapshot view lists the robot containers ----
   // Wait for the SETTLED view: the snapshot rows are a disk listing and appear first, while the

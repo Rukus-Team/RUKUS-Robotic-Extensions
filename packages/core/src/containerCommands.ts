@@ -12,6 +12,7 @@ import { parseControllerInfo } from './live/parsers';
 import { globToRegExp } from './live/ftp';
 import { folderDate } from '@core/backupFolders';
 import { gated } from './experimental';
+import { markerBoundRobot, profileNamed } from './robotBinding';
 import {
   copySnapshotAsync, swapSnapshot, writeProvenance, writeRobotJson, writeCellJson, writeRobotGitignore,
   normalizeTpForCompare, normalizeKarelForCompare, snapshotFileTimes,
@@ -230,8 +231,9 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
       `Robot container "${spec.name}" created${programs ? ` with ${programs.length} working folder${programs.length === 1 ? '' : 's'}` : ''}.`,
       'Snapshot from Backup…', 'Snapshot from Robot…', 'Later'
     );
-    if (first === 'Snapshot from Backup…') await vscode.commands.executeCommand('robotCode.data.snapshotFromBackup');
-    if (first === 'Snapshot from Robot…') await vscode.commands.executeCommand('robotCode.data.snapshotFromRobot');
+    const created = s.containers.markers.find(m => path.resolve(m.root) === path.resolve(root));
+    if (first === 'Snapshot from Backup…') await vscode.commands.executeCommand('robotCode.data.snapshotFromBackup', { marker: created });
+    if (first === 'Snapshot from Robot…') await vscode.commands.executeCommand('robotCode.data.snapshotFromRobot', { marker: created });
   });
 
   // ── Snapshot from Backup ───────────────────────────────────────────────────
@@ -314,22 +316,45 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
     }
   });
 
-  // ── Snapshot from Robot ────────────────────────────────────────────────────
-  reg('robotCode.data.snapshotFromRobot', gated(async (node?: { marker?: RobotMarker }) => {
-    const marker = await pickMarker(node?.marker);
+  // ── Snapshot from Robot (heavy: overwrite the whole snapshot from the controller) ──
+  //
+  // The heavyweight counterpart to an incremental Fetch: it lists everything on the controller,
+  // replaces the container's snapshot wholesale and records the controller's own metadata
+  // (F number, version, host). It is tied to the controller, so it is offered on the Controllers
+  // tree and the robot page, not on the Snapshot view.
+  reg('robotCode.data.snapshotFromRobot', gated(async (arg?: unknown) => {
+    const node = arg as { marker?: RobotMarker; c?: { profile?: { name?: string } } } | undefined;
+    const explicit = typeof arg === 'string' ? arg : node?.c?.profile?.name;
+    let marker = node?.marker;
+    if (!marker && explicit) {
+      const bound = s.containers.markers.filter(m => markerBoundRobot(m).name.toLowerCase() === explicit.toLowerCase());
+      if (bound.length === 1) marker = bound[0];
+      else if (bound.length > 1) {
+        const pick = await vscode.window.showQuickPick(
+          bound.map(m => ({ label: m.name, description: vscode.workspace.asRelativePath(m.root, false), marker: m })),
+          { placeHolder: `Snapshot ${explicit} into which robot container?` });
+        if (!pick) return;
+        marker = pick.marker;
+      } else {
+        const pick = await vscode.window.showInformationMessage(
+          `No robot container is bound to "${explicit}". Create one to hold its snapshot?`,
+          'Initialize Robot Container…', 'Cancel');
+        if (pick) await vscode.commands.executeCommand('robotCode.containers.initRobot');
+        return;
+      }
+    }
+    if (!marker) marker = await pickMarker(undefined);
     if (!marker) return;
+
     const live = s.live;
     if (!live) { vscode.window.showInformationMessage('No robot is connected. Connect a robot first (Controllers view).'); return; }
     const connected = live.connected();
     if (!connected.length) { vscode.window.showInformationMessage('No robot is connected. Connect a robot first (Controllers view).'); return; }
-    // Prefer match by controller binding, then by robot name
-    const match = (marker.controller
-      ? connected.find(c => c.profile.name.toUpperCase() === marker.controller!.toUpperCase())
-      : undefined)
-      ?? connected.find(c => c.profile.name.toUpperCase() === marker.name.toUpperCase());
-    const chosen = match
-      ?? (connected.length === 1 ? connected[0]
-        : (await vscode.window.showQuickPick(connected.map(c => ({ label: c.profile.name, description: `${c.profile.host} · ${c.state}`, c })), { placeHolder: `Robot to snapshot into ${marker.name}` }))?.c);
+    // Read from the controller the caller named, else the container's own binding, else ask.
+    const want = explicit ?? markerBoundRobot(marker).name;
+    let chosen = profileNamed(connected, want);
+    if (!chosen) chosen = connected.length === 1 ? connected[0]
+      : (await vscode.window.showQuickPick(connected.map(c => ({ label: c.profile.name, description: `${c.profile.host} · ${c.state}`, c })), { placeHolder: `Robot to snapshot into ${marker.name}` }))?.c;
     if (!chosen) return;
     const profile = chosen.profile;
 

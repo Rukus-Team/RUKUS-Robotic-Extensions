@@ -6,6 +6,7 @@ import { registerTpProviders } from '@fanuc/tp/providers';
 import { registerTpDiagnostics } from '@fanuc/tp/diagnostics';
 import { registerTpCommands } from '@fanuc/tp/commands';
 import { registerKarelProviders } from '@fanuc/karel/providers';
+import { registerAlarmLookup } from '@fanuc/alarms/alarmHover';
 import { ktransDiagnostics } from '@fanuc/karel/ktrans';
 import { registerViews } from '@fanuc/views/trees';
 import { openRegisterTable } from '@fanuc/data/registerTable';
@@ -44,6 +45,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   registerTpDiagnostics(ctx, s);
   registerTpCommands(ctx, s);
   registerKarelProviders(ctx, s);
+  registerAlarmLookup(ctx);
   s.live = registerLive(ctx, s);
   registerRunningLine(ctx, s, s.live);       // FANUC: the TP line a task was executing
   registerEditorCommands(ctx, s, s.live);   // FANUC: teach from the robot, compare with the controller

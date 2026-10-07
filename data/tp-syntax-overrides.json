@@ -249,7 +249,8 @@
     "Rejected (ASBN-092) on a V9.40 SpotTool+ controller - an example from a manual for another application."
    ],
    "confidence": "medium",
-   "probe": "rejected: J P[2] 100% FINE Gun=ON"
+   "probe": "rejected: J P[2] 100% FINE Gun=ON",
+   "summary": "A motion option seen in spot welding .LS files."
   },
   "motion-option:UPDET_OFS": {
    "confidence": "high",
@@ -302,6 +303,15 @@
   "motion-option:SOFTFLOAT[N] (MOTION OPTION)": {
    "confidence": "high",
    "probe": "accepted: L P[1] 100mm/sec FINE SOFTFLOAT[1]"
+  },
+  "program-call:MAKEDIR": {
+   "summary": "Listed with SRWRTCSV/UPLDFIL as a file utility (creates a directory); arguments not documented."
+  },
+  "program-call:TWKCALC2": {
+   "summary": "Computes per-tip wear from total wear using the robot-tip wear ratio (one-step method). TWKCALC(ratio) is the older one-argument form."
+  },
+  "program-call:DSPWEBPG": {
+   "summary": "Shows a web page on the iPendant (HandlingTool names the macro program DSP_WEBP). Installed on the controller, not in the workspace."
   }
  }
 }

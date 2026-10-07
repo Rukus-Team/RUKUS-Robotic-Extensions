@@ -12,8 +12,6 @@ export interface TpDoc {
   notes?: string[];
   /** the software option the instruction needs, e.g. "J512 Line Tracking" */
   option?: string;
-  /** where the syntax comes from (manual and page) */
-  source?: string;
   /** what a real controller made of it (data/tp-syntax-verified.json), e.g. "Verified on a FANUC controller (...)" */
   verified?: string;
 }
@@ -186,7 +184,7 @@ add(/^VISION GET_NFOUND/, 'Vision get number found', "VISION GET_NFOUND '<proces
 add(/^VISION GET_PASSFAIL/, 'Vision pass/fail', "VISION GET_PASSFAIL '<process>' R[n]", 'Stores the inspection result (1 pass / 0 fail) in R[n].');
 add(/^VISION CAMERA_CALIB/, 'Camera calibration', "VISION CAMERA_CALIB '<calib>' REQUEST=n", 'Runs a camera calibration step (robot-generated grid calibration).');
 add(/^VISION SET_REFERENCE/, 'Set vision reference', "VISION SET_REFERENCE '<process>'", 'Sets the reference position for the vision process.');
-add(/^VISION OVERRIDE\b/, 'Vision override', "VISION OVERRIDE '<override>' <value>|R[n]", 'Overrides a vision process parameter (exposure, etc.) with a value or a register for the next run (iRVision Operator\'s Manual B-83914EN-1).');
+add(/^VISION OVERRIDE\b/, 'Vision override', "VISION OVERRIDE '<override>' <value>|R[n]", 'Overrides a vision process parameter (exposure, etc.) with a value or a register for the next run (iRVision).');
 add(/^VISION\b/, 'Vision instruction', 'VISION <sub-instruction>', 'iRVision instruction.');
 add(/^SPOT\[/, 'Spot weld', 'SPOT[SD=n,P=n,t=n,S=n,ED=n]',
   'Spot welding instruction: SD = squeeze distance schedule, P = pressure schedule, t = weld time/schedule, S = weld schedule, ED = end distance. Usually appears as a motion option.');
@@ -211,7 +209,7 @@ add(/^AR\[/, 'Argument register', 'AR[n]', 'Argument n passed by the caller via 
 // motion options, operands, functions, option macros and FANUC-supplied programs. After the
 // hand-written entries above, so those win where both match.
 for (const c of CATALOG_DOCS) {
-  const doc: TpDoc = { title: c.title, syntax: c.syntax, description: c.description, notes: c.notes, option: c.option, source: c.source, verified: c.verified };
+  const doc: TpDoc = { title: c.title, syntax: c.syntax, description: c.description, notes: c.notes, option: c.option, verified: c.verified };
   for (const re of c.res) {
     try { D.push({ match: new RegExp((c.anywhere ? '' : '^') + re, 'i'), doc, anywhere: c.anywhere }); } catch { /* a form that did not make a valid regex */ }
   }

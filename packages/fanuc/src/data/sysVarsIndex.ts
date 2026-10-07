@@ -131,7 +131,7 @@ export function describeSysVar(token: string, r: SysVarLookup, extraDoc?: string
   if (extraDoc) lines.push('', extraDoc);
   if (info?.description && info.description !== extraDoc) {
     // a guess is shown as a guess: the name expanded, not a manual's words
-    lines.push('', info.source === 'inferred' ? `${info.description}\n\n_Inferred from the name — no manual describes this one yet._` : info.description);
+    lines.push('', info.source === 'inferred' ? `${info.description}\n\n_Inferred from the name; no description yet._` : info.description);
   }
   if (info) {
     const facts = [info.dataType ? `\`${info.dataType}\`` : '', info.access ? `access ${info.access}` : '', info.storage ? `storage ${info.storage}` : ''].filter(Boolean);

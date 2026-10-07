@@ -1,5 +1,48 @@
 # Changelog
 
+## 26.109.5 - 2026-10-06 - KAREL reference in the editor; alarm codes
+
+### Added
+- **What each parameter is for** in the hover over a KAREL built-in (230 of 301 built-ins), with
+  notes and related entries. The parameter hints while typing a call describe the current argument.
+  `robotCode.karel.hoverDetail`: `verbose` (default) or `simple` (signature and one-line
+  description, as before).
+- **Hovers for the rest of the KAREL language**: translator directives (`%NOABORT`,
+  `%STACKSIZE` ...), statements (`OPEN FILE`, `WAIT FOR`, `CONNECT TIMER` ...), data types,
+  conditions, actions and clauses.
+- **FANUC KAREL: KAREL Reference…** - any built-in, statement, directive or data type on its own
+  page, searchable by name or purpose; every hover links to it.
+- **`%ENVIRONMENT` check**: a built-in from iRVision (`CVIS`), robot-to-robot data transfer
+  (`RPCC`) or data monitoring (`DAQ`) used without the directive is flagged - ktrans stops at
+  "Id must be defined" without it (and without the option's .ev file in its support folder) - with a
+  quick fix that adds it to the header. Picking such a built-in from completion adds it too.
+  `robotCode.karel.diagnostics.environment`: `needed` (default), `all` (also a note for the groups
+  ktrans loads by itself - REGOPE, SYSTEM, UIF ... - checked against KTRANS V9.40-1) or `off`.
+- **Alarm codes** (10,524): hover over `SRVO-002` / `FILE-014` in a TP or KAREL program for the
+  cause and remedy, and over the number a KAREL program uses for one (`POST_ERR(2014, ...)`,
+  `IF status = 2014`). **FANUC: Look Up Alarm Code…** finds one by code or by words from its
+  message. The alarm text ships beside the extension and is read on the first lookup.
+
+### Changed
+- 89 KAREL built-in signatures corrected: parameter names, and order where ours was wrong -
+  `GET_REG(register_no, ...)`, `MODIFY_QUEUE(value, sequence_no, ...)`,
+  `XML_ADDTAG(xml_file, tag_name, numchar, caseflag, tag_ident, status)`. Optional parameters are
+  written `[group_no : INTEGER]` throughout.
+- Hovers no longer cite where their text came from, and TP instruction hovers no longer show an
+  example line.
+- **Snapshot from Robot** is a Controllers action: right-click a connected robot in the
+  Controllers view, or **Snapshot…** on the robot page. It offers **Initialize Robot Container…**
+  when the controller has none.
+- **Fetch** is one multi-select on the Snapshot view (TP/KAREL source, compiled programs,
+  register & position data, I/O), replacing Fetch All / Fetch Programs / Fetch Data & I/O. The
+  working copy is never touched.
+- **Compare All with Robot** (was Fetch & Compare All) reads and compares, and writes nothing.
+- **Get Controller Errors** is on the robot row of the Controllers view.
+
+### Fixed
+- Parameter names `file__var`, `attr__mask` and `term__char` in three KAREL signatures.
+- Completion of a built-in with an optional parameter put a stray `[` in the inserted name.
+
 ## 26.109.4 - 2026-10-05 - Color themes, RUKUS skin themes; CALL list by installed options
 
 ### Added

@@ -561,7 +561,7 @@ class SnapshotTree implements vscode.TreeDataProvider<SNode> {
         snapOnly ? `${snapOnly} on robot only` : '',
       ].filter(Boolean).join(' · ');
       (it as any).filterText = `${el.marker.name} ${it.description}`;
-      it.tooltip = `${el.marker.root}\n${date ? `snapshot ${date}${from ? ` · ${from}` : ''}${updated}\n` : ''}${el.ds ? `${el.ds.sources.length} data files read · ${progs.length} programs` : 'No snapshot yet - run "Fetch All" or snapshot it from a backup folder.'}\n\nFetch, pull and push keep the working copy and the robot in sync.`;
+      it.tooltip = `${el.marker.root}\n${date ? `snapshot ${date}${from ? ` · ${from}` : ''}${updated}\n` : ''}${el.ds ? `${el.ds.sources.length} data files read · ${progs.length} programs` : 'No snapshot yet - run "Fetch" or snapshot it from a backup folder.'}\n\nFetch, pull and push keep the working copy and the robot in sync.`;
       it.iconPath = icon('archive', el.ds ? undefined : 'disabledForeground');
       it.contextValue = 'robot-container';
       it.resourceUri = vscode.Uri.file(el.marker.root);

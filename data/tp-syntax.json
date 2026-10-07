@@ -8894,7 +8894,7 @@
     "J P[2] 100% FINE Gun=ON"
    ],
    "option": null,
-   "summary": "Appears as a motion option in the manual's example ASCII (.LS) file.",
+   "summary": "A motion option seen in spot welding .LS files.",
    "notes": [
     "Rejected (ASBN-092) on a V9.40 SpotTool+ controller - an example from a manual for another application.",
     "Not explained anywhere in the manual; likely an application (dispense/sealing) gun option - include only for recognition (medium)."
@@ -15001,7 +15001,7 @@
     "code": null,
     "name": "iRVision (base: 2DV J901 / 3DL J902 / 3DV J914)"
    },
-   "summary": "Listed with SRWRTCSV/UPLDFIL as a file utility (creates a directory); arguments not documented in this manual.",
+   "summary": "Listed with SRWRTCSV/UPLDFIL as a file utility (creates a directory); arguments not documented.",
    "notes": [
     "Only the name appears; no argument list.",
     "Generic CALL colouring/hover only; no program-specific hover or completion."
@@ -23574,7 +23574,7 @@
     "code": "J670",
     "name": "Servo Gun"
    },
-   "summary": "Computes per-tip wear from total wear using the robot-tip wear ratio (one-step method). TWKCALC(ratio) is the older one-argument form in the course manual.",
+   "summary": "Computes per-tip wear from total wear using the robot-tip wear ratio (one-step method). TWKCALC(ratio) is the older one-argument form.",
    "notes": [
     "KAREL routine supplied with the servo gun tip-wear package.",
     "Source: R30iB V8.30 Servo Gun Function Operator.txt 6"
@@ -25133,7 +25133,7 @@
     "CALL DSPWEBPG(AR[1]) ;"
    ],
    "option": null,
-   "summary": "Shows a web page on the iPendant (the HandlingTool manual names the macro program DSP_WEBP). Installed on the controller, not in the workspace.",
+   "summary": "Shows a web page on the iPendant (HandlingTool names the macro program DSP_WEBP). Installed on the controller, not in the workspace.",
    "notes": [],
    "confidence": "medium",
    "sources": [
