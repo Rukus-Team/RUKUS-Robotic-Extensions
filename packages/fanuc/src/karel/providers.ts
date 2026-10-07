@@ -3,6 +3,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { type KProgram, type KSymbol, resolveSymbol, routineSignature, findUnused, findUndeclared, stripCommentAndStrings, KAREL_KEYWORDS } from './parser';
 import { KAREL_BUILTINS, KAREL_BUILTIN_LIST, KAREL_SYSVARS, KAREL_PREDEFINED, type KBuiltin } from './builtins';
+import { KAREL_BUILTIN_DETAILS } from './karelReference';
+import { alarmAt, alarmHover } from '../alarms/alarmHover';
+import { builtinFooter, clip, escapeMd, languageEntryAt, languageHover, missingEnvironment, environmentInsert, registerKarelReference, ENV_NEEDS_DIRECTIVE } from './referenceDocs';
 import { FanucServices } from '../services';
 import { spanToRange, config, md, debounce } from '@core/util';
 import { lintKarel, identifierLengthIssues, karelNameLimits, karelCoreVersionOf, type KarelCoreVersion, type KarelNameLimits } from './lint';
@@ -49,6 +52,7 @@ export function registerKarelProviders(ctx: vscode.ExtensionContext, s: FanucSer
   );
   registerKarelDiagnostics(ctx, s);
   registerKarelCommands(ctx, s);
+  registerKarelReference(ctx, d => s.karel.get(d));
 }
 
 // ---------------------------------------------------------------------------
@@ -85,6 +89,9 @@ function symbolMarkdown(sym: KSymbol): vscode.MarkdownString {
 class KHover implements vscode.HoverProvider {
   constructor(private s: FanucServices) {}
   async provideHover(doc: vscode.TextDocument, pos: vscode.Position): Promise<vscode.Hover | undefined> {
+    // an alarm code: FILE-014 anywhere, 2014 where the line is about errors (POST_ERR, status)
+    const alarm = alarmAt(doc.lineAt(pos.line).text, pos.character, true);
+    if (alarm) return alarmHover(pos.line, alarm);
     const w = wordAt(doc, pos); if (!w) return undefined;
     const clean = stripCommentAndStrings(doc.lineAt(pos.line).text);
     if (clean[w.range.start.character] === ' ' && doc.lineAt(pos.line).text[w.range.start.character] !== ' ') return undefined; // inside comment/string
@@ -101,7 +108,12 @@ class KHover implements vscode.HoverProvider {
     const sym = resolveSymbol(prog, upper, pos.line);
     if (sym) return new vscode.Hover(symbolMarkdown(sym), w.range);
     const b = KAREL_BUILTINS.get(upper);
-    if (b) return new vscode.Hover(builtinMarkdown(b), w.range);
+    // a statement, directive, data type ...; over a built-in only where the built-in table
+    // holds a statement (WRITE, READ, DELAY ...) the reference describes better
+    const lang = languageEntryAt(doc.lineAt(pos.line).text, pos.character);
+    const statementLike = b && !b.sig.includes('(');
+    if (b && !(lang && statementLike)) return new vscode.Hover(builtinMarkdown(b, verboseHover(doc)), w.range);
+    if (lang) return languageHover(lang.name, lang.entries, verboseHover(doc), new vscode.Range(pos.line, lang.start, pos.line, lang.end));
     if (PORTS.includes(upper)) return new vscode.Hover(md(`**${upper}[n]** — I/O port array (read/write like a variable)`), w.range);
     return undefined;
   }
@@ -114,7 +126,7 @@ class KHover implements vscode.HoverProvider {
  * "all one liney" popup), the description as its own paragraph, and the return type named.
  * A statement (WRITE, READ, DELAY ...) is called a statement, not a routine.
  */
-export function builtinMarkdown(b: KBuiltin): vscode.MarkdownString {
+export function builtinMarkdown(b: KBuiltin, verbose = false): vscode.MarkdownString {
   const isStatement = /^Statement\b/i.test(b.doc) || (!/\(/.test(b.sig) && b.sig.includes(' '));
   const paren = /^([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)\s*$/s.exec(b.sig);
   let sigLines: string[];
@@ -126,8 +138,42 @@ export function builtinMarkdown(b: KBuiltin): vscode.MarkdownString {
   }
   const doc = b.doc.replace(/^Statement:\s*/i, '');
   const lines = [`**${b.name}** — ${isStatement ? 'KAREL statement' : b.ret ? `built-in function, returns ${b.ret}` : 'built-in routine'}`, '', '```karel', ...sigLines, '```', '', doc];
-  if (paren && paren[2].includes(';')) lines.push('', `_${paren[2].split(';').filter(Boolean).length} parameters; \`VAR\` ones are written by the routine._`);
+  const detail = KAREL_BUILTIN_DETAILS[b.name];
+  const params = verbose && detail ? builtinParams(b) : [];
+  if (params.some(p => p.text)) {
+    // robotCode.karel.hoverDetail = verbose: what each parameter is for
+    lines.push('', '**Parameters**', '', ...params.map(p => `- \`${p.name}\`${p.out ? ' _(out)_' : ''}${p.text ? ` — ${escapeMd(p.text)}` : ''}`));
+  } else if (paren && paren[2].includes(';')) lines.push('', `_${paren[2].split(';').filter(Boolean).length} parameters; \`VAR\` ones are written by the routine._`);
+  if (verbose && detail?.notes?.length) lines.push('', ...detail.notes.map(n => `- ${escapeMd(clip(n))}`));
+  lines.push(...builtinFooter(b.name, detail, verbose));
   return md(...lines);
+}
+
+/** `robotCode.karel.hoverDetail`: `verbose` (the default) adds what each parameter is for */
+function verboseHover(scope?: vscode.ConfigurationScope): boolean {
+  return config<string>('karel.hoverDetail', 'verbose', scope) !== 'simple';
+}
+
+/**
+ * A built-in's parameters as its signature names them, each with what it is for:
+ * by position when the reference lists as many (its names often differ - register_no for reg_no),
+ * else by name. The text loses its leading "name " (either name), since the name is shown beside it.
+ */
+function builtinParams(b: KBuiltin): { name: string; type: string; out: boolean; text?: string }[] {
+  const m = /\(([^)]*)\)/.exec(b.sig.replace(/<;([^>]*)>/g, ';$1'));
+  const ours = (m ? m[1].split(';').map(p => p.trim().replace(/^\[|\]$/g, '')).filter(Boolean) : []).flatMap(p => {
+    const [names, type = ''] = p.split(':').map(x => x.trim());
+    const out = /^VAR\s+/i.test(names);
+    return names.replace(/^VAR\s+/i, '').split(',').map(n => ({ name: n.trim(), type, out }));
+  });
+  const manual = KAREL_BUILTIN_DETAILS[b.name]?.params ?? [];
+  return ours.map((p, i) => {
+    const d = manual.length === ours.length ? manual[i] : manual.find(q => q.name.toLowerCase() === p.name.toLowerCase());
+    let text = d?.text;
+    const lead = [p.name, d?.name ?? ''].find(n => n && text?.toLowerCase().startsWith(n.toLowerCase() + ' '));
+    if (text && lead) text = text.slice(lead.length + 1).replace(/^./, c => c.toUpperCase());
+    return { ...p, text: text ? clip(text) : undefined };
+  });
 }
 
 class KDefinition implements vscode.DefinitionProvider {
@@ -306,12 +352,20 @@ class KCompletion implements vscode.CompletionItemProvider {
       it.sortText = '0' + sym.name;
       items.push(it);
     }
+    // a built-in from a group ktrans only loads with %ENVIRONMENT (iRVision, robot-to-robot data
+    // transfer) brings the directive into the header with it
+    const named = new Set(prog.directives.filter(d => d.name === 'ENVIRONMENT').map(d => d.args.split(/\s+/)[0].toUpperCase()));
     for (const b of KAREL_BUILTIN_LIST) {
       if (b.sig.includes(' ') && !b.sig.includes('(')) continue; // statements documented as builtins
       const it = new vscode.CompletionItem(b.name, vscode.CompletionItemKind.Function);
       it.detail = b.sig; it.documentation = b.doc; it.sortText = '1' + b.name;
       const params = paramNames(b.sig);
       it.insertText = new vscode.SnippetString(params.length ? `${b.name}(${params.map((p, i) => `\${${i + 1}:${p}}`).join(', ')})` : b.name);
+      const group = KAREL_BUILTIN_DETAILS[b.name]?.env;
+      if (group && ENV_NEEDS_DIRECTIVE.has(group) && !named.has(group) && prog.name) {
+        it.additionalTextEdits = [environmentInsert(doc, prog, group)];
+        it.detail = `${b.sig}  (adds %ENVIRONMENT ${group})`;
+      }
       items.push(it);
     }
     for (const k of STATEMENT_KEYWORDS) { const it = new vscode.CompletionItem(k, vscode.CompletionItemKind.Keyword); it.sortText = '2' + k; items.push(it); }
@@ -324,7 +378,7 @@ class KCompletion implements vscode.CompletionItemProvider {
 function paramNames(sig: string): string[] {
   const m = /\(([^)]*)\)/.exec(sig.replace(/<;([^>]*)>/g, ';$1'));
   if (!m) return [];
-  return m[1].split(';').map(p => p.trim()).filter(Boolean).flatMap(p => p.split(':')[0].replace(/^VAR\s+/i, '').split(',').map(x => x.trim()).filter(Boolean));
+  return m[1].split(';').map(p => p.trim().replace(/^\[|\]$/g, '')).filter(Boolean).flatMap(p => p.split(':')[0].replace(/^VAR\s+/i, '').split(',').map(x => x.trim()).filter(Boolean));
 }
 
 class KSignatureHelp implements vscode.SignatureHelpProvider {
@@ -355,13 +409,10 @@ class KSignatureHelp implements vscode.SignatureHelpProvider {
     }
     const b = KAREL_BUILTINS.get(upper);
     if (!b) return undefined;
-    const m = /\(([^)]*)\)/.exec(b.sig.replace(/<;([^>]*)>/g, ';$1'));
-    const params = (m ? m[1].split(';').map(p => p.trim()).filter(Boolean) : []).flatMap(p => {
-      const [names, type] = p.split(':').map(x => x.trim());
-      return names.replace(/^VAR\s+/i, '').split(',').map(n => `${n.trim()} : ${type ?? ''}`);
-    });
+    const verbose = verboseHover(doc);
+    const params = builtinParams(b);
     const si = new vscode.SignatureInformation(b.sig + (b.ret ? ` : ${b.ret}` : ''), b.doc);
-    si.parameters = params.map(p => new vscode.ParameterInformation(p));
+    si.parameters = params.map(p => new vscode.ParameterInformation(`${p.name} : ${p.type}`, verbose && p.text ? p.text : undefined));
     help.signatures = [si]; help.activeSignature = 0; help.activeParameter = Math.min(argIndex, Math.max(params.length - 1, 0));
     return help;
   }
@@ -496,6 +547,19 @@ function registerKarelDiagnostics(ctx: vscode.ExtensionContext, s: FanucServices
       for (const u of findUndeclared(prog, up => KAREL_BUILTINS.has(up) || KAREL_PREDEFINED.has(up), included)) {
         const diag = new vscode.Diagnostic(spanToRange(u.span), `"${prog.lines[u.line]?.slice(u.span.col, u.span.col + u.span.len) ?? u.upper}" is used but never declared. ktrans does not report this — it translates and then misbehaves on the robot.`, vscode.DiagnosticSeverity.Warning);
         diag.code = 'karel.undeclared'; diag.source = 'KAREL';
+        out.push(diag);
+      }
+    }
+
+    // A built-in from a group ktrans loads only with %ENVIRONMENT (referenceDocs.ts): without the
+    // directive ktrans stops at "Id must be defined"; the quick fix adds it to the header.
+    const envMode = config<string>('karel.diagnostics.environment', 'needed', doc);
+    if (envMode !== 'off' && prog.name) {
+      for (const m of missingEnvironment(prog, (up, line) => !!resolveSymbol(prog, up, line), envMode === 'all')) {
+        const diag = m.needed
+          ? new vscode.Diagnostic(spanToRange(m.span), `${m.upper} needs %ENVIRONMENT ${m.group} in the program header; without it ktrans reports "Id must be defined". ktrans also needs the option's ${m.group.toLowerCase()}.ev in the support folder its robot.ini names.`, vscode.DiagnosticSeverity.Warning)
+          : new vscode.Diagnostic(spanToRange(m.span), `${m.upper} belongs to %ENVIRONMENT ${m.group}, which is not in the header. ktrans loads this group by itself, so it translates either way.`, vscode.DiagnosticSeverity.Information);
+        diag.code = 'karel.environment'; diag.source = 'KAREL';
         out.push(diag);
       }
     }

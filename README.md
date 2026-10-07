@@ -228,9 +228,12 @@ cell/                          # the workspace
   terminators and `LINE_COUNT`, so a renumber-only change reads as identical and one
   inserted line shows as one line, not a cascade.
 - **Snapshots are taken on demand**: *Snapshot from Backup Folder…* copies one of your
-  dated archives wholesale; *Snapshot from Robot…* pulls everything listed on a connected
-  controller. Both replace the previous snapshot wholesale and record provenance
-  (`snapshot.json`: date, source, file count, controller F number and version).
+  dated archives wholesale, and *Snapshot from Robot…* (on the **Controllers** view and the robot
+  page) overwrites the snapshot with everything on a connected controller. Both replace the previous
+  snapshot wholesale and record provenance (`snapshot.json`: date, source, file count, controller F
+  number and version). A **Fetch** on the Snapshot view is the incremental alternative: it updates
+  only what you choose, never touches the working copy, and keeps each replaced file's previous
+  version in `snapshot-history/`.
 - **It knows RUKUS's backup layout.** *Snapshot from Backup Folder…* lists this robot's backups
   for you - RUKUS's `<cluster>\Latest\<robot>` first, then the dated ones, newest first - from
   the workspace, from `robotCode.data.backupFolders` and from the robot folder's own archives,
@@ -251,12 +254,12 @@ is the index, backups are remote history, and the controller is the remote. Ever
 offline; the only write is Push.
 
 The **Snapshot** view lists each robot's snapshot: the files, their age, and whether each is
-`=` or `≠` the working copy, with **Fetch** (entire / programs / data & I/O / this file),
-**Pull**, **Compare**, **Revert** and **History** on the rows. The same actions are on a
+`=` or `≠` the working copy. Its toolbar has **Fetch** (a multi-select of TP/KAREL source, compiled
+programs, data, I/O); the rows add **Fetch / Pull / Compare / Revert / History** for one file. The same actions are on a
 right-click in the **File Explorer** for a program or data file. The **Programs** view lists every
 working program of a robot against its snapshot with a git-shaped marker (`✓`, `↑n`, `↓n`, `↕`,
-`?`), and **Fetch & Compare All** on its toolbar reads the robot and says whether each copy differs
-too. In the editor, the tab carries
+`?`), and **Compare All with Robot** on its toolbar reads the robot and says whether each copy
+differs too. In the editor, the tab carries
 **Fetch · Pull · Push · Compare** — and a **Revert** (discard) when the working copy differs — and
 each action uses the robot of the file's own container, so it never asks which robot. The status
 bar names the focused file's robot and shows the open file's snapshot state and age.

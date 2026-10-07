@@ -35,21 +35,21 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
   },
   {
     title: 'Understand the cell', hint: 'flow, who calls what, who uses which register, what changed',
-    commands: ['robotCode.tp.showFlow', 'robotCode.tp.showCallGraph', 'robotCode.tools.xrefReport', 'robotCode.tools.unusedPrograms', 'robotCode.data.openRegisterTable', 'robotCode.tools.diffBackups'],
+    commands: ['robotCode.tp.showFlow', 'robotCode.tp.showCallGraph', 'robotCode.tools.xrefReport', 'robotCode.tools.unusedPrograms', 'robotCode.data.openRegisterTable', 'robotCode.tools.diffBackups', 'robotCode.lookupAlarm'],
   },
   {
     title: 'Robot - only when you ask', hint: 'connect, read, open and download files; push is the one write',
-    commands: ['robotCode.live.connect', 'robotCode.live.disconnect', 'robotCode.live.dashboard', 'robotCode.live.getAll', 'robotCode.live.refresh', 'robotCode.live.getPosition', 'robotCode.live.getTasks', 'robotCode.live.getRegisters', 'robotCode.live.getIo', 'robotCode.live.getInfo', 'robotCode.live.getOptions', 'robotCode.live.showOptions', 'robotCode.live.getFiles', 'robotCode.live.openRobotFile', 'robotCode.live.compareWithRobot', 'robotCode.live.downloadFile', 'robotCode.live.liveEdit','robotCode.live.pullBackup', 'robotCode.live.openAsWorkspaceFolder', 'robotCode.live.revealRunning', 'robotCode.live.toggleFilesShow', 'robotCode.live.toggleAutoRefresh', 'robotCode.live.manageRobots', 'robotCode.live.setPassword', 'robotCode.live.removeRobot', 'robotCode.live.focusView'],
+    commands: ['robotCode.live.connect', 'robotCode.live.disconnect', 'robotCode.live.dashboard', 'robotCode.live.getAll', 'robotCode.live.refresh', 'robotCode.live.getPosition', 'robotCode.live.getTasks', 'robotCode.live.getRegisters', 'robotCode.live.getIo', 'robotCode.live.getInfo', 'robotCode.live.getOptions', 'robotCode.live.showOptions', 'robotCode.live.getFiles', 'robotCode.live.openRobotFile', 'robotCode.live.compareWithRobot', 'robotCode.live.downloadFile', 'robotCode.live.liveEdit','robotCode.live.pullBackup', 'robotCode.data.snapshotFromRobot', 'robotCode.live.openAsWorkspaceFolder', 'robotCode.live.revealRunning', 'robotCode.live.toggleFilesShow', 'robotCode.live.toggleAutoRefresh', 'robotCode.live.manageRobots', 'robotCode.live.setPassword', 'robotCode.live.removeRobot', 'robotCode.live.focusView'],
   },
   {
     title: 'Keep it in sync', hint: 'the snapshot is the last known robot state: fetch it, pull it into your file, push your file back',
-    commands: ['robotCode.sync.fetchFile', 'robotCode.sync.pullFile', 'robotCode.sync.pushFile', 'robotCode.sync.compareFile', 'robotCode.sync.comparePositions', 'robotCode.sync.compareRegisters', 'robotCode.sync.revertFile', 'robotCode.sync.pullToWorking', 'robotCode.sync.history', 'robotCode.sync.fetchAll', 'robotCode.sync.fetchPrograms', 'robotCode.sync.fetchData', 'robotCode.sync.fetchFolder', 'robotCode.sync.pullFolder', 'robotCode.sync.fetchProgram', 'robotCode.sync.fetchCompareAll', 'robotCode.sync.errors'],
+    commands: ['robotCode.sync.fetch', 'robotCode.sync.fetchFile', 'robotCode.sync.pullFile', 'robotCode.sync.pushFile', 'robotCode.sync.compareFile', 'robotCode.sync.comparePositions', 'robotCode.sync.compareRegisters', 'robotCode.sync.revertFile', 'robotCode.sync.pullToWorking', 'robotCode.sync.history', 'robotCode.sync.fetchFolder', 'robotCode.sync.pullFolder', 'robotCode.sync.fetchCompareAll', 'robotCode.sync.errors'],
   },
   {
     title: 'Backups and robot containers', hint: 'controller data, snapshots, working copy against snapshot',
-    commands: ['robotCode.data.refresh', 'robotCode.data.removeBackupFolder', 'robotCode.data.restoreBackupFolders', 'robotCode.data.snapshotFromBackup', 'robotCode.data.snapshotFromRobot', 'robotCode.views.toggleLatestOnly'],
+    commands: ['robotCode.data.refresh', 'robotCode.data.removeBackupFolder', 'robotCode.data.restoreBackupFolders', 'robotCode.data.snapshotFromBackup', 'robotCode.views.toggleLatestOnly'],
   },
-  { title: 'KAREL', hint: 'check, then compile with ktrans', commands: ['robotCode.karel.precheck', 'robotCode.karel.compile'] },
+  { title: 'KAREL', hint: 'check, then compile with ktrans; look up any built-in, statement or directive', commands: ['robotCode.karel.precheck', 'robotCode.karel.compile', 'robotCode.karel.showReference'] },
   {
     title: 'In RUKUS', hint: 'its clusters are the cells; what needs a connection held open lives there',
     commands: ['robotCode.rukus.openCluster', 'robotCode.rukus.syncClusters', 'robotCode.rukus.exportCell', 'robotCode.rukus.revealData', 'robotCode.rukus.open', 'robotCode.rukus.monitor', 'robotCode.rukus.alarms', 'robotCode.rukus.backup'],

@@ -8,7 +8,7 @@ import { FEATURE_GROUPS, prettyKey } from './featureGroups';
 import { robotConnectionsEnabled } from '../experimental';
 
 /** the commands that talk to a controller: left out while the experimental switch is off */
-const ROBOT_COMMAND = /^robotCode\.(live\.|tp\.teachPosition$|tp\.recordPosition$|data\.snapshotFromRobot$)/;
+const ROBOT_COMMAND = /^robotCode\.(live\.|tp\.teachPosition$|tp\.recordPosition$|data\.snapshotFromRobot$|sync\.(fetch|fetchFile|pullFile|pushFile|fetchFolder|pullFolder|fetchCompareAll|errors)$)/;
 
 interface ManifestCommand { command: string; title: string; icon?: string }
 interface ManifestKey { command: string; key: string }

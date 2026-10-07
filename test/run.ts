@@ -38,6 +38,7 @@ import { ftpGetText, ftpList, FtpClient, globToRegExp, transferTimeout } from '@
 import { filesToShow } from '@core/live/fileFilter';
 import { unwrapControllerHtml, looksLikeHtml } from '@core/live/html';
 import { parseKtransIssues } from '@fanuc/karel/ktransOutput';
+import { lookupAlarm, alarmMarkdownLines, alarmFacilities } from '@fanuc/alarms/alarms';
 import { startMockRobot } from './mockRobot.mjs';
 import { diffBackups, backupDiffMarkdown } from '@fanuc/tools/backupDiff';
 import { buildXref, xrefFindings, xrefCsv } from '@fanuc/tools/xref';
@@ -2127,6 +2128,20 @@ if (backupDir) {
   check(classifyPath(path.join(robotB, 'PROGB.LS'), markers) === 'working', 'fixture: B working');
 
   console.log(`  containers: ${checksRun} checks passed (module, classify, rank, normalize, snapshot)`);
+}
+
+// ---------- alarm codes (R-30iB Plus Error Code Manual): FILE-014 by name, and as the KAREL status 2014 ----------
+{
+  check(alarmFacilities().FILE === 2, `facility map: FILE = ${alarmFacilities().FILE}`);
+  const byName = lookupAlarm('FILE-014');
+  check(byName?.id === 'FILE-014' && byName.facility === 'FILE' && byName.number === 14 && byName.code === 2014 && /File not found/.test(byName.message) && !!byName.cause && !!byName.remedy, `FILE-014 by name: ${JSON.stringify(byName)}`);
+  check(lookupAlarm('file-014')?.id === 'FILE-014' && lookupAlarm('FILE-14')?.id === 'FILE-014', 'lower case and unpadded spellings find FILE-014');
+  check(lookupAlarm(2014)?.id === 'FILE-014' && lookupAlarm('2014')?.id === 'FILE-014', 'the KAREL status 2014 is FILE-014');
+  check(lookupAlarm(43001)?.id === 'RPM-001', `five digits: 43001 = RPM-001: ${lookupAlarm(43001)?.id}`);
+  check(lookupAlarm('FILE-999') === undefined && lookupAlarm(999999) === undefined && lookupAlarm('nonsense') === undefined, 'an unknown code is undefined');
+  const md = alarmMarkdownLines(byName!);
+  check(md[0].startsWith('**FILE-014**') && md.some(l => l.startsWith('**Cause:**')) && md.some(l => l.startsWith('**Remedy:**')), `hover lines: ${md.join(' | ')}`);
+  check(alarmMarkdownLines({ id: 'X-001', facility: 'X', number: 1, message: 'a*b_c' })[0].endsWith('a\\*b\\_c'), 'markdown specials in manual text are escaped');
 }
 
 console.log(failures ? `\n${failures} FAILURE(S) of ${checksRun} checks` : `\nALL ${checksRun} CHECKS PASSED`);

@@ -53,10 +53,8 @@ export function registerSyncCommands(ctx: vscode.ExtensionContext, s: Services):
   reg('robotCode.sync.revertFile', (arg?: unknown) => revertFileCommand(s, arg));
   reg('robotCode.sync.pullToWorking', (arg?: unknown) => pullToWorkingCommand(s, arg));
   reg('robotCode.sync.history', (arg?: unknown) => historyCommand(s, arg));
-  reg('robotCode.sync.fetchProgram', gated((arg?: unknown) => fetchFileCommand(s, arg)));
-  reg('robotCode.sync.fetchAll', gated((arg?: unknown) => fetchScopeCommand(s, arg, 'all')));
-  reg('robotCode.sync.fetchPrograms', gated((arg?: unknown) => fetchScopeCommand(s, arg, 'programs')));
-  reg('robotCode.sync.fetchData', gated((arg?: unknown) => fetchScopeCommand(s, arg, 'data')));
+  // Fetch… - incremental, and the user picks what to advance (the heavy overwrite is on the robot)
+  reg('robotCode.sync.fetch', gated((arg?: unknown) => fetchChooseCommand(s, arg)));
   // right-click a folder: fetch (snapshot only) or pull (fetch + overwrite) everything under it
   reg('robotCode.sync.fetchFolder', gated((arg?: unknown) => folderCommand(s, arg, false)));
   reg('robotCode.sync.pullFolder', gated((arg?: unknown) => folderCommand(s, arg, true)));
@@ -204,11 +202,7 @@ async function fetchFileCommand(s: Services, arg?: unknown): Promise<void> {
   vscode.window.setStatusBarMessage(`$(cloud-download) Snapshot: ${target.fileName} fetched${res.changed ? ' (changed)' : ''} · just now`, 6000);
 }
 
-async function fetchScopeCommand(s: Services, arg?: unknown, scope: 'all' | 'programs' | 'data' = 'all'): Promise<void> {
-  const marker = await resolveMarker(s, arg);
-  if (!marker) return;
-  const conn = await robotForMarker(s, marker);
-  if (!conn) return;
+async function fetchMatching(s: Services, marker: RobotMarker, conn: RobotConnection, test: (name: string) => boolean, what: string): Promise<void> {
   const live = s.live;
   if (!live) return;
   let listing;
@@ -218,10 +212,8 @@ async function fetchScopeCommand(s: Services, arg?: unknown, scope: 'all' | 'pro
     vscode.window.showWarningMessage(`Could not list ${conn.profile.device} on ${conn.profile.name}: ${e instanceof Error ? e.message : String(e)}`);
     return;
   }
-  const predicate = scope === 'programs' ? isSnapshotProgramFile : scope === 'data' ? isSnapshotDataFile : () => true;
-  const names = listing.filter(f => !f.isDir && predicate(f.name)).map(f => f.name);
-  if (!names.length) { vscode.window.showInformationMessage(`Nothing to fetch (${scope}) from ${conn.profile.name}.`); return; }
-  const what = scope === 'programs' ? 'programs' : scope === 'data' ? 'data & I/O' : 'snapshot';
+  const names = listing.filter(f => !f.isDir && test(f.name)).map(f => f.name);
+  if (!names.length) { vscode.window.showInformationMessage(`Nothing to fetch (${what}) from ${conn.profile.name}.`); return; }
   const outcome = await withContainerLock(marker, () => live.withTransfer(conn.profile.name, () => vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: `Fetching ${what} from ${conn.profile.name}`, cancellable: true },
     (progress, token) => {
@@ -237,6 +229,37 @@ async function fetchScopeCommand(s: Services, arg?: unknown, scope: 'all' | 'pro
   await refreshAfterSync(s);
   reportOutcome(s, marker, conn, outcome, what);
 }
+
+/**
+ * Fetch - incremental: update the snapshot from the controller, never the working copy. The
+ * user picks what to advance from a multi-select (TP/KAREL source, compiled, data, I/O); the
+ * heavyweight, controller-tied overwrite is `robotCode.data.snapshotFromRobot`, on the
+ * Controllers side. Every category ticked (the default) is "everything listed".
+ */
+async function fetchChooseCommand(s: Services, arg?: unknown): Promise<void> {
+  const marker = await resolveMarker(s, arg);
+  if (!marker) return;
+  const conn = await robotForMarker(s, marker);
+  if (!conn) return;
+  const picks = await vscode.window.showQuickPick(
+    FETCH_CHOICES.map(c => ({ label: c.label, description: c.description, picked: true, test: c.test })),
+    { canPickMany: true, placeHolder: `What to fetch from ${conn.profile.name} into ${marker.name}'s snapshot`, matchOnDescription: true });
+  if (!picks?.length) return;
+  const tests = picks.map(p => p.test);
+  const what = picks.length === FETCH_CHOICES.length ? 'everything listed' : picks.map(p => p.label).join(', ');
+  await fetchMatching(s, marker, conn, n => tests.some(t => t(n)), what);
+}
+
+/** What a Fetch… choice matches on the controller's own listing. */
+export interface FetchChoice { label: string; description: string; test: (name: string) => boolean }
+
+export const FETCH_CHOICES: readonly FetchChoice[] = [
+  { label: 'TP programs', description: '.ls - editable TP source', test: n => /\.ls$/i.test(n) },
+  { label: 'KAREL programs', description: '.kl - editable KAREL source', test: n => /\.kl$/i.test(n) },
+  { label: 'Compiled programs', description: '.tp / .pc - controller bytecode', test: n => /\.(tp|pc)$/i.test(n) },
+  { label: 'Register & position data', description: '.va - registers, positions, macros, frames', test: n => /\.va$/i.test(n) },
+  { label: 'I/O', description: '.io and IOSTATE.DG - I/O configuration and state', test: n => /\.io$/i.test(n) || n.toLowerCase() === 'iostate.dg' },
+];
 
 function reportOutcome(s: Services, marker: RobotMarker, conn: RobotConnection, outcome: FetchOutcome, what: string): void {
   const bits = [`${outcome.ok} file${outcome.ok === 1 ? '' : 's'}`];

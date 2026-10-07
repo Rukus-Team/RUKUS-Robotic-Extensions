@@ -11,6 +11,7 @@ import { FanucServices } from '../services';
 import { spanToRange, spanContains, config, md, programNameFromUri } from '@core/util';
 import { resolveProgram } from '@core/resolve';
 import { frameHover } from './frameHover';
+import { alarmAt, alarmHover } from '../alarms/alarmHover';
 import { ORDER_FILE, parseOrderFile, catalogOptionInstalled, cachedOptionsForRobot, type ControllerOption } from '../live/controllerOptions';
 import { boundRobot } from '@core/robotBinding';
 
@@ -193,6 +194,9 @@ class TpHover implements vscode.HoverProvider {
   constructor(private s: FanucServices) {}
   async provideHover(doc: vscode.TextDocument, pos: vscode.Position): Promise<vscode.Hover | undefined> {
     const prog = this.s.tp.get(doc);
+    // an alarm code written out (SRVO-002 in a remark or a message string): what the manual says
+    const alarm = alarmAt(doc.lineAt(pos.line).text, pos.character, false);
+    if (alarm) return alarmHover(pos.line, alarm);
     // `$` system variables first: they can contain R[n] indices, and the variable is what
     // the reader is asking about
     const sv = await this.s.sysvars.hover(doc, pos);
@@ -242,7 +246,6 @@ class TpHover implements vscode.HoverProvider {
     if (use.notes?.length) lines.push('', ...use.notes.map(n => `- ${n}`));
     if (use.option) lines.push('', `Requires option **${use.option}**.`);
     if (use.verified) lines.push('', `${/^Verified/.test(use.verified) ? '✓' : '◐'} ${use.verified}`);
-    if (use.source) lines.push('', `*${use.source}*`);
     if (line.motion && use === primary) lines.push('', this.describeMotion(prog, line.motion, doc.uri));
     // PAYLOAD[n]: what schedule n actually is on this controller, from symotn.va
     const pl = /^PAYLOAD\[(\d+)\]/.exec(line.body);
