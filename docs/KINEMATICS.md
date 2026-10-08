@@ -59,7 +59,19 @@ The RWS 1.0 manual for RobotWare 6 (3HAC050973-001) lists conversion actions on 
 - `POST ...?action=JointsFromCartesian`: inverse. It needs the old joints and a config.
 - `POST ...?action=AllJointSolutions`
 
-The reads `/rw/motionsystem/mechunits/ROB_1/jointtarget` and `/robtarget` exist on the real IRC5 crawl. The actions are not yet tested there, because the crawler skips `?action=` links. Do this in phase 4 with the RWS connector.
+The reads `/rw/motionsystem/mechunits/ROB_1/jointtarget` and `/robtarget` exist on the real IRC5 crawl.
+
+**Verified 2026-09-25 on a RobotStudio VC** (IRC5, RobotWare 6.16.3, IRB 7600-150/3.5). Built in as `RwsClient.poseFromJoints`, `jointsFromPose` and `allJointSolutions`, and used by *ABB: Convert Target on Controller*. The parameter names come from the RW 6.16 kernel's strings, because the manual's names are wrong for 6.16:
+
+- **URL:** `POST /rw/motionsystem/mechunits/ROB_1?action=` with `CalcPoseFromJoints`, `JointsFromCartesian` or `AllJointSolutions`. The body is form-encoded. No mastership is needed.
+- **Units are SI:** metres and radians both ways. At zero joints the flange is at `2.672, 0, 2.02`, and a 0.5 m tool on flange Z moves it to `3.172`.
+- **Forward parameters:** `rob_joints=[6]`, `ext_joints=[6]` (9E9 = unused), `tool_frame_position=[x,y,z]`, `tool_frame_orientation=[q1..q4]`, `robot_fixed_object=FALSE`, `elog_at_error=FALSE`. Every one is required.
+- **Forward answer:** the `position-from-joint` item, with fields `position-x/y/z`, `robtargetorientation-u0..u3` and `quarter-rev-j1/j4/j6/jx`.
+- **Inverse parameters:** `curr_position`, `curr_orientation`, `curr_ext_joints`, `old_rob_joints` (picks the nearest solution), `old_ext_joints`, `robot_configuration=[cf1,cf4,cf6,cfx]`, plus the four tool and flag parameters above.
+- **Inverse answers:** a `joints-from-cartesian` item with `robotjoint1..6`. `AllJointSolutions` returns one `all-joint-solutions` item per solution: four for the IRB 7600 test pose, each with its configuration. RW spells the first configuration field `quarter_rev_j11`.
+- **Round trip:** joints 10, 20, -10, 30, 40, 50° go to a pose and back to the same joints within 0.00003°. An unreachable pose answers 400 "Position outside of reach".
+- **World frame:** RW 6.16 names the world frame `Word`. `robtarget?coordinate=World` is a 400, while `coordinate=Word` works.
+- **Not verified:** the Absolute Accuracy claim. The VC has no calibration data.
 
 **What an ABB backup does not carry (checked 2026-09-25 on 24 IRC5 backups, RobotWare 6.13).** Unlike FANUC, `SYSPAR/MOC.cfg` has no nominal link geometry. The robot type is only a name (`-use_robot_type "ROB1_6700_LeanID_2.65_220"`), and the geometry lives inside RobotWare. What MOC.cfg does have:
 

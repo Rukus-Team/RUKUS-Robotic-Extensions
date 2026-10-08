@@ -1,17 +1,19 @@
 import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { type KProgram, type KSymbol, resolveSymbol, routineSignature, findUnused, findUndeclared, stripCommentAndStrings, KAREL_KEYWORDS } from './parser';
-import { KAREL_BUILTINS, KAREL_BUILTIN_LIST, KAREL_SYSVARS, KAREL_PREDEFINED, type KBuiltin } from './builtins';
+import { type KProgram, type KSymbol, resolveSymbol, routineSignature, stripCommentAndStrings, KAREL_KEYWORDS } from './parser';
+import { KAREL_BUILTINS, KAREL_BUILTIN_LIST, KAREL_SYSVARS, type KBuiltin } from './builtins';
 import { KAREL_BUILTIN_DETAILS } from './karelReference';
 import { alarmAt, alarmHover } from '../alarms/alarmHover';
-import { builtinFooter, clip, escapeMd, languageEntryAt, languageHover, missingEnvironment, environmentInsert, registerKarelReference, ENV_NEEDS_DIRECTIVE } from './referenceDocs';
+import { builtinFooter, clip, escapeMd, languageEntryAt, languageHover, environmentInsert, registerKarelReference, ENV_NEEDS_DIRECTIVE } from './referenceDocs';
 import { FanucServices } from '../services';
 import { spanToRange, config, md, debounce } from '@core/util';
-import { lintKarel, identifierLengthIssues, karelNameLimits, karelCoreVersionOf, type KarelCoreVersion, type KarelNameLimits } from './lint';
+import { karelNameLimits, karelCoreVersionOf, type KarelCoreVersion, type KarelNameLimits } from './lint';
 import { compileKarel, ktransDiagnostics, findKtrans } from './ktrans';
 import { detectTabWidth } from './tabWidth';
-import { includedNames, karelSupportDirs } from './includes';
+import { karelSupportDirs } from './includes';
+import { karelChecks } from './checks';
+import { lintDiagnostics, lintSettingsFor, onDidChangeLintConfig } from '@core/lint/vscodeLint';
 
 const SEL = { language: 'fanuc-karel' };
 const WORD = /\$?[A-Za-z_][A-Za-z0-9_]*/;
@@ -521,70 +523,15 @@ function registerKarelDiagnostics(ctx: vscode.ExtensionContext, s: FanucServices
   };
   const run = (doc: vscode.TextDocument) => {
     if (doc.languageId !== 'fanuc-karel') return;
-    const prog = s.karel.get(doc);
-    const out: vscode.Diagnostic[] = [];
-    const sevMap = { error: vscode.DiagnosticSeverity.Error, warning: vscode.DiagnosticSeverity.Warning, info: vscode.DiagnosticSeverity.Information, hint: vscode.DiagnosticSeverity.Hint };
-    const identLen = config<boolean>('karel.diagnostics.identifierLength', true, doc);
-    for (const d of [...prog.diagnostics, ...(identLen ? identifierLengthIssues(prog, nameLimits(doc)) : [])]) {
-      const diag = new vscode.Diagnostic(spanToRange(d.span), d.message, sevMap[d.severity]);
-      diag.code = d.code; diag.source = 'KAREL';
-      out.push(diag);
-    }
-    if (config<boolean>('karel.diagnostics.unusedVariables', true, doc) && prog.name) {
-      for (const u of findUnused(prog)) {
-        if (u.span.len === 0) continue;
-        const diag = new vscode.Diagnostic(spanToRange(u.span), `${u.kind} "${u.name}" is never used.`, vscode.DiagnosticSeverity.Hint);
-        diag.tags = [vscode.DiagnosticTag.Unnecessary]; diag.code = 'karel.unused'; diag.source = 'KAREL';
-        out.push(diag);
-      }
-    }
-    // Used but never declared. ktrans does NOT report this (checked against KTRANS
-    // V9.40-1), so a mistyped name translates clean and goes wrong on the robot — which
-    // makes it one of the few checks here that beats the official compiler rather than
-    // repeating it. findUndeclared declines to answer for anything it cannot see all of.
-    if (config<boolean>('karel.diagnostics.undeclared', true, doc)) {
-      const included = prog.includes.length && !doc.isUntitled ? includedNames(prog, path.dirname(doc.uri.fsPath), supportDirs()) : undefined;
-      for (const u of findUndeclared(prog, up => KAREL_BUILTINS.has(up) || KAREL_PREDEFINED.has(up), included)) {
-        const diag = new vscode.Diagnostic(spanToRange(u.span), `"${prog.lines[u.line]?.slice(u.span.col, u.span.col + u.span.len) ?? u.upper}" is used but never declared. ktrans does not report this — it translates and then misbehaves on the robot.`, vscode.DiagnosticSeverity.Warning);
-        diag.code = 'karel.undeclared'; diag.source = 'KAREL';
-        out.push(diag);
-      }
-    }
-
-    // A built-in from a group ktrans loads only with %ENVIRONMENT (referenceDocs.ts): without the
-    // directive ktrans stops at "Id must be defined"; the quick fix adds it to the header.
-    const envMode = config<string>('karel.diagnostics.environment', 'needed', doc);
-    if (envMode !== 'off' && prog.name) {
-      for (const m of missingEnvironment(prog, (up, line) => !!resolveSymbol(prog, up, line), envMode === 'all')) {
-        const diag = m.needed
-          ? new vscode.Diagnostic(spanToRange(m.span), `${m.upper} needs %ENVIRONMENT ${m.group} in the program header; without it ktrans reports "Id must be defined". ktrans also needs the option's ${m.group.toLowerCase()}.ev in the support folder its robot.ini names.`, vscode.DiagnosticSeverity.Warning)
-          : new vscode.Diagnostic(spanToRange(m.span), `${m.upper} belongs to %ENVIRONMENT ${m.group}, which is not in the header. ktrans loads this group by itself, so it translates either way.`, vscode.DiagnosticSeverity.Information);
-        diag.code = 'karel.environment'; diag.source = 'KAREL';
-        out.push(diag);
-      }
-    }
-
-    // The lint: what ktrans refuses and what it lets through (lint.ts). One rule can be
-    // switched off by its code in robotCode.karel.diagnostics.lintIgnore.
-    if (config<boolean>('karel.diagnostics.lint', true, doc)) {
-      const ignore = new Set(config<string[]>('karel.diagnostics.lintIgnore', [], doc).map(x => x.trim()));
-      for (const d of lintKarel(prog)) {
-        if (ignore.has(d.code) || ignore.has(d.code.replace(/^karel\.lint\./, ''))) continue;
-        const diag = new vscode.Diagnostic(spanToRange(d.span), d.message, sevMap[d.severity]);
-        diag.code = d.code; diag.source = 'KAREL';
-        out.push(diag);
-      }
-    }
-
-    if (prog.name && prog.nameSpan && !doc.isUntitled) {
-      const file = path.basename(doc.uri.fsPath).replace(/\.[^.]+$/, '');
-      if (file.toUpperCase() !== prog.name.toUpperCase()) {
-        const diag = new vscode.Diagnostic(spanToRange(prog.nameSpan), `Program name "${prog.name}" differs from file name "${file}"; the controller loads ${prog.name}.pc and expects the file to match.`, vscode.DiagnosticSeverity.Warning);
-        diag.code = 'karel.fileName'; diag.source = 'KAREL';
-        out.push(diag);
-      }
-    }
-    coll.set(doc.uri, out);
+    // the checks are in checks.ts (shared with Lint Folder and robot-lint); .robotlint.json has the last word
+    const findings = karelChecks(s.karel.get(doc), {
+      settings: lintSettingsFor(doc.uri),
+      setting: (key, fallback) => config(key, fallback, doc),
+      nameLimits: nameLimits(doc),
+      fsPath: doc.isUntitled ? undefined : doc.uri.fsPath,
+      supportDirs: doc.isUntitled ? undefined : supportDirs(),
+    });
+    coll.set(doc.uri, lintDiagnostics(findings, doc.uri, 'KAREL'));
   };
   const schedule = (doc: vscode.TextDocument) => {
     if (doc.languageId !== 'fanuc-karel') return;
@@ -597,6 +544,7 @@ function registerKarelDiagnostics(ctx: vscode.ExtensionContext, s: FanucServices
     vscode.workspace.onDidChangeTextDocument(e => schedule(e.document)),
     vscode.workspace.onDidCloseTextDocument(d => { coll.delete(d.uri); ktransDiagnostics.delete(d.uri); }),
     vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration('robotCode.karel')) { iniCache = undefined; supportCache = undefined; for (const d of vscode.workspace.textDocuments) run(d); } }),
+    onDidChangeLintConfig(() => { for (const d of vscode.workspace.textDocuments) run(d); }),
     vscode.workspace.onDidSaveTextDocument(d => { if (d.languageId === 'fanuc-karel' && config<boolean>('karel.compileOnSave', false, d)) void compileKarel(d, s); }),
   );
   for (const d of vscode.workspace.textDocuments) run(d);

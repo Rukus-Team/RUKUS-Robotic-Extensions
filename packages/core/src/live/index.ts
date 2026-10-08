@@ -151,7 +151,8 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
 
   reg('robotCode.live.dashboard', async (node?: any) => { const name = await pickRobot(nameOf(node)); if (name) openDashboard(ctx, s, robots, name); });
 
-  reg('robotCode.live.addRobot', () => openRobotForm(ctx, s, robots));
+  // a brand opens the form on its own tab: { brand: 'abb' }, optionally { name } to edit one
+  reg('robotCode.live.addRobot', (arg?: any) => openRobotForm(ctx, s, robots, typeof arg?.name === 'string' ? arg.name : undefined, typeof arg?.brand === 'string' ? arg.brand : undefined));
   reg('robotCode.live.manageRobots', (node?: any) => openRobotForm(ctx, s, robots, nameOf(node)));
 
   reg('robotCode.live.removeRobot', async (node?: any) => {

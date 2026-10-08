@@ -99,9 +99,8 @@ function serialize(c: RobotConnection) {
   };
 }
 
-function html(name: string): string {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${WEBVIEW_BASE_CSS}
-  :root { --ok: var(--vscode-testing-iconPassed, #3fb950); --bad: var(--vscode-testing-iconFailed, #f14c4c); --warn: var(--vscode-charts-yellow, #f6c343); --blue: var(--vscode-charts-blue, #61afef); --purple: var(--vscode-charts-purple, #c678dd); --orange: var(--vscode-charts-orange, #d19a66); --green: var(--vscode-charts-green, #98c379); --muted: var(--vscode-descriptionForeground); --line: var(--vscode-panel-border, #444); --card: var(--vscode-editorWidget-background) }
+/** the robot page's look, shared by every brand's controller page */
+export const ROBOT_PAGE_CSS = `  :root { --ok: var(--vscode-testing-iconPassed, #3fb950); --bad: var(--vscode-testing-iconFailed, #f14c4c); --warn: var(--vscode-charts-yellow, #f6c343); --blue: var(--vscode-charts-blue, #61afef); --purple: var(--vscode-charts-purple, #c678dd); --orange: var(--vscode-charts-orange, #d19a66); --green: var(--vscode-charts-green, #98c379); --muted: var(--vscode-descriptionForeground); --line: var(--vscode-panel-border, #444); --card: var(--vscode-editorWidget-background) }
   body { padding: 0 18px 24px }
   .head { position: sticky; top: 0; z-index: 3; background: var(--vscode-editor-background); padding: 14px 0 10px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 14px; flex-wrap: wrap }
   .head h1 { font-size: 20px; margin: 0; display: flex; align-items: center; gap: 10px; color: var(--warn) } .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 3px color-mix(in srgb, var(--muted) 25%, transparent) } .dot.connected { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent) } .dot.error { background: var(--bad) } .dot.connecting { background: var(--warn) }
@@ -133,7 +132,11 @@ function html(name: string): string {
   .chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 320px; overflow: auto } .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 6px; border-radius: 14px; background: var(--vscode-editor-background); border: 1px solid var(--line); font-size: 11.5px; cursor: pointer; white-space: nowrap } .chip:hover { border-color: var(--vscode-focusBorder) } .chip .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none } .chip.on .led { background: var(--ok); box-shadow: 0 0 6px var(--ok) } .chip.sim .led { outline: 2px dashed var(--warn) } .chip .k { font-family: var(--vscode-editor-font-family, monospace); color: var(--blue) } .chip.on .k { color: var(--green) } .chip .c { max-width: 160px; overflow: hidden; text-overflow: ellipsis }
   .empty { color: var(--muted); padding: 10px 0 } .err { color: var(--bad) }
   .note { color: var(--muted); font-size: 11.5px; margin-top: 10px }
-</style></head><body>
+`;
+
+function html(name: string): string {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${WEBVIEW_BASE_CSS}
+${ROBOT_PAGE_CSS}</style></head><body>
 <div class="head">
   <h1><span class="dot" id="dot"></span><span id="name">${name}</span></h1>
   <div class="sub" id="sub">…</div>

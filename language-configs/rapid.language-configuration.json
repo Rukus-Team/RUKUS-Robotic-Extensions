@@ -1,0 +1,79 @@
+{
+  "comments": {
+    "lineComment": "!"
+  },
+  "brackets": [
+    [
+      "[",
+      "]"
+    ],
+    [
+      "(",
+      ")"
+    ],
+    [
+      "{",
+      "}"
+    ]
+  ],
+  "autoClosingPairs": [
+    {
+      "open": "[",
+      "close": "]"
+    },
+    {
+      "open": "(",
+      "close": ")"
+    },
+    {
+      "open": "{",
+      "close": "}"
+    },
+    {
+      "open": "\"",
+      "close": "\"",
+      "notIn": [
+        "string",
+        "comment"
+      ]
+    }
+  ],
+  "surroundingPairs": [
+    [
+      "[",
+      "]"
+    ],
+    [
+      "(",
+      ")"
+    ],
+    [
+      "{",
+      "}"
+    ],
+    [
+      "\"",
+      "\""
+    ]
+  ],
+  "wordPattern": "[A-Za-z_][A-Za-z0-9_]*",
+  "folding": {
+    "markers": {
+      "start": "^\\s*((LOCAL\\s+)?(PROC|FUNC|TRAP|RECORD)\\b|MODULE\\b|IF\\b.*\\bTHEN\\s*(!.*)?$|FOR\\b.*\\bDO\\s*(!.*)?$|WHILE\\b.*\\bDO\\s*(!.*)?$|TEST\\b)",
+      "end": "^\\s*(ENDPROC|ENDFUNC|ENDTRAP|ENDRECORD|ENDMODULE|ENDIF|ENDFOR|ENDWHILE|ENDTEST)\\b"
+    }
+  },
+  "indentationRules": {
+    "increaseIndentPattern": "^\\s*((LOCAL\\s+)?(PROC|FUNC|TRAP|RECORD)\\b|MODULE\\b|IF\\b.*\\bTHEN\\s*(!.*)?$|ELSEIF\\b|ELSE\\s*(!.*)?$|FOR\\b.*\\bDO\\s*(!.*)?$|WHILE\\b.*\\bDO\\s*(!.*)?$|TEST\\b|CASE\\b.*:\\s*(!.*)?$|DEFAULT\\s*:|ERROR\\b|UNDO\\b|BACKWARD\\b)",
+    "decreaseIndentPattern": "^\\s*(ENDPROC|ENDFUNC|ENDTRAP|ENDRECORD|ENDMODULE|ENDIF|ENDFOR|ENDWHILE|ENDTEST|ELSEIF|ELSE|CASE|DEFAULT|ERROR|UNDO|BACKWARD)\\b"
+  },
+  "onEnterRules": [
+    {
+      "beforeText": "^\\s*!.*\\S.*$",
+      "action": {
+        "indent": "none",
+        "appendText": "! "
+      }
+    }
+  ]
+}

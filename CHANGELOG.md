@@ -1,5 +1,231 @@
 # Changelog
 
+## 26.109.6 - 2026-10-07 - ABB support (RAPID, IRC5 and OmniCore controllers, analysis) and a linter for TP, KAREL and RAPID
+
+Issues #16 and #17 (RUKUS #28). ABB RAPID in the editor
+(language, navigation, formatting, linting), ABB controllers over Robot Web Services (IRC5 / RWS 1.0 and OmniCore /
+RWS 2.0: reads, backup, controller page, event log, I/O), ABB analysis reports, RUKUS clusters with mixed brands,
+a linter for every language with a command line, and a side bar and start-up that load only the brands a
+workspace holds. Checked against RobotStudio virtual controllers: IRC5 RobotWare 6.16 and OmniCore RobotWare 8.2.1.
+
+### Added
+- **Robot Code: Lint Folder…** (Explorer right-click → Robot Code, or the Command Palette) lints every
+  TP, KAREL and RAPID program under a folder or backup. Findings go to Problems (files open in an
+  editor keep their live diagnostics), and a summary goes to Output → *Robot Code Lint*.
+- **robot-lint**, the same linter on plain Node (`dist/robot-lint.js`, in the .vsix): text, JSON or SARIF
+  output, exit code 1 on errors, `--max-warnings`, `--rules`, `--init`. For CI and for checking a backup.
+- **.robotlint.json** turns rules off, changes their severity and sets their options. It takes `prefix.*` keys
+  and `ignore` globs, and VS Code completes the rule names from `schemas/robotlint.schema.json`. The nearest
+  one above a file applies, in the editor and the command line alike. **Robot Code: Create Lint Config** writes a starter.
+- **Style rules** (`tp.style.*`, `karel.style.*`, `rapid.style.*`). On as hints: a WAIT / WaitDI / WaitUntil with no
+  timeout, a missing program COMMENT / %COMMENT, TODO-FIXME left in, unused LOCAL RAPID data, and BREAK left in (info).
+  Off until turned on: program/routine length, line length, keyword case, program naming pattern, RAPID data
+  prefixes, fixed-time waits, uncommented I/O, moves before UFRAME_NUM/UTOOL_NUM, plant speed limits, and inline targets.
+  None is an error by default. Over the FANUC reference backup and 24 IRC5 backups (5,655 modules), no
+  style rule reports an error and RAPID reports no warning.
+
+- **Getting around RAPID like TP** (`rapid/symbols.ts` resolves a name as the controller does: routine,
+  LOCAL, task, shared modules; labels apart):
+  - **Find All References** (Shift+F12) across every module of the task and the shared modules,
+    late-bound `%"Name"%` calls included.
+  - **Rename** (F2) in every module that sees the symbol. It refuses instructions and predefined names, and a
+    new name that is already declared where the symbol is used.
+  - Every use of the name under the cursor is **highlighted** (writes apart from reads), and **Ctrl+T** finds
+    routines, records and module data in every RAPID file of the workspace.
+  - **"N references" above each routine**; click it to list them. Unused routines say "no references".
+  - **Quick fixes**: remove an unused LOCAL routine (with its comment block) or an unused LOCAL declaration,
+    or add `\MaxTime` to a wait.
+  - **ABB RAPID: Go to Label…** (Ctrl+Alt+L) and **Show Routine Call Graph** (Ctrl+Alt+G, or right-click).
+    The graph shows the routine's callers, and what it calls through the task, as clickable boxes.
+- Checked live against the RobotStudio IRC5 VC (RobotWare 6.16): system, tasks, modules, module text,
+  the program pointer (now seen live for the first time), joints, and Back Up and Download (21 files, 0.8 s).
+- **OmniCore controllers connect** (RobotWare 7/8 over Robot Web Services 2.0). Everything the ABB Controllers
+  view does for an IRC5 now works on an OmniCore too: state, identity, tasks, modules, opening a module from
+  the controller, pointers, joints and TCP, **ABB: Convert Target on Controller**, and **Back Up and Download**.
+  The client follows the controller family. An OmniCore gets HTTPS with Basic login, HAL+JSON answers
+  (`rws/hal.ts` reads them into the same pages as RWS 1.0's XHTML), and the resources RobotWare 8 moved
+  (`/rw/panel/ctrl-state`, `/rw/rapid/tasks/{task}/modules`, `/ctrl/backup/create`,
+  `/rw/motionsystem/mechunits/{unit}/pose-from-joints`, ...). Test connection in Robot Connections works for it.
+  Checked live against a RobotStudio OmniCore VC (RobotWare 8.2.1): Back Up and Download took 23 files in 1.4 s.
+  `ROBOT_CODE_ABB_LIVE="NAME=host:port:omnicore,..." npm run smoke:abb` runs the live checks against real or
+  virtual controllers.
+- **Event log and I/O signals** under each connected ABB controller (also **ABB: Show Event Log** / **ABB: Show
+  I/O Signals**, and on the controller's right-click menu). Each is a read-only page read from the controller
+  when opened:
+  - the event log shows the newest 100 messages, each with its code, type, title, description, causes and
+    actions. RobotWare 8 lists oldest first, refuses the newest-first order and counts `start` in pages, so the
+    client starts at the page that holds the oldest message wanted and turns the list round;
+  - the signals show every signal with its type, value and network/device path.
+- **FANUC loads only where it is needed too.** An ABB-only workspace leaves FANUC out entirely: no TP/KAREL
+  language features, FANUC views, tools, live extras or controller-data scan. A folder with FANUC files, an
+  empty folder, or `robotCode.fanuc.enabled` true loads it. The side bar's brand choice (`robotCode.views.brands`)
+  also decides which brands load on the next start. A brand that is off still answers its commands ("FANUC
+  support is off in this workspace - turn it on?") instead of "command not found", and opening one of its files
+  offers the same once. Output → Robot Code says which brands loaded and why.
+- **ABB support loads by itself in a workspace with ABB files.** It needs no setting and no reload when the
+  folder (or a backup folder) holds an ABB backup (BACKINFO with RAPID/SYSPAR) or .mod / .prg modules; a
+  FANUC-only workspace does not load it. An explicit `robotCode.abb.enabled` true or false still decides. The
+  check is a bounded folder scan at start-up, and views and menus follow the result (context key
+  `robotCode.abbActive`), not the setting.
+- **The side bar follows the workspace's brands.** A FANUC-only workspace shows the FANUC views, an ABB-only one
+  the ABB views (RAPID, ABB Controllers), and a mixed one both. In an empty folder, the first time the Robot Code
+  side bar opens, it asks which robots you work with and keeps the answer for that workspace.
+  `robotCode.views.brands` (auto / fanuc / abb / both) overrides it. If the workspace has ABB files while ABB
+  support is off, it offers to turn ABB on, once.
+- **Who holds write access**, on the ABB controller row and the controller page's State card: free, or who has it.
+  On OmniCore that is the control station holding write access (name and id); on IRC5, RAPID / configuration /
+  motion mastership held by the FlexPendant or a remote client. It is read with the controller state (a read only).
+  On OmniCore it also says when the pendant's **Remote Access** is off (then no PC may even ask for write access),
+  and how to turn it on: Write Access on the FlexPendant, long-press the hard button with the speech-bubble icon (or
+  the E-Device button). The "no write access" error says the same, and who holds write access when someone does.
+- **ABB controller page** (click a controller in ABB Controllers, or **ABB: Open Controller Page**). It looks
+  like the FANUC robot page but holds what an ABB controller has: state (motors, mode, speed, RAPID execution),
+  the controller and its options (searchable), RAPID tasks with program and motion pointers (click to open),
+  position (TCP with quaternion and configuration, joints), the loaded modules (click to read one), I/O signals
+  (the ones set, or search any by name or network/device), and the event log, newest first. Nothing is read
+  until a card's Get is pressed, and each card shows how old its reading is.
+- **ABB analysis reports** (Markdown, from the editor; no controller needed):
+  - **ABB: Compare Two Backups…** (also used by Compare Two Backups when both folders are ABB backups). Per task
+    it lists modules added, removed and changed. Inside a changed module it shows the routines that changed,
+    the data declarations that changed, and the robtargets that moved (with mm and re-orientation), then the
+    SYSPAR files that changed. Re-indenting is not a change. Encrypted modules get one line per task.
+  - **ABB RAPID: Unused Routines** for the open module's task (or a task picked from the backups). Calls from
+    the shared modules and from the backup's HOME libraries count; `main`, connected TRAPs and late-bound
+    string names count as used.
+  - **ABB RAPID: Data & Signal Cross-Reference**: who writes and who reads every PERS/VAR and every I/O signal
+    (found from the I/O instructions and functions). Findings: a PERS written from several modules, a VAR
+    read but never written, a VAR never used, and a signal set from several modules.
+- **ABB Actions**: an Actions card on the controller page and the same commands on a connected controller's
+  right-click: **speed override** (5/10/25/50/75/100% or any), **motors on / off**, **RAPID start** (once or
+  continuous), **stop**, **PP to Main**, **load a module** from the open editor or a file (uploaded to $HOME, then
+  loaded), **unload a module** (also on a module's right-click), **set an output**, **write a RAPID variable**, and
+  **Request / Release write access** beside the write access tag. Each asks first and says what will change;
+  Stop does not ask. IRC5: write access is mastership of RAPID, configuration and motion, held until released.
+  **OmniCore write access is in progress:** this PC registers as a remote control station with the id and PIN
+  the controller allows (asked the first time, the PIN kept in secret storage), then asks for write access. That
+  path is built and unit-tested but not yet checked on a controller with an allowed id and PIN, so on an OmniCore
+  the Actions are refused (with the reason) until write access is granted. The RWS client keeps one connection
+  open per controller and goes straight to it (not through VS Code's proxy): an IRC5 drops mastership when the
+  connection that took it closes. Checked live on the RobotStudio IRC5 VC (every action, settings put back);
+  `ROBOT_CODE_ABB_LIVE_ACTIONS=1` adds these checks to the live smoke test.
+
+- **The open RUKUS cluster's ABB robots appear in ABB Controllers**, with their address, port,
+  IRC5 / OmniCore and RWS user as RUKUS keeps them (`packages/abb/src/live/rukusCluster.ts`). They
+  follow the cluster - opened, synced, or edited in RUKUS - and nothing is written to settings. A
+  controller from RUKUS is edited and removed in RUKUS; the connection form and Remove say so.
+  Their RWS password is copied into secret storage the first time, as FANUC FTP passwords are.
+- **Encrypted RUKUS passwords are read.** A cluster with RUKUS's "Encrypt robot passwords" on keeps
+  them as `dpapi:v1:...` (Windows DPAPI for the account that saved the file). `core/rukus/dpapi.ts`
+  decrypts them through Windows PowerShell, for ABB RWS and FANUC FTP passwords alike. One another
+  account encrypted cannot be read here and is left for the user to enter. Checked against a value
+  RUKUS's own C# code encrypted, non-ASCII password included.
+- The RUKUS Clusters view shows an ABB robot as ABB IRC5 / OmniCore with its port and identity.
+
+- **Modules under each task** in ABB Controllers, program modules first. Click one to read its
+  source from the controller into a read-only RAPID editor. It is one GET
+  (`?resource=module-text`), nothing is saved on the controller, and the line numbers are the
+  pointers' line numbers. If the workspace has no copy of the module a pointer names, clicking
+  the pointer opens the controller's text.
+- **ABB: Convert Target on Controller** (RAPID editor context menu, while a controller is
+  connected). It turns the jointtarget under the cursor into a robtarget, or a robtarget into its
+  joint solutions, using the controller's own kinematics (tool0, base frame). The solution in the
+  robtarget's configuration is listed first. The result can be copied or inserted as a
+  declaration under the line. These are calculations only: nothing moves and nothing is stored.
+
+- **ABB: Back Up and Download** (right-click a connected controller). This takes the
+  FlexPendant's backup into `$BACKUP/<name>` on the controller (RAPID keeps running), then
+  downloads every file of it to a folder you pick. The copy on the controller can be kept, as
+  the pendant would, or removed after the download. It is confirmed every time. The default name is `<system>_Backup_<date>_<time>`. An
+  existing name on the controller or on the PC is refused before anything is written. The
+  download is a normal IRC5 backup folder, so the RAPID view lists it. On the RobotStudio VC
+  it took 1.1 s: 18 files, 36 requests. RW 6.16 only accepts the destination as a
+  `/fileservice/$BACKUP/...` path.
+
+- **A FANUC / ABB selector in Robot Connections.** ABB controllers are now added, edited, tested
+  and connected in the same form as FANUC robots, not through three input boxes. The list shows
+  both brands, each tagged, and **New controller** makes one of the brand that is selected. A new
+  ABB controller starts at `192.168.125.1`, the service (programming) port on every IRC5 and
+  OmniCore, as Default User. Test connection logs in, reads the system name and RobotWare, and
+  logs out. The form has a Controller choice of IRC5 (RWS 1.0) or OmniCore (RWS 2.0). An
+  OmniCore can be saved and its port checked, but it is not read yet. **ABB: Add Controller…**
+  opens the form on the ABB tab, and **ABB: Edit Connection…** is in the controller's
+  right-click menu. Core stays brand-free: a brand registers its tab through
+  `core/live/connectionKinds.ts`.
+
+- **ABB RAPID, behind `robotCode.abb.enabled` (off by default; reload after turning it on).**
+  `.mod`, `.prg` and the `.sys` modules inside a RAPID backup layout open as ABB RAPID with
+  highlighting and snippets always; with the setting on they also get an outline, go to
+  definition across the task (a backup's `RAPID/TASKn` SYSMOD + PROGMOD, with `TASK0` as the
+  shared modules), hover for RobotWare instructions, routines and robtargets (X/Y/Z, quaternion,
+  configuration), completion, folding and diagnostics. RAPID modules and IRC5 backups join the
+  workspace index. Files are opened as Latin-1, the way the controller writes them.
+  Checked against 24 IRC5 backups (RobotWare 6.13, SpotWare): 1045 plain modules parse, 27080
+  robtargets decode, no error diagnostics; `npm run smoke:abb` runs the providers in VS Code.
+- **A RAPID section in the sidebar** (with the setting on). One row per IRC5 backup, named by
+  robot, with its robot type and date (`2V04_V01AR11 - IRB 8700-630/3.50 LeanID - 23-09-16`, read
+  from BACKINFO and SYSPAR). Under it the tasks by their controller name, the motion task first
+  and open, TASK0 as "Shared", and the backup's HOME disk last, by subfolder. Under a task its
+  modules - program modules, then system modules, then the encrypted ones, locked - each with
+  its routine and point counts; under a module its routines, one click to the routine.
+  Modules outside a backup group by folder.
+- **Typing RAPID: argument hints and completion from ABB's manual.** Every RobotWare 6
+  instruction, function and data type (from 3HAC050917, the RAPID Instructions, Functions and
+  Data Types manual, by `scripts/import-rapid-manual.mjs`) with its syntax and arguments. While a
+  call is being written the syntax shows with the current argument highlighted and described
+  (the task's own PROCs and FUNCs too). Completion fits the spot: at the start of a statement
+  the instructions, inserting their required arguments as placeholders (`MoveL ${1:ToPoint},
+  ${2:Speed}, ${3:Zone}, ${4:Tool};`) and the task's routines; in an argument, the task's data
+  of that argument's type first, then RobotWare's predefined ones (`v5` ... `vmax`, `fine`,
+  `z0` ... `z200`, `tool0`, `wobj0`), then functions returning that type; after a `\` the
+  instruction's optional arguments. Hover shows the manual's entry.
+- **Enter in RAPID.** On a comment line, Enter starts the next line with `!` at the same indent;
+  on an empty `!` line it does not, so two Enters leave comment mode. After PROC, IF ... THEN,
+  FOR, WHILE, TEST and CASE the next line is one step in; END... lines step back out.
+- **Format Document for RAPID, Visual Basic style, from the customer's base.** MODULE in column
+  0, everything inside at `robotCode.rapid.format.baseIndent`, one `robotCode.rapid.format.indentSize`
+  step per block (TEST/CASE and ERROR handlers laid out as the controller does), wrapped
+  statements keep their continuation offset, only leading whitespace ever changes. Both settings
+  are "auto" by default (what the file already uses) and can be set per workspace folder, so a
+  customer's cell carries its own; the editor's tab size follows the step. Over the 924 plain
+  modules of the IRC5 corpus it never changes code, is idempotent, and leaves 666 files untouched.
+- **ABB controllers over Robot Web Services** (with the setting on). Add a controller
+  (address, user; the password goes to VS Code's secret storage, never settings), Connect, and the
+  section shows the controller's state (motors, AUTO/MANUAL, speed override, RAPID running or
+  stopped), who it is (system name, RobotWare), each RAPID task with its program pointer and
+  motion pointer (module, routine, line - click to open the module at that line when it is in
+  the workspace), and the robot's joints and TCP. Open RAPID modules mark the pointer lines, with
+  how old the reading is. Reads happen only when asked: Connect and Get read, nothing reads on
+  a timer or a hover.
+  The session is given back on Disconnect. Tested against a mock IRC5 that replays a real
+  controller's RWS answers (RobotWare 6.16): 11 requests to connect, 9 per Get, 0 while idle.
+- **Notepad++: ABB RAPID** next to FANUC TP and KAREL (`notepad++/`, regenerated for this version): colouring,
+  folding (MODULE, PROC, FUNC, TRAP, RECORD, FOR, WHILE, TEST), Ctrl+Space completion with call tips for the
+  RAPID functions, and the routines in the Function List. `install.ps1` / `uninstall.ps1` cover it too.
+
+### Changed
+- **RAPID indentation is yours to set.** `robotCode.rapid.format.indentSize` and `.baseIndent` take any number
+  (1-16 / 0-16) or auto. The new `robotCode.rapid.format.insertSpaces` (auto / true / false) indents with tabs:
+  one tab per indent size, leftover columns in spaces. A tab size or tabs/spaces picked in the status bar now
+  sticks for that file, and Format follows it; the extension no longer resets it when you switch editors.
+  **ABB RAPID: Set Indentation…** picks the size, base and tabs/spaces for one file or saves them for the workspace folder.
+- The TP and KAREL editor checks moved out of the VS Code code into `tp/checks.ts` and `karel/checks.ts`, so
+  the editor, Lint Folder and robot-lint share them. What they report in the editor is unchanged.
+
+- **Core no longer imports FANUC code.** Program indexing, backup detection and usage findings go
+  through a brand registry (`packages/core/src/brand.ts`); FANUC's sidebar sections, tools, live
+  editor commands and status bar moved to `packages/fanuc`. No behaviour change for FANUC: the
+  same 1663 checks and 161-check smoke pass before and after.
+
+### Fixed
+- **An ABB robot in a cluster was made a FANUC controller** (FTP, MD:) by the cell sync. The cell's
+  controllers are the cluster's FANUC robots only; a file without `Make` is still all FANUC.
+- **Send Cell to RUKUS could overwrite an ABB robot** with FTP settings when a cell controller had the
+  same name. Only a FANUC robot of that name is updated now; an ABB one is left exactly as it was.
+
+- RWS errors now show the controller's reason ("Position outside of reach", "Unresolved url"),
+  not just the return code.
+- A World-frame TCP read now works on RW 6.16, which spells the world frame `Word`.
+
 ## 26.109.5 - 2026-10-06 - KAREL reference in the editor; alarm codes
 
 ### Added

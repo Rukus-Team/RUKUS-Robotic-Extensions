@@ -1,5 +1,9 @@
 /**
  * Robot connection form: one webview to add, edit, test and remove robot profiles.
+ *
+ * FANUC's fields are the form's own. Another brand (connectionKinds.ts) brings its fields and
+ * its store, and the form shows a FANUC / <brand> selector: the list holds every brand's
+ * controllers, each tagged, and "New controller" starts one of the selected brand.
  */
 import * as vscode from 'vscode';
 import type { Services } from '../services';
@@ -8,21 +12,32 @@ import type { RobotProfile } from './types';
 import { WEBVIEW_BASE_CSS } from '../webviewStyle';
 import { connectionHint } from './connectionHints';
 import { parseControllerInfo } from './parsers';
+import { connectionKind, connectionKinds, onDidChangeConnectionKinds, type ConnectionKind } from './connectionKinds';
 
 let panel: vscode.WebviewPanel | undefined;
 
-export function openRobotForm(ctx: vscode.ExtensionContext, s: Services, robots: RobotManager, editName?: string) {
+/** `brand` picks the selector ('fanuc' or a registered kind); `editName` selects that controller */
+export function openRobotForm(ctx: vscode.ExtensionContext, s: Services, robots: RobotManager, editName?: string, brand?: string) {
+  const state = (select?: { brand: string; name?: string }) => ({ type: 'profiles', brands: brandsForView(), profiles: profilesForView(robots), datasets: datasetSuggestions(s, robots), select });
+  const initial = { brand: brand && connectionKind(brand) ? brand : 'fanuc', name: editName };
   if (!panel) {
     panel = vscode.window.createWebviewPanel('robotCode.robotForm', 'Robot Connections', vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true });
     panel.onDidDispose(() => { panel = undefined; });
     ctx.subscriptions.push(panel);
-    const sub = robots.onDidChange(() => { if (panel) void panel.webview.postMessage({ type: 'profiles', profiles: profilesForView(robots), datasets: datasetSuggestions(s, robots) }); });
-    panel.onDidDispose(() => sub.dispose());
+    const push = () => { if (panel) void panel.webview.postMessage(state()); };
+    let kindSubs: vscode.Disposable[] = [];
+    const watchKinds = () => { for (const d of kindSubs) d.dispose(); kindSubs = connectionKinds().map(k => k.onDidChange(push)); };
+    watchKinds();
+    const subs = [robots.onDidChange(push), onDidChangeConnectionKinds(() => { watchKinds(); push(); })];
+    panel.onDidDispose(() => { for (const d of [...subs, ...kindSubs]) d.dispose(); });
 
     panel.webview.onDidReceiveMessage(async (m: any) => {
       try {
+        const kind = m.brand && m.brand !== 'fanuc' ? connectionKind(m.brand) : undefined;
+        if (m.brand && m.brand !== 'fanuc' && !kind) throw new Error(`${m.brand} controllers are not available (is that brand turned on?).`);
+        if (kind) { await kindMessage(kind, m); return; }
         switch (m.type) {
-          case 'ready': await panel!.webview.postMessage({ type: 'profiles', profiles: profilesForView(robots), datasets: datasetSuggestions(s, robots), select: editName }); break;
+          case 'ready': await panel!.webview.postMessage(state(initial)); break;
           case 'test': {
             const p = toProfile(m.profile);
             const started = Date.now();
@@ -62,7 +77,36 @@ export function openRobotForm(ctx: vscode.ExtensionContext, s: Services, robots:
   }
   panel.webview.html = html();
   panel.reveal();
-  if (editName) void panel.webview.postMessage({ type: 'profiles', profiles: profilesForView(robots), datasets: datasetSuggestions(s, robots), select: editName });
+  if (editName || brand) void panel.webview.postMessage(state(initial));
+}
+
+/** a message about another brand's controller: that brand does the work */
+async function kindMessage(kind: ConnectionKind, m: any) {
+  const post = (x: unknown) => panel?.webview.postMessage(x);
+  switch (m.type) {
+    case 'test': {
+      const r = await kind.test(m.profile ?? {}, m.password || undefined, m.originalName || undefined);
+      await post({ type: 'kindTestResult', ...r });
+      break;
+    }
+    case 'save': {
+      const name = await kind.save(m.profile ?? {}, m.password || undefined, m.originalName || undefined);
+      await post({ type: 'saved', brand: kind.id, name });
+      if (m.connect) { try { await kind.connect(name); } catch (e: any) { await post({ type: 'error', text: `${name}: ${e?.message ?? e}` }); } }
+      break;
+    }
+    case 'delete': {
+      const ok = await vscode.window.showWarningMessage(`Remove ${kind.label} controller "${m.name}" and forget its password?`, { modal: true }, 'Remove');
+      if (ok) await kind.remove(m.name);
+      break;
+    }
+    case 'connect': try { await kind.connect(m.name); } catch (e: any) { await post({ type: 'error', text: `${m.name}: ${e?.message ?? e}` }); } break;
+    case 'disconnect': await kind.disconnect(m.name); break;
+  }
+}
+
+function brandsForView() {
+  return [{ id: 'fanuc', label: 'FANUC' }, ...connectionKinds().map(k => ({ id: k.id, label: k.label, fields: k.fields(), defaults: k.defaults(), note: k.note }))];
 }
 
 function toProfile(p: any): RobotProfile {
@@ -75,12 +119,14 @@ function toProfile(p: any): RobotProfile {
 }
 
 function profilesForView(robots: RobotManager) {
-  return robots.list().map(c => ({ ...c.profile, state: c.state, error: c.error, info: c.snapshot?.info }));
+  const fanuc = robots.list().map(c => ({ ...c.profile, brand: 'fanuc', state: c.state, error: c.error, info: c.snapshot?.info, detail: c.snapshot?.info?.version?.split(' ')[0] }));
+  const others = connectionKinds().flatMap(k => k.list().map(r => ({ brand: k.id, name: r.name, host: r.host, state: r.state, detail: r.detail, profile: r.profile })));
+  return [...fanuc, ...others];
 }
 
 /** robot names seen in backup folders but not yet configured → quick prefill chips */
 function datasetSuggestions(s: Services, robots: RobotManager): string[] {
-  const have = new Set(robots.list().map(c => c.profile.name.toUpperCase()));
+  const have = new Set([...robots.list().map(c => c.profile.name), ...connectionKinds().flatMap(k => k.list().map(r => r.name))].map(n => n.toUpperCase()));
   return [...new Set(s.data.datasets.map(d => d.name))].filter(n => !have.has(n.toUpperCase()) && !/^\d{4}-/.test(n)).sort();
 }
 
@@ -108,6 +154,8 @@ function html(): string {
   .result { margin-top: 12px; padding: 10px 12px; border-radius: 4px; border: 1px solid var(--vscode-panel-border, #444); display: none } .result.ok { border-color: var(--vscode-testing-iconPassed, #3fb950) } .result.bad { border-color: var(--vscode-testing-iconFailed, #f14c4c) } .result b { display: block; margin-bottom: 4px } .muted { opacity: .7 } .hint { margin-top: 6px; opacity: .85 }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 2px } .chip { padding: 3px 9px; border-radius: 12px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); cursor: pointer; font-size: 12px } .chip:hover { filter: brightness(1.15) }
   .help { font-size: 12px; opacity: .7; margin-top: 4px } .proto { display: flex; gap: 14px } .proto label { display: flex; gap: 6px; align-items: center; cursor: pointer }
+  .brandsel { display: flex; gap: 0; margin: 0 0 14px; border: 1px solid var(--vscode-panel-border, #444); border-radius: 4px; overflow: hidden; width: max-content } .brandsel button { border-radius: 0; padding: 6px 18px; background: transparent; color: var(--vscode-foreground); font-weight: 600; letter-spacing: .03em } .brandsel button + button { border-left: 1px solid var(--vscode-panel-border, #444) } .brandsel button.on { background: var(--vscode-button-background); color: var(--vscode-button-foreground) }
+  .tag { font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 1px 5px; border-radius: 3px; border: 1px solid currentColor; opacity: .8; flex: none } .tag.fanuc { color: var(--vscode-charts-yellow, #d7ba2f) } .tag.abb { color: var(--vscode-charts-red, #f14c4c) }
   .toast { position: fixed; bottom: 14px; right: 18px; background: var(--vscode-notifications-background); color: var(--vscode-notifications-foreground); border: 1px solid var(--vscode-notifications-border, #444); padding: 8px 12px; border-radius: 4px; display: none }
 </style></head><body>
 <h1>Robot connections</h1>
@@ -116,10 +164,11 @@ function html(): string {
     <div class="list" id="list"></div>
     <button class="newbtn" id="new" aria-label="Add a new robot profile">＋ New robot</button>
     <div id="suggest"></div>
-    <p class="help">Read-only, and on demand: the extension only reads a file from the controller when you press Get on a panel. Nothing is polled in the background unless you switch auto-refresh on below. Passwords go to the Windows credential store, not to settings.</p>
+    <p class="help">Read-only, and on demand: the extension only reads from a controller when you press Get (or Connect, or open a file from it). Nothing is polled in the background unless you switch auto-refresh on. Passwords go to the Windows credential store, not to settings.</p>
   </div>
   <div class="card">
-    <div class="grid">
+    <div class="brandsel" id="brandsel" role="tablist" aria-label="Controller brand"></div>
+    <div class="grid" id="fanucGrid">
       <label>Robot name</label><input type="text" id="name" placeholder="S002R01" maxlength="32">
       <label>IP address</label><input type="text" id="host" placeholder="192.168.0.10">
       <label>Read files over</label><div class="proto"><label><input type="radio" name="proto" value="http" checked> Web server (HTTP) — no login</label><label><input type="radio" name="proto" value="ftp"> FTP — needs user/password</label></div>
@@ -131,6 +180,8 @@ function html(): string {
       <label>Auto-refresh</label><div><label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="autoRefresh"> keep re-reading what I have opened</label><div class="help">Off by default. The controller generates each diagnostic file on request, so this is continuous load on the robot for as long as VS Code is open.</div></div>
       <label>Refresh every</label><div class="inline"><input type="range" id="poll" min="1000" max="30000" step="500" value="5000" style="flex:1"><span id="pollLabel">5.0 s</span></div>
     </div>
+    <div class="grid" id="kindGrid" style="display:none"></div>
+    <p class="help" id="kindNote" style="display:none"></p>
     <div class="actions">
       <button id="test" aria-label="Test the connection to this robot">Test connection</button>
       <button class="primary" id="save" aria-label="Save this robot profile">Save</button>
@@ -146,8 +197,12 @@ function html(): string {
 <script>
   const vscode = acquireVsCodeApi();
   const $ = id => document.getElementById(id);
-  let profiles = [], current = null; // current = name being edited, null = new
+  // brand = the selector; current = name being edited in that brand, null = new
+  let profiles = [], brands = [{ id: 'fanuc', label: 'FANUC' }], brand = 'fanuc', current = null;
   const fields = ['name','host','httpPort','ftpPort','ftpUser','device'];
+  const kind = () => brands.find(b => b.id === brand);
+  const isFanuc = () => brand === 'fanuc';
+  const profileOf = (b, n) => profiles.find(p => p.brand === b && p.name === n);
   function read() {
     const p = {}; for (const f of fields) p[f] = $(f).value;
     p.useFtp = document.querySelector('input[name=proto]:checked').value === 'ftp';
@@ -159,39 +214,115 @@ function html(): string {
     document.querySelector('input[name=proto][value=' + (p?.useFtp ? 'ftp' : 'http') + ']').checked = true;
     $('poll').value = p?.pollIntervalMs ?? 5000; $('pollLabel').textContent = ((p?.pollIntervalMs ?? 5000) / 1000).toFixed(1) + ' s';
     $('auto').checked = !!p?.autoConnect; $('autoRefresh').checked = !!p?.autoRefresh; $('ftpPass').value = ''; $('ftpPass').placeholder = p ? '(unchanged)' : '';
+    updateProto();
+  }
+  // another brand's fields, built from what it registered
+  function buildKind() {
+    const k = kind();
+    $('kindGrid').innerHTML = (k.fields || []).map(f => {
+      const id = 'k_' + f.key, help = f.help ? '<div class="help">' + esc(f.help) + '</div>' : '';
+      let input;
+      if (f.type === 'checkbox') input = '<div><label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="' + id + '"> ' + esc(f.placeholder || '') + '</label>' + help + '</div>';
+      else if (f.type === 'select') input = '<div><select id="' + id + '">' + (f.options || []).map(o => '<option value="' + esc(o.value) + '">' + esc(o.label) + '</option>').join('') + '</select>' + help + '</div>';
+      else input = '<div><input type="' + f.type + '" id="' + id + '" placeholder="' + esc(f.placeholder || '') + '" autocomplete="off">' + help + '</div>';
+      return '<label for="' + id + '">' + esc(f.label) + '</label>' + input;
+    }).join('');
+    for (const f of k.fields || []) if (f.type === 'select') $('k_' + f.key).onchange = e => {
+      const o = (f.options || []).find(x => x.value === e.target.value);
+      if (o && o.sets) setKindValues(o.sets);
+    };
+    $('kindNote').textContent = k.note || ''; $('kindNote').style.display = k.note ? '' : 'none';
+  }
+  function setKindValues(v) {
+    for (const f of kind().fields || []) {
+      if (!(f.key in v) || f.type === 'password') continue;
+      const el = $('k_' + f.key); if (!el) continue;
+      if (f.type === 'checkbox') el.checked = !!v[f.key]; else el.value = v[f.key] ?? '';
+    }
+  }
+  function fillKind(p) {
+    buildKind();
+    const k = kind(), v = p ? p.profile : (k.defaults || {});
+    for (const f of k.fields || []) {
+      const el = $('k_' + f.key);
+      if (f.type === 'password') { el.value = ''; el.placeholder = p ? '(unchanged)' : (f.placeholder || ''); }
+      else if (f.type === 'checkbox') el.checked = !!v[f.key];
+      else el.value = v[f.key] ?? '';
+    }
+  }
+  function readKind() {
+    const profile = {}; let password;
+    for (const f of kind().fields || []) {
+      const el = $('k_' + f.key);
+      if (f.type === 'password') password = el.value || undefined;
+      else if (f.type === 'checkbox') profile[f.key] = el.checked;
+      else if (f.type === 'number') { if (el.value.trim() !== '') profile[f.key] = +el.value; }
+      else profile[f.key] = el.value.trim();
+    }
+    return { profile, password };
+  }
+  function renderBrands() {
+    const el = $('brandsel');
+    el.style.display = brands.length > 1 ? '' : 'none';
+    el.innerHTML = brands.map(b => '<button role="tab" aria-selected="' + (b.id === brand) + '" data-b="' + esc(b.id) + '" class="' + (b.id === brand ? 'on' : '') + '">' + esc(b.label) + '</button>').join('');
+    for (const btn of el.querySelectorAll('button')) btn.onclick = () => { if (btn.dataset.b !== brand) { brand = btn.dataset.b; current = null; show(null); renderList(); } };
+  }
+  // the form for p (null = a new controller) in the selected brand
+  function show(p) {
+    renderBrands();
+    $('fanucGrid').style.display = isFanuc() ? '' : 'none'; $('kindGrid').style.display = isFanuc() ? 'none' : '';
+    if (isFanuc()) { fill(p); $('kindNote').style.display = 'none'; } else fillKind(p);
     $('delete').style.display = p ? '' : 'none';
     $('toggle').style.display = p ? '' : 'none'; if (p) $('toggle').textContent = p.state === 'connected' ? 'Disconnect' : 'Connect';
-    $('result').style.display = 'none'; updateProto();
+    $('result').style.display = 'none';
   }
+  function nameInput() { return isFanuc() ? $('name') : $('k_name'); }
   function updateProto() { const ftp = document.querySelector('input[name=proto]:checked').value === 'ftp'; for (const id of ['lUser','ftpUser','lPass','ftpPass']) $(id).style.opacity = ftp ? '1' : '.45'; }
   function renderList() {
-    $('list').innerHTML = profiles.map(p => '<div class="row' + (p.name === current ? ' active' : '') + '" data-n="' + esc(p.name) + '"><span class="dot ' + p.state + '"></span><span class="n">' + esc(p.name) + '</span><span class="h">' + esc(p.host) + (p.info?.version ? ' · ' + esc(p.info.version.split(' ')[0]) : '') + '</span></div>').join('') || '<div class="row muted">No robots yet</div>';
-    for (const r of document.querySelectorAll('.row[data-n]')) r.onclick = () => { current = r.dataset.n; fill(profiles.find(p => p.name === current)); renderList(); };
+    const tagged = brands.length > 1;
+    $('list').innerHTML = profiles.map(p => '<div class="row' + (p.name === current && p.brand === brand ? ' active' : '') + '" data-b="' + esc(p.brand) + '" data-n="' + esc(p.name) + '"><span class="dot ' + p.state + '"></span>' + (tagged ? '<span class="tag ' + esc(p.brand) + '">' + esc((brands.find(b => b.id === p.brand) || {}).label || p.brand) + '</span>' : '') + '<span class="n">' + esc(p.name) + '</span><span class="h">' + esc(p.host) + (p.detail ? ' · ' + esc(p.detail) : '') + '</span></div>').join('') || '<div class="row muted">No controllers yet</div>';
+    for (const r of document.querySelectorAll('.row[data-n]')) r.onclick = () => { brand = r.dataset.b; current = r.dataset.n; show(profileOf(brand, current)); renderList(); };
   }
   function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-  function toast(t) { const el = $('toast'); el.textContent = t; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 2500); }
-  $('new').onclick = () => { current = null; fill(null); renderList(); $('name').focus(); };
+  function toast(t) { const el = $('toast'); el.textContent = t; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 4000); }
+  function send(type, extra) {
+    if (isFanuc()) vscode.postMessage(Object.assign({ type, profile: read(), password: $('ftpPass').value || undefined, originalName: current }, extra));
+    else { const k = readKind(); vscode.postMessage(Object.assign({ type, brand, profile: k.profile, password: k.password, originalName: current }, extra)); }
+  }
+  $('new').onclick = () => { current = null; show(null); renderList(); nameInput().focus(); };
   $('poll').oninput = () => $('pollLabel').textContent = ($('poll').value / 1000).toFixed(1) + ' s';
   for (const r of document.querySelectorAll('input[name=proto]')) r.onchange = updateProto;
-  $('test').onclick = () => { $('test').disabled = true; $('test').textContent = 'Testing…'; const res = $('result'); res.className = 'result'; res.style.display = 'block'; res.innerHTML = '<span class="muted">Contacting ' + esc($('host').value) + '…</span>'; vscode.postMessage({ type: 'test', profile: read(), password: $('ftpPass').value || undefined }); };
-  $('save').onclick = () => vscode.postMessage({ type: 'save', profile: read(), password: $('ftpPass').value || undefined, originalName: current, connect: false });
-  $('saveConnect').onclick = () => vscode.postMessage({ type: 'save', profile: read(), password: $('ftpPass').value || undefined, originalName: current, connect: true });
-  $('delete').onclick = () => current && vscode.postMessage({ type: 'delete', name: current });
-  $('toggle').onclick = () => { const p = profiles.find(x => x.name === current); if (p) vscode.postMessage({ type: p.state === 'connected' ? 'disconnect' : 'connect', name: p.name }); };
+  $('test').onclick = () => {
+    $('test').disabled = true; $('test').textContent = 'Testing…';
+    const res = $('result'); res.className = 'result'; res.style.display = 'block';
+    res.innerHTML = '<span class="muted">Contacting ' + esc(isFanuc() ? $('host').value : ($('k_host') || {}).value) + '…</span>';
+    send('test');
+  };
+  $('save').onclick = () => send('save', { connect: false });
+  $('saveConnect').onclick = () => send('save', { connect: true });
+  $('delete').onclick = () => current && vscode.postMessage({ type: 'delete', brand, name: current });
+  $('toggle').onclick = () => { const p = profileOf(brand, current); if (p) vscode.postMessage({ type: p.state === 'connected' ? 'disconnect' : 'connect', brand, name: p.name }); };
+  function testDone() { $('test').disabled = false; $('test').textContent = 'Test connection'; const res = $('result'); res.style.display = 'block'; return res; }
   window.addEventListener('message', e => {
     const m = e.data;
     if (m.type === 'profiles') {
       profiles = m.profiles;
-      if (m.select && profiles.some(p => p.name === m.select)) { current = m.select; fill(profiles.find(p => p.name === current)); }
-      else if (current && !profiles.some(p => p.name === current)) { current = null; fill(null); }
-      else if (current) { const p = profiles.find(x => x.name === current); $('toggle').textContent = p.state === 'connected' ? 'Disconnect' : 'Connect'; }
+      if (m.brands) brands = m.brands;
+      if (!brands.some(b => b.id === brand)) { brand = 'fanuc'; current = null; show(null); }
+      if (m.select) {
+        brand = brands.some(b => b.id === m.select.brand) ? m.select.brand : 'fanuc';
+        const p = m.select.name ? profileOf(brand, m.select.name) : undefined;
+        current = p ? p.name : null; show(p || null);
+      }
+      else if (current && !profileOf(brand, current)) { current = null; show(null); }
+      else if (current) { const p = profileOf(brand, current); $('toggle').textContent = p.state === 'connected' ? 'Disconnect' : 'Connect'; renderBrands(); }
+      else renderBrands();
       renderList();
-      $('suggest').innerHTML = m.datasets.length ? '<h2>Found in your backups</h2><div class="chips">' + m.datasets.map(n => '<span class="chip" data-n="' + esc(n) + '">' + esc(n) + '</span>').join('') + '</div><div class="help">Click a name to start a profile for it, then enter its IP.</div>' : '';
-      for (const c of document.querySelectorAll('.chip')) c.onclick = () => { current = null; fill(null); $('name').value = c.dataset.n; renderList(); $('host').focus(); };
+      $('suggest').innerHTML = m.datasets.length ? '<h2>Found in your backups</h2><div class="chips">' + m.datasets.map(n => '<span class="chip" data-n="' + esc(n) + '">' + esc(n) + '</span>').join('') + '</div><div class="help">Click a name to start a controller for it in the brand selected on the right, then enter its IP.</div>' : '';
+      for (const c of document.querySelectorAll('.chip')) c.onclick = () => { current = null; show(null); nameInput().value = c.dataset.n; renderList(); (isFanuc() ? $('host') : $('k_host')).focus(); };
     }
     if (m.type === 'testResult') {
-      $('test').disabled = false; $('test').textContent = 'Test connection';
-      const res = $('result'); res.style.display = 'block';
+      const res = testDone();
       if (m.ok) {
         res.className = 'result ok';
         res.innerHTML = '<b>✓ Connected in ' + m.ms + ' ms</b>' + esc([m.info.application, m.info.version].filter(Boolean).join(' ')) + (m.info.fNumber ? ' · F# ' + esc(m.info.fNumber) : '') + (m.info.robotName ? ' · robot name <b style="display:inline">' + esc(m.info.robotName) + '</b>' : '') + '<div class="hint muted">Clock on controller: ' + esc(m.info.date ?? '?') + '</div>';
@@ -201,9 +332,15 @@ function html(): string {
         res.innerHTML = '<b>✗ Could not connect (' + m.ms + ' ms)</b>' + esc(m.error) + '<div class="hint">' + esc(m.hint) + '</div>';
       }
     }
-    if (m.type === 'saved') { current = m.name; toast('Saved ' + m.name); }
+    if (m.type === 'kindTestResult') {
+      const res = testDone();
+      res.className = 'result ' + (m.ok ? 'ok' : 'bad');
+      res.innerHTML = '<b>' + (m.ok ? '✓ Connected in ' : '✗ Could not connect (') + m.ms + ' ms' + (m.ok ? '' : ')') + '</b>' + esc(m.text) + (m.hint ? '<div class="hint">' + esc(m.hint) + '</div>' : '');
+      if (m.ok && m.suggestedName && $('k_name') && !$('k_name').value) $('k_name').value = m.suggestedName;
+    }
+    if (m.type === 'saved') { brand = m.brand || 'fanuc'; current = m.name; toast('Saved ' + m.name); renderList(); }
     if (m.type === 'error') { toast(m.text); }
   });
-  fill(null); vscode.postMessage({ type: 'ready' });
+  show(null); vscode.postMessage({ type: 'ready' });
 </script></body></html>`;
 }

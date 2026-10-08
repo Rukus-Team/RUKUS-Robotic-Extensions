@@ -1,13 +1,14 @@
 // Notepad++ support (beta list 4, item 9), generated from what the extension already knows so
 // the two cannot drift: keyword lists from syntaxes/*.tmLanguage.json, KAREL built-in
-// signatures from packages/fanuc/src/karel/builtins.ts.
+// signatures from packages/fanuc/src/karel/builtins.ts, RAPID built-ins from
+// packages/abb/src/rapid/builtins.ts and their signatures from packages/abb/src/rapid/reference.json.
 //
 //   node scripts/make-notepadpp.mjs      writes notepad++/  (then `node esbuild.mjs --npp` for robotcode.js)
 //
 // Out:
-//   userDefineLangs/FANUC TP.xml, FANUC KAREL.xml      colouring + folding (User Defined Language 2.1)
-//   autoCompletion/FANUC TP.xml, FANUC KAREL.xml       Ctrl+Space words; KAREL built-ins with call tips
-//   functionList/fanuc_tp.xml, fanuc_karel.xml         Function List: TP labels, KAREL routines
+//   userDefineLangs/FANUC TP.xml, FANUC KAREL.xml, ABB RAPID.xml   colouring + folding (User Defined Language 2.1)
+//   autoCompletion/  (the same three names)            Ctrl+Space words; KAREL built-ins and RAPID functions with call tips
+//   functionList/fanuc_tp.xml, fanuc_karel.xml, abb_rapid.xml   Function List: TP labels, KAREL and RAPID routines
 //   install.ps1, uninstall.ps1                         from scripts/notepadpp/: copy the above into %APPDATA%\Notepad++
 //                                                      (+ robotcode.js and its Run menu entries), and take it all out
 //                                                      (autoCompletion beside notepad++.exe: only place it is read)
@@ -64,6 +65,19 @@ const builtinsTs = readFileSync(path.join(root, 'packages/fanuc/src/karel/builti
 const builtins = new Map();
 for (const m of builtinsTs.matchAll(/\bb\('([A-Z0-9_]+)',\s*'([^']*)',\s*'((?:[^'\\]|\\.)*)'(?:,\s*'([^']*)')?\)/g)) builtins.set(m[1], { sig: m[2], doc: m[3].replace(/\\'/g, "'"), ret: m[4] });
 const klBuiltins = uniq([...klBuiltinsGrammar, ...builtins.keys()]);
+
+// RAPID: the extension's built-in names as RobotWare spells them (instructions, functions, types, in
+// that order in builtins.ts) and the grammar's control / storage words
+const rp = grammar('rapid.tmLanguage.json');
+const rapidBuiltinsTs = readFileSync(path.join(root, 'packages/abb/src/rapid/builtins.ts'), 'utf8');
+const [rpInstructions, rpFunctions, rpTypes] = [...rapidBuiltinsTs.matchAll(/= set\(`([^`]*)`\)/g)].map(m => m[1].split(/\s+/).filter(Boolean));
+const rpControl = words(rp.control.match).concat(['AND', 'OR', 'XOR', 'NOT', 'DIV', 'MOD']);
+const rpStorage = words(rp.storage.match).concat(['NOVIEW', 'READONLY', 'SYSMODULE', 'NOSTEPIN', 'VIEWONLY', 'VERSION', 'LANGUAGE']);
+const rpConstants = ['TRUE', 'FALSE', 'fine', 'vmax', 'tool0', 'wobj0', 'load0', 'ERRNO', 'OP_AUTO', 'OP_MAN_PROG', 'OP_MAN_TEST',
+  ...[5, 10, 20, 30, 40, 50, 60, 80, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000].map(v => `v${v}`),
+  ...[0, 1, 5, 10, 15, 20, 30, 40, 50, 60, 80, 100, 150, 200].map(z => `z${z}`)];
+const rpRoutine = ['MODULE', 'PROC', 'FUNC', 'TRAP', 'RECORD', 'ENDMODULE', 'ENDPROC', 'ENDFUNC', 'ENDTRAP', 'ENDRECORD', 'BACKWARD', 'ERROR', 'UNDO'];
+const rpReference = JSON.parse(readFileSync(path.join(root, 'packages/abb/src/rapid/reference.json'), 'utf8')).entries;
 
 // ---------------------------------------------------------------- UDL
 // Colours follow the extension's type colours: amber TP, blue PC/KAREL, teal macro, grey data.
@@ -180,6 +194,31 @@ const klUdl = udl({
   ],
 });
 
+const rapidUdl = udl({
+  name: 'ABB RAPID', ext: 'mod sys prg modx sysx MOD SYS PRG MODX SYSX',
+  comments: '00! 01 02 03 04',
+  operators: ':= = < > + - * / ( ) , ; : [ ] { } \\ %',
+  // a one-line IF has no ENDIF, so IF does not fold; every other block always has its END
+  folds: {
+    open: 'MODULE PROC FUNC TRAP RECORD FOR WHILE TEST',
+    middle: 'BACKWARD ERROR UNDO',
+    close: 'ENDMODULE ENDPROC ENDFUNC ENDTRAP ENDRECORD ENDFOR ENDWHILE ENDTEST',
+  },
+  delimiters: delims([['"', '', '"']]),
+  // a word in two lists takes the first list's colour
+  keywords: { 1: rpControl, 2: rpStorage, 3: rpTypes, 4: rpInstructions, 5: rpFunctions, 6: rpConstants },
+  styles: [
+    ['KEYWORDS1', '0000C0', true],   // control flow and logical operators
+    ['KEYWORDS2', '808080', true],   // VAR PERS CONST LOCAL, module attributes
+    ['KEYWORDS3', '1F5FBF'],         // data types
+    ['KEYWORDS4', 'C04000', true],   // instructions: MoveL, SetDO, WaitTime
+    ['KEYWORDS5', '795E26'],         // functions
+    ['KEYWORDS6', 'B5530B'],         // TRUE fine v100 z10 tool0 wobj0
+    ['KEYWORDS7', '000000'],
+    ['KEYWORDS8', '000000'],
+  ],
+});
+
 // ---------------------------------------------------------------- auto-completion
 function autoComplete(language, entries, env) {
   const sorted = [...entries].sort((a, b) => (a.name.toUpperCase() < b.name.toUpperCase() ? -1 : a.name.toUpperCase() > b.name.toUpperCase() ? 1 : 0));
@@ -217,12 +256,23 @@ for (const [name, b] of builtins) {
   klEntries.set(name, { name, params: inner ? inner.split(';').map(p => p.trim()) : [], doc: b.doc, ret: b.ret });
 }
 
+// RAPID: every word once, in RobotWare's spelling; functions carry their arguments as call tips
+// (an optional one as [\Name type], a switch as [\Name]). Instructions take no parentheses: no call tip.
+const rpEntries = new Map();
+for (const w of [...rpControl, ...rpStorage, ...rpRoutine, ...rpTypes, ...rpInstructions, ...rpFunctions, ...rpConstants]) if (!rpEntries.has(w.toUpperCase())) rpEntries.set(w.toUpperCase(), { name: w });
+for (const e of rpReference) {
+  if (e.kind !== 'function' || !/^[A-Za-z]\w*$/.test(e.name)) continue;
+  const params = (e.args ?? []).map(a => `${a.optional ? '[' : ''}${a.switch || a.optional ? '\\' : ''}${a.name}${a.switch ? '' : ` ${a.type}`}${a.optional ? ']' : ''}`);
+  rpEntries.set(e.name.toUpperCase(), { name: e.name, params, doc: e.summary ?? '', ret: e.returns });
+}
+
 // ---------------------------------------------------------------- function list
+const COMMENT_EXPR = { 'FANUC TP': '(?m-s)//.*$', 'FANUC KAREL': '(?m-s)--.*$', 'ABB RAPID': '(?m-s)!.*$' };
 const functionList = (id, name, mainExpr, nameExpr) => `<?xml version="1.0" encoding="UTF-8" ?>
 <!-- ${name} Function List - generated by robot-code-vscode scripts/make-notepadpp.mjs, Robot Code ${version}. -->
 <NotepadPlus>
     <functionList>
-        <parser displayName="${name}" id="${id}" commentExpr="${esc(name === 'FANUC TP' ? '(?m-s)//.*$' : '(?m-s)--.*$')}">
+        <parser displayName="${name}" id="${id}" commentExpr="${esc(COMMENT_EXPR[name])}">
             <function mainExpr="${esc(mainExpr)}">
                 <functionName>
                     <nameExpr expr="${esc(nameExpr)}" />
@@ -243,11 +293,15 @@ for (const d of ['userDefineLangs', 'autoCompletion', 'functionList']) mkdirSync
 const w = (rel, text) => { writeFileSync(path.join(out, rel), text.replace(/\r?\n/g, '\r\n'), 'utf8'); console.log(`  ${rel}`); };
 w('userDefineLangs/FANUC TP.xml', tpUdl);
 w('userDefineLangs/FANUC KAREL.xml', klUdl);
+w('userDefineLangs/ABB RAPID.xml', rapidUdl);
 w('autoCompletion/FANUC TP.xml', autoComplete('FANUC TP', tpWords, { sep: ',' }));
 w('autoCompletion/FANUC KAREL.xml', autoComplete('FANUC KAREL', [...klEntries.values()], { sep: ';' }));
+w('autoCompletion/ABB RAPID.xml', autoComplete('ABB RAPID', [...rpEntries.values()], { sep: ',' }));
 // TP: labels "  12:  LBL[10:HOME] ;" ; KAREL: ROUTINE name (bodies and FROM forward declarations alike)
 w('functionList/fanuc_tp.xml', functionList('fanuc_tp', 'FANUC TP', '(?m)^\\s*\\d+:\\s*LBL\\[\\d+(:[^\\]]*)?\\]', 'LBL\\[\\d+(:[^\\]]*)?\\]'));
 w('functionList/fanuc_karel.xml', functionList('fanuc_karel', 'FANUC KAREL', '(?mi)^\\s*ROUTINE\\s+\\w+', '\\w+$'));
+// RAPID: PROC / TRAP name, FUNC type name, LOCAL or not
+w('functionList/abb_rapid.xml', functionList('abb_rapid', 'ABB RAPID', '(?mi)^\\s*(LOCAL\\s+)?(PROC|TRAP|FUNC\\s+\\w+)\\s+\\w+', '\\w+$'));
 w('install.ps1', ps1('install.ps1'));
 w('uninstall.ps1', ps1('uninstall.ps1'));
-console.log(`Notepad++ files for Robot Code ${version}: ${klEntries.size} KAREL words (${builtins.size} with call tips), ${tpWords.length} TP words`);
+console.log(`Notepad++ files for Robot Code ${version}: ${klEntries.size} KAREL words (${builtins.size} with call tips), ${tpWords.length} TP words, ${rpEntries.size} RAPID words (${[...rpEntries.values()].filter(e => e.params).length} functions with call tips)`);

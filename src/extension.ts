@@ -1,7 +1,19 @@
 import * as vscode from 'vscode';
 import { FanucServices } from '@fanuc/services';
 import { registerBrand } from '@core/brand';
+import { registerLint } from '@core/lint/vscodeLint';
+import { registerFanucLint } from '@fanuc/lint';
+import { registerAbbLint } from '@abb/lint';
+import { registerAbbTools } from '@abb/tools';
+import { registerBrandViews } from './brandViews';
+import { decideBrands } from './brandAuto';
+import { registerBrandOffStubs } from './brandOff';
 import { fanucBrand } from '@fanuc/brand';
+import { abbBrand } from '@abb/brand';
+import { registerRapidProviders } from '@abb/rapid/providers';
+import { registerRapidView } from '@abb/views/rapidTree';
+import { registerAbbControllers } from '@abb/live/view';
+import { followRukusCluster } from '@abb/live/rukusCluster';
 import { registerTpProviders } from '@fanuc/tp/providers';
 import { registerTpDiagnostics } from '@fanuc/tp/diagnostics';
 import { registerTpCommands } from '@fanuc/tp/commands';
@@ -32,40 +44,69 @@ import { windowFolders, setWindowFolders } from '@core/util';
 const sameFolder = (a: string, b: string) => a.replace(/[\\/]+$/, '').toLowerCase() === b.replace(/[\\/]+$/, '').toLowerCase();
 
 export function activate(ctx: vscode.ExtensionContext) {
+  // Which brands load: settings, the side bar's brand choice, else what the workspace holds (brandAuto.ts).
+  // Views and menus read the context keys, not the settings, so a detected workspace needs no setting.
+  const brands = decideBrands();
+  const fanuc = brands.fanuc.on, abb = brands.abb.on;
+  void vscode.commands.executeCommand('setContext', 'robotCode.fanucActive', fanuc);
+  void vscode.commands.executeCommand('setContext', 'robotCode.abbActive', abb);
   // Brands first: the services' file watchers and indexes are built from what they register.
-  registerBrand(fanucBrand);
-  installFanucRegisterReaders();
+  if (fanuc) registerBrand(fanucBrand);
+  if (abb) registerBrand(abbBrand);
+  // the linter: each brand's languages for Lint Folder (the editor's diagnostics use the same checks)
+  if (fanuc) registerFanucLint();
+  if (abb) registerAbbLint();
+  registerLint(ctx);
+  if (fanuc) installFanucRegisterReaders();
   const s = new FanucServices();
-  s.sysvars = new SysVarsReference(ctx.extensionPath, s.output);
   ctx.subscriptions.push(s, ktransDiagnostics);
-  registerSysVarProviders(ctx, s.sysvars);
+  if (fanuc) {
+    s.sysvars = new SysVarsReference(ctx.extensionPath, s.output);
+    registerSysVarProviders(ctx, s.sysvars);
+  }
+  // the side bar shows the brands this workspace holds (asks when it holds none)
+  registerBrandViews(ctx, s, { fanuc, abb });
+  s.output.appendLine(`[Robot Code] brands: FANUC ${fanuc ? 'on' : 'off'} (${brands.fanuc.why}), ABB ${abb ? 'on' : 'off'} (${brands.abb.why})`);
 
-  // FANUC modules. Another robot brand would register its own set here.
-  registerTpProviders(ctx, s);
-  registerTpDiagnostics(ctx, s);
-  registerTpCommands(ctx, s);
-  registerKarelProviders(ctx, s);
-  registerAlarmLookup(ctx);
+  // FANUC modules - left out of an ABB-only workspace
+  if (fanuc) {
+    registerTpProviders(ctx, s);
+    registerTpDiagnostics(ctx, s);
+    registerTpCommands(ctx, s);
+    registerKarelProviders(ctx, s);
+    registerAlarmLookup(ctx);
+  }
+  const abbControllers = abb ? (registerRapidProviders(ctx, s), registerRapidView(ctx, s), registerAbbTools(ctx), registerAbbControllers(ctx, s)) : undefined;
+  // core: the robot connections (and their form, which ABB uses too), containers, RUKUS
   s.live = registerLive(ctx, s);
-  registerRunningLine(ctx, s, s.live);       // FANUC: the TP line a task was executing
-  registerEditorCommands(ctx, s, s.live);   // FANUC: teach from the robot, compare with the controller
-  registerOptionsView(ctx, s, s.live);      // FANUC: the controller's software options (ORDERFIL.DAT)
+  if (fanuc) {
+    registerRunningLine(ctx, s, s.live);       // FANUC: the TP line a task was executing
+    registerEditorCommands(ctx, s, s.live);   // FANUC: teach from the robot, compare with the controller
+    registerOptionsView(ctx, s, s.live);      // FANUC: the controller's software options (ORDERFIL.DAT)
+  }
   s.live.cellRootResolver = () => s.containers.cells[0]?.root;
   s.rukus = registerRukusClusters(ctx, s);
-  registerViews(ctx, s);
-  registerTools(ctx, s);
-  registerLiveDecorations(ctx, s);
-  registerTypeDecorations(ctx, s);
-  registerContextStatus(ctx, s);
+  // RUKUS clusters mix brands: the open cluster's ABB robots join ABB Controllers.
+  if (abbControllers) ctx.subscriptions.push(followRukusCluster(abbControllers, s.rukus, s.output));
+  if (fanuc) {
+    registerViews(ctx, s);
+    registerTools(ctx, s);
+    registerLiveDecorations(ctx, s);
+    registerTypeDecorations(ctx, s);
+    registerContextStatus(ctx, s);
+    registerSnapshotDiffCommands(ctx, s);
+  }
   registerContainerCommands(ctx, s);
   registerSyncCommands(ctx, s);
   registerSyncOnOpen(ctx, s);
-  registerSnapshotDiffCommands(ctx, s);
   registerFeatureFinder(ctx);
   registerReportIssue(ctx);
   registerFileIcons(ctx);
+  // a brand that is off: its commands say so (and offer to turn it on) instead of "command not found",
+  // and opening one of its files offers the same
+  registerBrandOffStubs(ctx, { fanuc, abb });
 
-  ctx.subscriptions.push(
+  if (fanuc) ctx.subscriptions.push(
     vscode.commands.registerCommand('robotCode.data.refresh', async () => {
       await s.containers.refresh();
       // Merge cell-defined controllers into RobotManager
@@ -134,7 +175,8 @@ export function activate(ctx: vscode.ExtensionContext) {
     // Merge cell-defined controllers into RobotManager
     const defs = s.containers.controllerDefs();
     if (s.live && Object.keys(defs).length) s.live.mergeCellProfiles(defs);
-    return Promise.all([s.data.refresh(), s.index.refresh()]);
+    // FANUC controller data (.va) is only read when FANUC is on
+    return Promise.all([fanuc ? s.data.refresh() : Promise.resolve(), s.index.refresh()]);
   }).then(() => {
     if (s.containers.warnings.length) {
       for (const w of s.containers.warnings) s.output.appendLine(`[Robot Code] container: ${w}`);

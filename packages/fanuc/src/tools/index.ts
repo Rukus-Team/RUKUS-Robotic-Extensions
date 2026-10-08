@@ -3,6 +3,7 @@
  * click-through to files and Markdown/CSV export.
  */
 import * as vscode from 'vscode';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { FanucServices } from '../services';
 import { WEBVIEW_BASE_CSS } from '@core/webviewStyle';
@@ -20,6 +21,12 @@ export function registerTools(ctx: vscode.ExtensionContext, s: FanucServices) {
     if (!dirA) return;
     const dirB = b instanceof vscode.Uri ? b.fsPath : await pickFolder(s, 'Backup B (newer)', dirA);
     if (!dirB) return;
+    // two ABB backups: the ABB compare knows tasks, modules, routines and robtargets (when ABB support is on)
+    const abbBackup = (d: string) => fs.existsSync(path.join(d, 'BACKINFO')) && (fs.existsSync(path.join(d, 'RAPID')) || fs.existsSync(path.join(d, 'SYSPAR')));
+    if (abbBackup(dirA) && abbBackup(dirB) && (await vscode.commands.getCommands(true)).includes('robotCode.abb.compareBackups')) {
+      await vscode.commands.executeCommand('robotCode.abb.compareBackups', vscode.Uri.file(dirA), vscode.Uri.file(dirB));
+      return;
+    }
     const diff = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Comparing backups…' }, async () => diffBackups(dirA, dirB));
     showDiffPanel(ctx, diff);
     // Someone comparing two backups is doing backup work, which is where RUKUS is the

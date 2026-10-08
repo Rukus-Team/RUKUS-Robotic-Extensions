@@ -188,6 +188,10 @@ If RUKUS is not installed, the buttons offer the download rather than failing. T
 - **Compare Two Backups…**: two backup folders in; changed programs (+/− lines), moved positions with deltas and distance, changed registers, renamed I/O, macro changes out. Click through to A ⟷ B diffs, save as Markdown.
 - **Register & I/O Cross-Reference Report**: who writes and who reads every register and I/O point across the cell, with findings (inconsistent comments, never-written, never-read, multi-writer outputs). Export CSV/Markdown.
 
+### Linting
+
+One set of checks for TP, KAREL and ABB RAPID, in the editor, over a whole folder or backup (**Robot Code: Lint Folder…**), and from a command line (`robot-lint`, shipped as `dist/robot-lint.js`). It covers what the controller or ktrans will refuse, plus house-style rules: a WAIT with no timeout, a missing program comment, TODO left in, unused LOCAL data, and opt-in length, naming and case rules. Rules and severities live in a `.robotlint.json`. See [docs/LINT.md](docs/LINT.md).
+
 ### Controller data views
 
 Activity bar → **Robot Code**, six sections with a count or status on each header: **Controllers** ("1 of 2 live"; each row a status dot, model, IP and what it is running — or why it failed), **Backup** (each backup folder: date, counts, data files read, any bracket arguments the parser had to guess at), **Programs** (TP, with call/caller trees; compiled-only `.tp` dimmed; **+** starts a new one), **PC programs** (KAREL sources and `.pc`), **Macros** (the macro table, with whether each target exists), **Data** (R, PR, SR, payload schedules, I/O). One colour and one icon per kind — amber TP, blue PC, teal macro, grey data — the same in the editor's call-target tints and the status bar. The *Registers & I/O Table* command opens a filterable table with one-click "find uses" and copy-as-`R[5:Comment]`. Under a connected controller the panels are grouped *Controller*, *Device*, *RUKUS*; each is dim until read, dated once read.
