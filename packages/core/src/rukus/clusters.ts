@@ -1,6 +1,10 @@
 /**
  * RUKUS's clusters in the sidebar, and the workspace that follows them.
  *
+ * Clusters are mixed since RUKUS #28: a cluster's FANUC robots become the cell's controllers
+ * here; its ABB robots are picked up by the ABB package from current() (packages/abb/src/live/
+ * rukusCluster.ts), not written anywhere. Encrypted passwords (dpapi:v1:) are decrypted with dpapi.ts.
+ *
  * With RUKUS on the PC there is nothing to set up by hand: its clusters are the cells.
  * The "RUKUS Clusters" view lists them straight from RUKUS's data folder; clicking one
  * makes that cluster's backup folder (`<backups root>\<cluster>`) the workspace and writes
@@ -16,6 +20,7 @@
  * The Initialize Cell Container wizard stays for a PC without RUKUS. The pure reading and
  * naming logic is in store.ts; this file is the VS Code half.
  */
+import { watchViewVisibility } from '../views/viewVisibility';
 import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -23,6 +28,7 @@ import * as path from 'node:path';
 import type { Services } from '../services';
 import { config, viewDeclared, showRecoverableError } from '../util';
 import { rukusInstallDir, RUKUS_DOWNLOAD_URL } from './launch';
+import { unprotectAll, resolvePassword, isProtected } from './dpapi';
 import {
   resolveDataRoot, readAppSettings, clustersFolder, backupsFolder, listClusters, clusterControllers,
   mergeControllersIntoCluster, templateToRegExp, clusterOfFolder, placeBackup, realFs, RUKUS_LATEST, RUKUS_MANIFEST,
@@ -209,16 +215,21 @@ export class RukusClusters implements vscode.Disposable {
     const dir = path.dirname(cellFile);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(cellFile, JSON.stringify(content, null, 2) + '\n', 'utf8');
-    let secrets = 0;
+    let secrets = 0, unreadable = 0;
     if (this.s.live) {
+      // A cluster with "Encrypt robot passwords" on holds them as dpapi:v1:... - readable by the
+      // Windows account that saved it, which is normally this one (dpapi.ts).
+      const decrypted = await unprotectAll(cluster.robots.map(r => r.ftpPassword ?? ''));
       for (const r of cluster.robots) {
         if (!r.ftpPassword || !wanted[r.name]) continue;
         if (await this.s.live.getPassword(r.name)) continue;
-        await this.s.live.setPassword(r.name, r.ftpPassword);
+        const password = resolvePassword(r.ftpPassword, decrypted);
+        if (password === undefined) { unreadable++; continue; }
+        await this.s.live.setPassword(r.name, password);
         secrets++;
       }
     }
-    const bits = [`${Object.keys(wanted).length} robot(s) from RUKUS`, changed ? `${changed} updated` : 'nothing changed', kept.length ? `${kept.length} controller(s) not in RUKUS kept: ${kept.join(', ')}` : '', secrets ? `${secrets} FTP password(s) stored` : '', existingName && existingName !== cluster.name ? `cell renamed from ${existingName}` : ''].filter(Boolean);
+    const bits = [`${Object.keys(wanted).length} robot(s) from RUKUS`, changed ? `${changed} updated` : 'nothing changed', kept.length ? `${kept.length} controller(s) not in RUKUS kept: ${kept.join(', ')}` : '', secrets ? `${secrets} FTP password(s) stored` : '', unreadable ? `${unreadable} encrypted password(s) another Windows account saved - enter them here` : '', existingName && existingName !== cluster.name ? `cell renamed from ${existingName}` : ''].filter(Boolean);
     return bits.join('; ');
   }
 
@@ -392,8 +403,14 @@ class ClustersTree implements vscode.TreeDataProvider<Node> {
       return it;
     }
     const it = new vscode.TreeItem(el.r.name, vscode.TreeItemCollapsibleState.None);
-    it.description = [el.r.host, el.r.isVirtual ? 'virtual' : '', el.r.isWriteLocked ? 'write-locked' : ''].filter(Boolean).join(' · ');
-    it.tooltip = `${el.r.name} at ${el.r.host} · FTP ${el.r.ftpUser || 'anonymous'} · ${el.r.ftpDirectory}${el.r.notes ? `\n${el.r.notes}` : ''}${el.r.ftpPassword ? '\nFTP password set in RUKUS (copied to VS Code secret storage on sync)' : ''}`;
+    const abb = el.r.make === 'abb' ? el.r.abb : undefined;
+    const where = abb ? `${el.r.host}${abb.port ? `:${abb.port}` : ''}` : el.r.host;
+    it.description = [where, abb ? (abb.family === 'omnicore' ? 'ABB OmniCore' : 'ABB IRC5') : '', el.r.isVirtual ? 'virtual' : '', el.r.isWriteLocked ? 'write-locked' : ''].filter(Boolean).join(' · ');
+    const secret = (stored: string | undefined, what: string) => stored
+      ? `\n${what} set in RUKUS${isProtected(stored) ? ' (encrypted for its Windows account)' : ''} - copied to VS Code secret storage on sync` : '';
+    it.tooltip = abb
+      ? `${el.r.name} at ${where} · ABB ${abb.family === 'omnicore' ? 'OmniCore (RWS 2.0)' : 'IRC5 (RWS 1.0)'} · ${abb.user}${[abb.systemName, abb.robotWareName ? `RobotWare ${abb.robotWareName}` : '', abb.robotType].filter(Boolean).map(x => `\n${x}`).join('')}${el.r.notes ? `\n${el.r.notes}` : ''}${secret(abb.password, 'RWS password')}\nIn the ABB Controllers view while this cluster is open.`
+      : `${el.r.name} at ${el.r.host} · FTP ${el.r.ftpUser || 'anonymous'} · ${el.r.ftpDirectory}${el.r.notes ? `\n${el.r.notes}` : ''}${secret(el.r.ftpPassword, 'FTP password')}`;
     it.iconPath = new vscode.ThemeIcon(el.r.isVirtual ? 'vm' : 'server-environment');
     it.contextValue = 'rukus-robot';
     return it;
@@ -405,7 +422,7 @@ export function registerRukusClusters(ctx: vscode.ExtensionContext, s: Services)
   r.state = ctx.globalState;
   const tree = new ClustersTree(r);
   ctx.subscriptions.push(r);
-  if (viewDeclared(ctx, 'robotCode.rukusClusters')) ctx.subscriptions.push(vscode.window.createTreeView('robotCode.rukusClusters', { treeDataProvider: tree, showCollapseAll: false }));
+  if (viewDeclared(ctx, 'robotCode.rukusClusters')) ctx.subscriptions.push(watchViewVisibility(vscode.window.createTreeView('robotCode.rukusClusters', { treeDataProvider: tree, showCollapseAll: false })));
   const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
   reg('robotCode.rukus.openCluster', async (arg?: string | Node) => {
     const name = typeof arg === 'string' ? arg : arg && 't' in arg && arg.t === 'cluster' ? arg.c.name : undefined;

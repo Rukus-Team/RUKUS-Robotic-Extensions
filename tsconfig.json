@@ -11,10 +11,13 @@
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
     "types": ["node", "vscode"],
     "paths": {
       "@core/*": ["./packages/core/src/*"],
-      "@fanuc/*": ["./packages/fanuc/src/*"]
+      "@fanuc/*": ["./packages/fanuc/src/*"],
+      "@abb/*": ["./packages/abb/src/*"]
     }
   },
   "include": ["src", "packages", "test"],

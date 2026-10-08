@@ -63,9 +63,19 @@ import { run as runContainersHardening } from './containersHardening.test';
 import { run as runSnapshotSync } from './snapshotSync.test';
 import { run as runSyncCore } from './syncCore.test';
 import { run as runFileIcons } from './fileIcons.test';
+import { run as runLint } from './lint.test';
+import { run as runRapidSymbols } from './rapidSymbols.test';
+import { run as runRws2 } from './rws2.test';
+import { run as runAbbTools } from './abbTools.test';
 import { run as runRukusLayout } from './rukusLayout.test';
 import { run as runRukusStore } from './rukusStore.test';
 import { run as runBetaIssues } from './betaIssues.test';
+import { run as runRapid, runGrammar as runRapidGrammar } from './rapid.test';
+import { run as runAbbBrand } from './abbBrand.test';
+import { run as runRws } from './rws.test';
+import { run as runRapidFormat } from './rapidFormat.test';
+import { run as runRapidAssist } from './rapidAssist.test';
+import { run as runRapidReference } from './rapidReference.test';
 
 const roots = process.argv.slice(2).length ? process.argv.slice(2) : [
   path.resolve(__dirname, '..', '..', 'reference-backup'),
@@ -1716,9 +1726,19 @@ if (backupDir) {
   await runSnapshotSync(check);
   await runSyncCore(check);
   runFileIcons(check);
+  runLint(check, fs.existsSync(ref) ? ref : undefined);
   runRukusLayout(check);
   runRukusStore(check);
   runBetaIssues(check);
+  runRapid(check);
+  runRapidSymbols(check);
+  runAbbTools(check);
+  runAbbBrand(check);
+  await runRws(check);
+  await runRws2(check);
+  runRapidFormat(check);
+  runRapidAssist(check);
+  runRapidReference(check);
 }
 
 // ---------- the grammars: every regex compiles, and the scopes the changelog promises are produced ----------
@@ -1826,6 +1846,7 @@ if (backupDir) {
   }
   const karel = await registry.loadGrammar('source.fanuc.karel');
   check(!!karel, 'KAREL grammar loads');
+  await runRapidGrammar(check, root);
 }
 
 // ---------- .robocode containers: pure module checks ----------

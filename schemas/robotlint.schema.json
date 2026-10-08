@@ -1,0 +1,2946 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Robot Code lint configuration",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "rules": {
+      "type": "object",
+      "description": "Rule code (or a prefix ending in .*) -> off / error / warning / info / hint, or [severity, { options }].",
+      "properties": {
+        "karel.compiledFile": {
+          "description": "a compiled .pc saved under a .kl name (check, default info)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.endName": {
+          "description": "END name does not match the PROGRAM or ROUTINE (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.environment": {
+          "description": "a built-in whose %ENVIRONMENT group is not in the header (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.fileName": {
+          "description": "the program name differs from the file name (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.identLength": {
+          "description": "a name longer than the core version allows (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.includeMissing": {
+          "description": "an %INCLUDE file that is not there (Check Before Compile) (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.argCount": {
+          "description": "a routine called with the wrong number of arguments (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.assignConst": {
+          "description": "an assignment to a constant (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.commentLength": {
+          "description": "%COMMENT longer than the controller keeps (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.cStyle": {
+          "description": "C-style syntax that is not KAREL (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.declAfterBegin": {
+          "description": "a declaration after BEGIN (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.directivePlacement": {
+          "description": "a directive inside a body or after the declarations (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.duplicate": {
+          "description": "a name declared twice (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.elseif": {
+          "description": "ELSEIF, which KAREL does not have (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.integerRange": {
+          "description": "an INTEGER literal out of range (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.lockGroup": {
+          "description": "MOVE with %NOLOCKGROUP, or %NOLOCKGROUP missing from a program that does not move (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.noBegin": {
+          "description": "a program or routine with no BEGIN (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.reservedName": {
+          "description": "a reserved word used as a name (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.returnValue": {
+          "description": "RETURN without a value in a function, or with one in a procedure (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.lint.stringLength": {
+          "description": "a string literal or STRING[n] longer than KAREL holds (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.style.keywordCase": {
+          "description": "a keyword not written in upper case (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.style.lineLength": {
+          "description": "a line longer than max characters (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "max": {
+                      "type": "number",
+                      "default": 120
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.style.programComment": {
+          "description": "the program has no %COMMENT (style, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.style.routineLength": {
+          "description": "a routine or main body longer than max lines (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "max": {
+                      "type": "number",
+                      "default": 200
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.style.todo": {
+          "description": "TODO / FIXME / XXX left in a comment (style, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.unbalanced": {
+          "description": "blocks not closed or closed by the wrong word (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.undeclared": {
+          "description": "a name used but never declared (ktrans does not catch this) (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "karel.unused": {
+          "description": "a variable, constant or routine nothing uses (check, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.badDeclaration": {
+          "description": "a declaration the parser could not read (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.duplicateName": {
+          "description": "two routines/data/records with one name in a module, or a local that repeats a parameter (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.misplaced": {
+          "description": "ELSE outside IF, CASE outside TEST, a handler inside a block (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.missingSemicolon": {
+          "description": "a statement without its \";\" (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.style.breakInstruction": {
+          "description": "a BREAK (debug stop) left in the program (style, default info)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.style.dataNaming": {
+          "description": "data whose name does not start with its type's prefix (options: type -> prefix) (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "robtarget": {
+                      "type": "string",
+                      "default": "p"
+                    },
+                    "jointtarget": {
+                      "type": "string",
+                      "default": "j"
+                    },
+                    "tooldata": {
+                      "type": "string",
+                      "default": "t"
+                    },
+                    "wobjdata": {
+                      "type": "string",
+                      "default": "wobj"
+                    },
+                    "speeddata": {
+                      "type": "string",
+                      "default": "v"
+                    },
+                    "zonedata": {
+                      "type": "string",
+                      "default": "z"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.style.inlineTarget": {
+          "description": "a move to an inline target (*) instead of a named robtarget (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.style.keywordCase": {
+          "description": "a RAPID keyword not written in upper case (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.style.lineLength": {
+          "description": "a line longer than max characters (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "max": {
+                      "type": "number",
+                      "default": 120
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.style.routineLength": {
+          "description": "a routine longer than max lines (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "max": {
+                      "type": "number",
+                      "default": 200
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.style.todo": {
+          "description": "TODO / FIXME / XXX left in a comment (style, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.style.unusedLocalData": {
+          "description": "LOCAL module data nothing in its module uses (style, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.style.waitTimeout": {
+          "description": "WaitDI/WaitDO/WaitUntil/... with no \\MaxTime waits forever if the condition never comes (style, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.syntax": {
+          "description": "a statement the parser could not read (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.unclosedBlock": {
+          "description": "IF/FOR/WHILE/TEST/PROC/... with no END word (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.undefinedLabel": {
+          "description": "GOTO to a label the routine does not have (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.unknownRoutine": {
+          "description": "a call to a routine the task does not declare and RAPID does not have (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.unmatchedEnd": {
+          "description": "an END word with nothing open to close (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "rapid.unusedLocalRoutine": {
+          "description": "a LOCAL routine nothing in its module names (check, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.block": {
+          "description": "IF/FOR blocks that are not closed or closed by the wrong word (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.bracketShape": {
+          "description": "bracket arguments the parser had to guess at (check, default info)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.cntBeforeOperation": {
+          "description": "a CNT move right before an operation that has to happen at the point (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.commentInconsistent": {
+          "description": "one register or I/O commented two ways in one program (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.commentLength": {
+          "description": "a comment line longer than the controller keeps (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.commentMismatch": {
+          "description": "an inline comment that differs from the controller's (editor only) (check, default info)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.crossReference": {
+          "description": "what the robot's other programs do with a register or I/O (editor only) (check, default info)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.doubleTerminator": {
+          "description": "more than one \";\" at the end of a line (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.duplicateLabel": {
+          "description": "a LBL[n] defined twice (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.duplicatePosition": {
+          "description": "two points at (nearly) the same place in one user frame (check, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.extendedCommentWidth": {
+          "description": "an extended comment line wider than the pendant writes (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.header": {
+          "description": "/PROG, /MN and /END are where the controller expects them (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.integerAxisValue": {
+          "description": "a position value written as an integer (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.lineCount": {
+          "description": "LINE_COUNT does not match the program (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.lineSequence": {
+          "description": "line numbers out of sequence or missing (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.missingProgram": {
+          "description": "a CALL or macro to a program that is not there (check, default info)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.missingTerminator": {
+          "description": "a line without its \" ;\" (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.payload": {
+          "description": "PAYLOAD[n] that does not exist or was never set up (editor only) (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.speed": {
+          "description": "speeds and CNT values out of range (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.style.fixedWait": {
+          "description": "a fixed time WAIT (n sec) instead of waiting for a condition (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "minSeconds": {
+                      "type": "number",
+                      "default": 0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.style.frameSelect": {
+          "description": "a program that moves the robot without selecting UFRAME_NUM and UTOOL_NUM first (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.style.maxSpeed": {
+          "description": "motion faster than the plant limit (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "jointPercent": {
+                      "type": "number",
+                      "default": 100
+                    },
+                    "linearMmSec": {
+                      "type": "number",
+                      "default": 2000
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.style.programComment": {
+          "description": "the program has no COMMENT in /ATTR (style, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.style.programLength": {
+          "description": "a program longer than max lines (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "max": {
+                      "type": "number",
+                      "default": 500
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.style.programName": {
+          "description": "the program name does not match the plant naming pattern (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "pattern": {
+                      "type": "string",
+                      "default": "^[A-Z][A-Z0-9_]*$"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.style.todo": {
+          "description": "TODO / FIXME / XXX left in a comment (style, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.style.uncommentedIo": {
+          "description": "I/O used without a comment in brackets (style, default off)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.style.waitTimeout": {
+          "description": "a WAIT on a condition with no TIMEOUT,LBL[...] waits forever if the signal never comes (style, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.undefinedLabel": {
+          "description": "a JMP to a label the program does not have (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.undefinedPosition": {
+          "description": "a P[n] with no data in /POS, or data given twice (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.unknownMacro": {
+          "description": "a macro not in the controller's macro table (editor only) (check, default info)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.untaughtPosition": {
+          "description": "a P[n] whose /POS block holds no position (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.unusedLabel": {
+          "description": "a label nothing jumps to (check, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
+        "tp.unusedPosition": {
+          "description": "position data no instruction uses (check, default hint)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        }
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "enum": [
+              "off",
+              "error",
+              "warning",
+              "info",
+              "hint"
+            ]
+          },
+          {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2
+          }
+        ]
+      }
+    },
+    "ignore": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Glob patterns of files not to lint, relative to this file. A pattern without / matches the file name anywhere."
+    }
+  },
+  "additionalProperties": false
+}

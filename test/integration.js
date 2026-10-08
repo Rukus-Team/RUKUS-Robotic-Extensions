@@ -794,4 +794,9 @@ async function main() {
   check('command registered: robotCode.live.dashboard', cmds.includes('robotCode.live.dashboard'));
   check('command registered: robotCode.live.getFiles', cmds.includes('robotCode.live.getFiles'));
   check('command registered: robotCode.live.toggleFilesShow', cmds.includes('robotCode.live.toggleFilesShow'));
+  // a FANUC-only workspace: the side bar shows the FANUC views and not the ABB ones
+  const brands = await vscode.commands.executeCommand('robotCode.views._brands');
+  check('an ABB command still answers in a FANUC-only workspace (offers to turn ABB on)', cmds.includes('robotCode.rapid.refresh') && cmds.includes('robotCode.abb.openPage'));
+  check('side bar: a FANUC-only workspace shows FANUC, not ABB', brands && brands.fanuc === true && brands.abb === false && !brands.needsAsk, JSON.stringify(brands));
+  check('FANUC loads in a FANUC workspace, ABB does not', brands && brands.loaded && brands.loaded.fanuc === true && brands.loaded.abb === false, JSON.stringify(brands && brands.loaded));
 }

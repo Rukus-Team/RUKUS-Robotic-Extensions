@@ -1674,6 +1674,12 @@
     },
     "fanuc-txt-light": {
       "iconPath": "./txt-light.svg"
+    },
+    "fanuc-mod-dark": {
+      "iconPath": "./mod-dark.svg"
+    },
+    "fanuc-mod-light": {
+      "iconPath": "./mod-light.svg"
     }
   },
   "file": "_default",
@@ -1935,7 +1941,9 @@
     "cam": "fanuc-cam-dark",
     "pmc": "fanuc-pmc-dark",
     "stm": "fanuc-stm-dark",
-    "txt": "fanuc-txt-dark"
+    "txt": "fanuc-txt-dark",
+    "mod": "fanuc-mod-dark",
+    "prg": "fanuc-mod-dark"
   },
   "fileNames": {
     "mix": "_hex",
@@ -2147,7 +2155,8 @@
     "fanuc-vd": "fanuc-vd-dark",
     "fanuc-cam": "fanuc-cam-dark",
     "fanuc-pmc": "fanuc-pmc-dark",
-    "fanuc-stm": "fanuc-stm-dark"
+    "fanuc-stm": "fanuc-stm-dark",
+    "abb-rapid": "fanuc-mod-dark"
   },
   "light": {
     "file": "_default_light",
@@ -2409,7 +2418,9 @@
       "cam": "fanuc-cam-light",
       "pmc": "fanuc-pmc-light",
       "stm": "fanuc-stm-light",
-      "txt": "fanuc-txt-light"
+      "txt": "fanuc-txt-light",
+      "mod": "fanuc-mod-light",
+      "prg": "fanuc-mod-light"
     },
     "languageIds": {
       "bat": "_windows_light",
@@ -2513,7 +2524,8 @@
       "fanuc-vd": "fanuc-vd-light",
       "fanuc-cam": "fanuc-cam-light",
       "fanuc-pmc": "fanuc-pmc-light",
-      "fanuc-stm": "fanuc-stm-light"
+      "fanuc-stm": "fanuc-stm-light",
+      "abb-rapid": "fanuc-mod-light"
     },
     "fileNames": {
       "mix": "_hex_light",

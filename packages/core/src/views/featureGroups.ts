@@ -49,7 +49,9 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     title: 'Backups and robot containers', hint: 'controller data, snapshots, working copy against snapshot',
     commands: ['robotCode.data.refresh', 'robotCode.data.removeBackupFolder', 'robotCode.data.restoreBackupFolders', 'robotCode.data.snapshotFromBackup', 'robotCode.views.toggleLatestOnly'],
   },
+  { title: 'Lint', hint: 'every TP, KAREL and RAPID program in a folder at once; rules in .robotlint.json (robot-lint runs the same from a command line)', commands: ['robotCode.lint.folder', 'robotCode.lint.clear', 'robotCode.lint.createConfig'] },
   { title: 'KAREL', hint: 'check, then compile with ktrans; look up any built-in, statement or directive', commands: ['robotCode.karel.precheck', 'robotCode.karel.compile', 'robotCode.karel.showReference'] },
+  { title: 'ABB RAPID (experimental)', hint: 'on in workspaces with ABB files (or robotCode.abb.enabled): modules, navigation, reports, controllers', commands: ['robotCode.rapid.refresh', 'robotCode.rapid.gotoLabel', 'robotCode.rapid.showCallGraph', 'robotCode.abb.unusedRoutines', 'robotCode.abb.xrefReport', 'robotCode.abb.compareBackups', 'robotCode.rapid.setIndentation', 'robotCode.abb.addController', 'robotCode.abb.editController', 'robotCode.abb.connect', 'robotCode.abb.refresh', 'robotCode.abb.disconnect', 'robotCode.abb.removeController', 'robotCode.abb.convertTarget', 'robotCode.abb.backup', 'robotCode.abb.openPage', 'robotCode.abb.showEventLog', 'robotCode.abb.showSignals', 'robotCode.abb.setSpeed', 'robotCode.abb.motorsOn', 'robotCode.abb.motorsOff', 'robotCode.abb.startRapid', 'robotCode.abb.stopRapid', 'robotCode.abb.resetProgramPointer', 'robotCode.abb.loadModule', 'robotCode.abb.unloadModule', 'robotCode.abb.setSignal', 'robotCode.abb.setRapidData', 'robotCode.abb.requestWriteAccess', 'robotCode.abb.releaseWriteAccess'] },
   {
     title: 'In RUKUS', hint: 'its clusters are the cells; what needs a connection held open lives there',
     commands: ['robotCode.rukus.openCluster', 'robotCode.rukus.syncClusters', 'robotCode.rukus.exportCell', 'robotCode.rukus.revealData', 'robotCode.rukus.open', 'robotCode.rukus.monitor', 'robotCode.rukus.alarms', 'robotCode.rukus.backup'],
@@ -58,7 +60,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
 ];
 
 /** contributed, but not something a person runs by name: tree-row plumbing, test hooks, this picker itself */
-export const NOT_LISTED = new Set(['robotCode.showFeatures', 'robotCode.views.revealInEditor', 'robotCode.live.openTaskLine', 'robotCode.live.getSection', 'robotCode.live._state', 'robotCode.tp._teachPlan', 'robotCode.sync.diffOpen', 'robotCode.containers.diffWithSnapshot']);
+export const NOT_LISTED = new Set(['robotCode.showFeatures', 'robotCode.views.revealInEditor', 'robotCode.rapid.open', 'robotCode.abb.openPointer', 'robotCode.abb.openModule', 'robotCode.live.openTaskLine', 'robotCode.live.getSection', 'robotCode.live._state', 'robotCode.tp._teachPlan', 'robotCode.sync.diffOpen', 'robotCode.containers.diffWithSnapshot']);
 
 /** `ctrl+alt+shift+t` -> `Ctrl+Alt+Shift+T`, as the keyboard shortcuts editor writes it */
 export function prettyKey(key: string): string {

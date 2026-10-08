@@ -1,0 +1,296 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "ABB RAPID",
+  "scopeName": "source.rapid",
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#header"
+    },
+    {
+      "include": "#string"
+    },
+    {
+      "include": "#module"
+    },
+    {
+      "include": "#routine"
+    },
+    {
+      "include": "#record"
+    },
+    {
+      "include": "#declaration"
+    },
+    {
+      "include": "#placeholder"
+    },
+    {
+      "include": "#late-binding"
+    },
+    {
+      "include": "#optional-argument"
+    },
+    {
+      "include": "#control"
+    },
+    {
+      "include": "#storage"
+    },
+    {
+      "include": "#constant"
+    },
+    {
+      "include": "#type"
+    },
+    {
+      "include": "#instruction"
+    },
+    {
+      "include": "#function"
+    },
+    {
+      "include": "#label"
+    },
+    {
+      "include": "#number"
+    },
+    {
+      "include": "#operator"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "match": "!.*$",
+      "name": "comment.line.exclamation.rapid"
+    },
+    "header": {
+      "comment": "%%% VERSION:1 LANGUAGE:ENGLISH %%% at the top of exported modules",
+      "match": "^\\s*(%%%)\\s*$|^\\s*(VERSION|LANGUAGE)\\s*(:)\\s*(\\S+)",
+      "captures": {
+        "1": {
+          "name": "punctuation.definition.header.rapid"
+        },
+        "2": {
+          "name": "keyword.other.header.rapid"
+        },
+        "3": {
+          "name": "punctuation.separator.rapid"
+        },
+        "4": {
+          "name": "constant.other.header.rapid"
+        }
+      }
+    },
+    "string": {
+      "begin": "\"",
+      "end": "\"(?!\")|$",
+      "name": "string.quoted.double.rapid",
+      "patterns": [
+        {
+          "match": "\"\"",
+          "name": "constant.character.escape.rapid"
+        },
+        {
+          "match": "\\\\(\\\\|[0-9A-Fa-f]{2})",
+          "name": "constant.character.escape.rapid"
+        }
+      ]
+    },
+    "module": {
+      "match": "(?i)^\\s*(MODULE)\\s+([A-Za-z]\\w*)\\s*(?:\\(([^)]*)\\))?",
+      "captures": {
+        "1": {
+          "name": "keyword.other.module.rapid"
+        },
+        "2": {
+          "name": "entity.name.type.module.rapid"
+        },
+        "3": {
+          "patterns": [
+            {
+              "match": "(?i)\\b(SYSMODULE|NOSTEPIN|VIEWONLY|READONLY|NOVIEW)\\b",
+              "name": "storage.modifier.module-attribute.rapid"
+            }
+          ]
+        }
+      }
+    },
+    "routine": {
+      "patterns": [
+        {
+          "match": "(?i)^\\s*(?:(LOCAL)\\s+)?(PROC|TRAP)\\s+([A-Za-z]\\w*)",
+          "captures": {
+            "1": {
+              "name": "storage.modifier.rapid"
+            },
+            "2": {
+              "name": "keyword.other.routine.rapid"
+            },
+            "3": {
+              "name": "entity.name.function.rapid"
+            }
+          }
+        },
+        {
+          "match": "(?i)^\\s*(?:(LOCAL)\\s+)?(FUNC)\\s+([A-Za-z]\\w*)\\s+([A-Za-z]\\w*)",
+          "captures": {
+            "1": {
+              "name": "storage.modifier.rapid"
+            },
+            "2": {
+              "name": "keyword.other.routine.rapid"
+            },
+            "3": {
+              "name": "support.type.rapid"
+            },
+            "4": {
+              "name": "entity.name.function.rapid"
+            }
+          }
+        },
+        {
+          "match": "(?i)\\b(ENDPROC|ENDFUNC|ENDTRAP|ENDMODULE|ENDRECORD)\\b",
+          "name": "keyword.other.routine.rapid"
+        },
+        {
+          "match": "(?i)^\\s*(ERROR|UNDO|BACKWARD)\\b",
+          "name": "keyword.control.handler.rapid"
+        }
+      ]
+    },
+    "record": {
+      "match": "(?i)^\\s*(?:(LOCAL)\\s+)?(RECORD)\\s+([A-Za-z]\\w*)",
+      "captures": {
+        "1": {
+          "name": "storage.modifier.rapid"
+        },
+        "2": {
+          "name": "keyword.other.record.rapid"
+        },
+        "3": {
+          "name": "entity.name.type.record.rapid"
+        }
+      }
+    },
+    "declaration": {
+      "comment": "VAR num x / PERS robtarget p10 / CONST speeddata vFast / routine parameters",
+      "match": "(?i)\\b(?:(LOCAL|TASK)\\s+)?(VAR|PERS|CONST|INOUT)\\s+([A-Za-z]\\w*)\\s+([A-Za-z]\\w*)",
+      "captures": {
+        "1": {
+          "name": "storage.modifier.rapid"
+        },
+        "2": {
+          "name": "storage.type.rapid"
+        },
+        "3": {
+          "name": "support.type.rapid"
+        },
+        "4": {
+          "name": "variable.other.declaration.rapid"
+        }
+      }
+    },
+    "placeholder": {
+      "match": "<(SMT|EXP|ARG|VAR|ID|DDN|RDN|PAR|TDN|CSE|ANY|DIM|TYPE)>",
+      "name": "invalid.placeholder.rapid"
+    },
+    "late-binding": {
+      "match": "%",
+      "name": "keyword.operator.late-binding.rapid"
+    },
+    "optional-argument": {
+      "comment": "\\WObj:=wobj1, \\TLoad?tl, \\Conc - and \\switch in parameter lists",
+      "match": "(\\\\)([A-Za-z]\\w*)",
+      "captures": {
+        "1": {
+          "name": "punctuation.definition.parameter.rapid"
+        },
+        "2": {
+          "name": "variable.parameter.optional.rapid"
+        }
+      }
+    },
+    "control": {
+      "match": "(?i)\\b(IF|THEN|ELSEIF|ELSE|ENDIF|FOR|FROM|TO|STEP|DO|ENDFOR|WHILE|ENDWHILE|TEST|CASE|DEFAULT|ENDTEST|GOTO|RETURN|RAISE|RETRY|TRYNEXT|EXIT|CONNECT|WITH)\\b",
+      "name": "keyword.control.rapid"
+    },
+    "storage": {
+      "match": "(?i)\\b(VAR|PERS|CONST|LOCAL|TASK|INOUT|ALIAS)\\b",
+      "name": "storage.type.rapid"
+    },
+    "constant": {
+      "patterns": [
+        {
+          "match": "(?i)\\b(TRUE|FALSE)\\b",
+          "name": "constant.language.boolean.rapid"
+        },
+        {
+          "match": "(?i)\\b(fine|z\\d+|v\\d+|vmax|tool0|wobj0|load0)\\b",
+          "name": "constant.language.predefined.rapid"
+        },
+        {
+          "match": "\\b(ERR_[A-Z0-9_]+|ERRNO|OP_AUTO|OP_MAN_PROG|OP_MAN_TEST)\\b",
+          "name": "constant.other.rapid"
+        }
+      ]
+    },
+    "type": {
+      "match": "(?i)\\b(stoppointdata|triggiosdnum|wzstationary|handler_type|socketstatus|jointtarget|wztemporary|triggstrgo|event_type|rmqmessage|robtarget|speeddata|errdomain|triggdata|syncident|shapedata|socketdev|rmqheader|pathrecid|corrdescr|forcedata|confdata|extjoint|robjoint|tooldata|wobjdata|loaddata|zonedata|signaldi|signaldo|signalai|signalao|signalgi|signalgo|trapdata|triggios|rawbytes|execmode|listitem|icondata|tunetype|paridnum|spotdata|errtype|mecunit|identno|datapos|rmqslot|simdata|string|switch|orient|intnum|errnum|errstr|taskid|symnum|btnres|gunnum|clock|iodev|tasks|opnum|tpnum|dnum|bool|byte|pose|num|pos|dir)\\b",
+      "name": "support.type.rapid"
+    },
+    "instruction": {
+      "match": "(?i)^\\s*(MotionProcessModeSet|SpeedLimCheckPoint|SafetyControlSync|SocketReceiveFrom|CalcRotAxisFrame|HollowWristReset|DeactEventBuffer|RemoveCyclicBool|SystemStopAction|SyncMoveSuspend|SetupCyclicBool|ResetRetryCount|ProcerrRecovery|RMQGetMsgHeader|TriggDataReset|StartMoveRetry|SyncMoveResume|PathRecMoveBwd|PathRecMoveFwd|ActEventBuffer|SetLeadThrough|WaitTestAndSet|UnpackRawBytes|TextTabInstall|WZHomeJointDef|RMQSendMessage|TriggStopProc|TriggDataCopy|StopMoveReset|MToolRotCalib|MToolTCPCalib|SToolRotCalib|SToolTCPCalib|STIndGunReset|SetAllDataVal|SetDataSearch|ClearRawBytes|WZLimJointDef|WriteRawBytes|SocketConnect|SocketReceive|RMQGetMessage|RMQGetMsgData|RMQEmptyQueue|TriggCheckIO|MechUnitLoad|SpeedRefresh|SyncMoveUndo|WaitSyncTask|PathRecStart|SpeedLimAxis|AliasIOReset|CheckProgRef|CopyRawBytes|PackRawBytes|PackDNHeader|WriteCfgData|ReadRawBytes|SocketCreate|SocketListen|SocketAccept|SocketSendTo|TriggRampAO|CirPathMode|WorldAccLim|SyncMoveOff|PathRecStop|STCalcForce|STTuneReset|EraseModule|RaiseToUser|StepBwdPath|IRMQMessage|WriteAnyBin|ReadCfgData|SaveCfgData|WriteStrBin|ClearIOBuff|SocketClose|RMQFindSlot|RMQReadWait|RMQSendWait|SearchExtJ|TriggEquip|TriggSpeed|PathAccLim|SyncMoveOn|CorrDiscon|CollDetect|IOBusStart|GetDataVal|SetDataVal|GetSysData|SetSysData|ReadAnyBin|WriteBlock|TPReadDnum|RemoveFile|RenameFile|SocketSend|SocketBind|MoveJSync|MoveLSync|MoveCSync|TriggJIOs|TriggLIOs|TriggAbsJ|StartMove|ClearPath|StorePath|RestoPath|PathResol|SoftDeact|DeactUnit|TuneServo|TuneReset|CorrWrite|CorrClear|MotionSup|WaitUntil|IODisable|StartLoad|ExitCycle|CallByVar|ISignalDI|ISignalDO|ISignalAI|ISignalAO|ISignalGI|ISignalGO|IVarValue|ReadBlock|WZDisable|TPReadNum|RemoveDir|MoveAbsJ|MoveExtJ|TriggInt|StopMove|SingArea|GripLoad|WaitWObj|DropWObj|PDispOff|PDispSet|EOffsOff|EOffsSet|IndAMove|IndCMove|IndDMove|IndRMove|IndReset|SetForce|STIndGun|InvertDO|WaitTime|WaitLoad|IOEnable|ErrRaise|ErrWrite|SkipWarn|IDisable|ClkReset|ClkStart|BitClear|WZBoxDef|WZCylDef|WZSphDef|WZLimSup|WZEnable|TPReadFK|UIMsgBox|WriteBin|CopyFile|CloseDir|SpyStart|MoveJDO|MoveLDO|MoveCDO|MoveJAO|MoveLAO|MoveCAO|MoveJGO|MoveLGO|MoveCGO|SearchJ|SearchL|SearchC|TriggIO|SoftAct|ActUnit|WaitRob|PDispOn|EOffsOn|CorrCon|STCalib|STClose|PulseDO|AliasIO|IDelete|IEnable|ClkStop|WZDOSet|TPErase|TPWrite|MakeDir|OpenDir|SpyStop|TriggJ|TriggL|TriggC|AccSet|VelSet|SpotML|CalibJ|CalibL|STOpen|STTune|WaitDI|WaitDO|WaitAI|WaitAO|WaitGI|WaitGO|UnLoad|ErrLog|ITimer|ISleep|IWatch|IError|BitSet|WZFree|TPShow|UIShow|Rewind|MoveJ|MoveL|MoveC|ConfJ|ConfL|SpotJ|SpotL|Reset|SetDO|SetAO|SetGO|Break|IPers|Clear|Close|Write|Load|Save|Stop|Decr|Incr|Open|Set|Add)\\b",
+      "captures": {
+        "1": {
+          "name": "support.function.instruction.rapid"
+        }
+      }
+    },
+    "function": {
+      "match": "(?i)\\b(GetModalPayloadMode|IsStopStateEvent|IsMechUnitActive|TextTabFreeToUse|PPMovedInManMode|SocketGetStatus|GetSignalOrigin|GetNextMechUnit|CSpeedOverride|GetMecUnitName|TriggDataValid|GetServiceInfo|RMQGetSlotName|NonMotionMode|UIClientExist|BitCheckDnum|UIAlphaEntry|UIMessageBox|IsSyncMoveOn|GetTSPStatus|DefAccFrame|MaxRobSpeed|GOutputDnum|IOUnitState|GetTaskName|ExecHandler|ProgMemFree|RawBytesLen|UIDnumEntry|StrDigCalc|CalcJointT|GInputDnum|TestAndSet|GetNextSym|GetSysInfo|TaskRunMec|TaskRunRob|ReadStrBin|BitAndDnum|BitXOrDnum|BitNegDnum|BitLShDnum|BitRShDnum|SocketPeek|TextTabGet|UIListView|UINumEntry|UIDnumTune|STIsClosed|STIsIndGun|RoundDnum|TruncDnum|NumToDnum|DnumToNum|DnumToStr|StrToByte|ByteToStr|StrDigCmp|OrientZYX|DefDFrame|ExecLevel|ReadMotor|BitOrDnum|UINumTune|PFRestart|PathLevel|STIsCalib|StrToVal|ValToStr|NumToStr|StrMatch|StrOrder|CalcRobT|EulerZYX|PoseMult|PoseVect|DefFrame|VectMagn|Distance|FileSize|FileTime|ModExist|BitCheck|CorrRead|STIsOpen|AbsDnum|StrPart|StrFind|StrMemb|RelTool|CJointT|NOrient|PoseInv|DotProd|Present|ArgName|DOutput|AOutput|GOutput|ValidIO|ClkRead|GetTime|IsSysId|RunMode|ReadNum|ReadStr|ReadBin|ReadDir|ModTime|TextGet|StrLen|StrMap|IsPers|DInput|AInput|GInput|TestDI|OpMode|FSSize|IsFile|BitAnd|BitXOr|BitNeg|BitLSh|BitRSh|MirPos|ATan2|Round|Trunc|CRobT|CTool|CWObj|IsVar|CDate|CTime|RobOS|BitOr|ACos|ASin|ATan|Sqrt|Offs|CPos|Type|Abs|Cos|Sin|Tan|Exp|Pow|Dim)(?=\\s*\\()",
+      "captures": {
+        "1": {
+          "name": "support.function.builtin.rapid"
+        }
+      }
+    },
+    "label": {
+      "match": "^\\s*([A-Za-z]\\w*)(:)(?!=)",
+      "captures": {
+        "1": {
+          "name": "entity.name.label.rapid"
+        },
+        "2": {
+          "name": "punctuation.separator.rapid"
+        }
+      }
+    },
+    "number": {
+      "match": "(?i)(?<![\\w.])(0x[0-9a-f]+|0b[01]+|0o[0-7]+|(\\d+\\.?\\d*|\\.\\d+)(e[+-]?\\d+)?)\\b",
+      "name": "constant.numeric.rapid"
+    },
+    "operator": {
+      "patterns": [
+        {
+          "match": ":=",
+          "name": "keyword.operator.assignment.rapid"
+        },
+        {
+          "match": "<>|<=|>=|<|>|=",
+          "name": "keyword.operator.comparison.rapid"
+        },
+        {
+          "match": "(?i)\\b(AND|OR|XOR|NOT|DIV|MOD)\\b",
+          "name": "keyword.operator.logical.rapid"
+        },
+        {
+          "match": "[-+*/]",
+          "name": "keyword.operator.arithmetic.rapid"
+        }
+      ]
+    }
+  }
+}

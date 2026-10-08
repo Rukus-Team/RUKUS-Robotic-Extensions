@@ -15,6 +15,10 @@ import {
 } from '@core/rukus/store';
 import { robotNameFromFolder, ROBOT_FOLDER_PATTERNS } from '@fanuc/data/vaParser';
 import { looksLikeBackupFolderName } from '@core/robotContainers';
+import { parseCluster, clusterAbbRobots } from '@core/rukus/store';
+import { unprotectAllSync, resolvePassword, isProtected, DPAPI_PREFIX, DPAPI_ENTROPY } from '@core/rukus/dpapi';
+import { profileFromRukus } from '@abb/live/rukusCluster';
+import { execFileSync } from 'node:child_process';
 
 export function run(check: (cond: unknown, msg: string) => void): void {
   // ---- 1. where the data is (PortableModeHelper.Resolve, the four cases) ----
@@ -147,6 +151,51 @@ export function run(check: (cond: unknown, msg: string) => void): void {
       appendAudit(path.join(tmp2, 'fresh'), { robotName: 'R', robotAddress: '1.1.1.1', targetKind: 'Program', targetAddress: 'MD:C.LS', result: 'Ok', origin: 'x', durationMs: 1, machineName: 'PC', windowsUser: 'sam' } as any) ;
     } catch (e: any) { check(/ENOENT/.test(String(e?.code ?? e)), `a missing data root is an error, not a silent skip (${e?.code ?? e})`); }
     finally { try { fs.rmSync(tmp2, { recursive: true, force: true }); } catch { /* best effort */ } }
+  }
+
+  // ---- 4b. mixed clusters (RUKUS #28): FANUC and ABB robots in one file ----
+  {
+    const mixed = parseCluster('Cell 7', 'Cell 7.json', JSON.stringify({
+      ClusterType: 1, EncryptPasswords: false,
+      Robots: [
+        { Make: 'Fanuc', RobotName: 'R01', IPAddress: '192.168.1.11', FTPUser: 'robot', FTPPassword: 'ftp', FTPDirectory: 'MD:/' },
+        { Make: 'Abb', RobotName: 'IRB6700', IPAddress: '192.168.125.1', Family: 'Irc5', Port: null, UseHttps: false, RwsUser: 'Default User', RwsPassword: 'robotics', MechUnit: 'ROB_1', SystemName: 'irc5_6_16', RobotWareName: '6.16.03.00', FTPUser: null, FTPPassword: null },
+        { Make: 'Abb', RobotName: 'OMNI', IPAddress: '127.0.0.1', Family: 'OmniCore', Port: 5466, UseHttps: true, RwsUser: 'Admin', RwsPassword: 'x', MechUnit: 'ROB_2' },
+        { RobotName: 'OLD', IPAddress: '10.0.0.1', FTPDirectory: 'MD:/' },
+      ],
+    }))!;
+    check(mixed.robots.map(r => r.make).join() === 'fanuc,abb,abb,fanuc', `each robot's brand, FANUC when the file does not say (${mixed.robots.map(r => r.make)})`);
+    check(Object.keys(clusterControllers(mixed)).sort().join() === 'OLD,R01', 'cell controllers are the FANUC robots only - an ABB robot is never tried over FTP');
+    const abbs = clusterAbbRobots(mixed);
+    check(abbs.map(r => r.name).join() === 'IRB6700,OMNI', 'the ABB robots, for ABB Controllers');
+    check(abbs[0].abb!.family === 'irc5' && abbs[0].abb!.port === undefined && abbs[0].abb!.systemName === 'irc5_6_16' && abbs[1].abb!.family === 'omnicore' && abbs[1].abb!.port === 5466 && abbs[1].abb!.https, 'ABB fields as RUKUS writes them (Family as text, Port null = default)');
+    const p0 = profileFromRukus(abbs[0]), p1 = profileFromRukus(abbs[1]);
+    check(JSON.stringify(p0) === JSON.stringify({ name: 'IRB6700', host: '192.168.125.1' }), `an IRC5 with defaults is a short profile (${JSON.stringify(p0)})`);
+    check(JSON.stringify(p1) === JSON.stringify({ name: 'OMNI', family: 'omnicore', host: '127.0.0.1', port: 5466, https: true, user: 'Admin', mechUnit: 'ROB_2' }), `an OmniCore keeps what differs (${JSON.stringify(p1)})`);
+
+    // Send Cell to RUKUS: a cell controller that shares an ABB robot's name must not touch it.
+    const text = JSON.stringify(mixed.raw);
+    const back = JSON.parse(mergeControllersIntoCluster(text, { IRB6700: { host: '9.9.9.9' }, R01: { host: '192.168.1.99' } }, 'x'));
+    const abbBack = back.Robots.filter((r: any) => r.RobotName === 'IRB6700');
+    check(abbBack.length === 1 && abbBack[0].Make === 'Abb' && abbBack[0].IPAddress === '192.168.125.1' && abbBack[0].RwsPassword === 'robotics', 'an ABB robot is neither overwritten nor duplicated by a same-named cell controller');
+    check(back.Robots.find((r: any) => r.RobotName === 'R01').IPAddress === '192.168.1.99', 'the FANUC robot is still updated');
+  }
+
+  // ---- 4c. RUKUS-encrypted passwords (dpapi:v1:), decrypted for this Windows account ----
+  {
+    check(!isProtected('robotics') && isProtected(DPAPI_PREFIX + 'AAAA'), 'what counts as encrypted');
+    const plain = new Map<string, string | undefined>();
+    check(resolvePassword('robotics', plain) === 'robotics' && resolvePassword(undefined, plain) === undefined, 'a plain password is used as it is');
+    if (process.platform === 'win32') {
+      // encrypt the way RUKUS does (CryptProtectData, CurrentUser, the same entropy), then read it back
+      const protect = (pw: string) => DPAPI_PREFIX + execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+        `Add-Type -AssemblyName System.Security; [Convert]::ToBase64String([Security.Cryptography.ProtectedData]::Protect([Text.Encoding]::UTF8.GetBytes('${pw}'), [Text.Encoding]::UTF8.GetBytes('${DPAPI_ENTROPY}'), 'CurrentUser'))`], { windowsHide: true }).toString().trim();
+      const a = protect('robotics'), b = protect('pässwörd');
+      const other = DPAPI_PREFIX + 'AQAAANCMnd8BFdERjHoAwE/Cl+sBAAAA';   // another account's: unreadable here
+      const got = unprotectAllSync([a, b, other, 'plain']);
+      check(got.get(a) === 'robotics' && got.get(b) === 'pässwörd', `RUKUS's encryption reads back, in any language (${got.get(b)})`);
+      check(got.has(other) && got.get(other) === undefined && !got.has('plain'), 'another account\'s password is undefined, not an error; plain values are not sent');
+    } else console.log('  rukus store: dpapi round trip NOT RUN - not Windows');
   }
 
   // ---- 5. the real thing, when this is the PC that has it (nothing printed from it but counts) ----

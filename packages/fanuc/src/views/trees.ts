@@ -7,6 +7,7 @@
  * it. Colour follows `typeStyle.ts` (amber TP, blue PC, teal macro, grey data) and is
  * always paired with the kind's icon; amber on a count means it is a problem.
  */
+import { watchViewVisibility } from '@core/views/viewVisibility';
 import * as vscode from 'vscode';
 import * as path from 'node:path';
 import { FanucServices } from '../services';
@@ -37,7 +38,7 @@ export function registerViews(ctx: vscode.ExtensionContext, s: FanucServices) {
   const snapshot = new SnapshotTree(s);
   const data = new DataTree(s);
   // A view the running manifest does not know (an update awaiting a reload) is skipped, not crashed on.
-  const mk = <T>(id: string, provider: vscode.TreeDataProvider<T>) => (viewDeclared(ctx, id) ? vscode.window.createTreeView(id, { treeDataProvider: provider, showCollapseAll: true }) : undefined);
+  const mk = <T>(id: string, provider: vscode.TreeDataProvider<T>) => (viewDeclared(ctx, id) ? watchViewVisibility(vscode.window.createTreeView(id, { treeDataProvider: provider, showCollapseAll: true })) : undefined);
   const views = {
     snapshot: mk('robotCode.snapshot', snapshot),
     tp: mk('robotCode.programs', tp),

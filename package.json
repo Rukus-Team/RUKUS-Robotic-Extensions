@@ -2,7 +2,7 @@
   "name": "robot-code",
   "displayName": "Robot Code — FANUC TP & KAREL (Beta)",
   "description": "BETA - in active development, not yet proven on a live cell. Full IDE support for FANUC robots: TP (.ls) and KAREL (.kl) with hover docs, go-to-definition, diagnostics, register/I-O comment resolution from controller backups, renumbering, call graphs, ktrans integration and more. Built to grow to other robot brands.",
-  "version": "26.109.5",
+  "version": "26.109.6",
   "publisher": "rukus-team",
   "license": "MIT",
   "repository": {
@@ -60,6 +60,7 @@
     "onLanguage:fanuc-dt",
     "onLanguage:fanuc-dg",
     "onLanguage:fanuc-io",
+    "onLanguage:abb-rapid",
     "workspaceContains:**/*.{ls,LS,kl,KL,va,VA}",
     "onUri"
   ],
@@ -364,6 +365,32 @@
           "light": "./media/file-icons/stm-light.svg",
           "dark": "./media/file-icons/stm-dark.svg"
         }
+      },
+      {
+        "id": "abb-rapid",
+        "aliases": [
+          "ABB RAPID"
+        ],
+        "extensions": [
+          ".mod",
+          ".MOD",
+          ".prg",
+          ".PRG"
+        ],
+        "filenamePatterns": [
+          "**/RAPID/**/*.sys",
+          "**/RAPID/**/*.SYS",
+          "**/HOME/**/*.sys",
+          "**/HOME/**/*.SYS",
+          "**/SYSMOD/*.sys",
+          "**/SYSMOD/*.SYS"
+        ],
+        "firstLine": "^\\s*(%%%|MODULE\\s+\\w+)",
+        "configuration": "./language-configs/rapid.language-configuration.json",
+        "icon": {
+          "light": "./media/file-icons/mod-light.svg",
+          "dark": "./media/file-icons/mod-dark.svg"
+        }
       }
     ],
     "grammars": [
@@ -406,6 +433,11 @@
         "language": "fanuc-io",
         "scopeName": "source.fanuc.va",
         "path": "./syntaxes/va.tmLanguage.json"
+      },
+      {
+        "language": "abb-rapid",
+        "scopeName": "source.rapid",
+        "path": "./syntaxes/rapid.tmLanguage.json"
       }
     ],
     "snippets": [
@@ -416,6 +448,10 @@
       {
         "language": "fanuc-karel",
         "path": "./snippets/karel.json"
+      },
+      {
+        "language": "abb-rapid",
+        "path": "./snippets/rapid.json"
       }
     ],
     "themes": [
@@ -661,6 +697,22 @@
         "icon": "$(play)"
       },
       {
+        "command": "robotCode.lint.folder",
+        "title": "Lint Folder…",
+        "category": "Robot Code",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "robotCode.lint.clear",
+        "title": "Clear Lint Folder Results",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.lint.createConfig",
+        "title": "Create Lint Config (.robotlint.json)",
+        "category": "Robot Code"
+      },
+      {
         "command": "robotCode.karel.precheck",
         "title": "Check Before Compile",
         "category": "FANUC KAREL",
@@ -736,6 +788,196 @@
         "command": "robotCode.views.revealInEditor",
         "title": "Reveal",
         "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.rapid.open",
+        "title": "Open RAPID Module",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.rapid.gotoLabel",
+        "title": "Go to Label…",
+        "category": "ABB RAPID"
+      },
+      {
+        "command": "robotCode.rapid.showCallGraph",
+        "title": "Show Routine Call Graph",
+        "category": "ABB RAPID",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "robotCode.rapid.setIndentation",
+        "title": "Set Indentation…",
+        "category": "ABB RAPID"
+      },
+      {
+        "command": "robotCode.rapid.refresh",
+        "title": "RAPID: Refresh",
+        "category": "Robot Code",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "robotCode.abb.addController",
+        "title": "ABB: Add Controller…",
+        "category": "Robot Code",
+        "icon": "$(add)"
+      },
+      {
+        "command": "robotCode.abb.connect",
+        "title": "ABB: Connect",
+        "category": "Robot Code",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "robotCode.abb.refresh",
+        "title": "ABB: Get (read state, tasks, position)",
+        "category": "Robot Code",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.abb.disconnect",
+        "title": "ABB: Disconnect",
+        "category": "Robot Code",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "robotCode.abb.editController",
+        "title": "ABB: Edit Connection…",
+        "category": "Robot Code",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "robotCode.abb.removeController",
+        "title": "ABB: Remove Controller",
+        "category": "Robot Code",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "robotCode.abb.openPointer",
+        "title": "ABB: Open Pointer",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.abb.openModule",
+        "title": "ABB: Open Module from Controller",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.abb.convertTarget",
+        "title": "ABB: Convert Target on Controller (jointtarget ⇄ robtarget)",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.abb.openPage",
+        "title": "ABB: Open Controller Page",
+        "category": "Robot Code",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "robotCode.abb.compareBackups",
+        "title": "ABB: Compare Two Backups…",
+        "category": "Robot Code",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "robotCode.abb.unusedRoutines",
+        "title": "Unused Routines (task report)",
+        "category": "ABB RAPID"
+      },
+      {
+        "command": "robotCode.abb.xrefReport",
+        "title": "Data & Signal Cross-Reference (task report)",
+        "category": "ABB RAPID"
+      },
+      {
+        "command": "robotCode.abb.showEventLog",
+        "title": "ABB: Show Event Log",
+        "category": "Robot Code",
+        "icon": "$(output)"
+      },
+      {
+        "command": "robotCode.abb.showSignals",
+        "title": "ABB: Show I/O Signals",
+        "category": "Robot Code",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "robotCode.abb.backup",
+        "title": "ABB: Back Up and Download…",
+        "category": "Robot Code",
+        "icon": "$(archive)"
+      },
+      {
+        "command": "robotCode.abb.setSpeed",
+        "title": "ABB: Set Speed Override…",
+        "category": "Robot Code",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "robotCode.abb.motorsOn",
+        "title": "ABB: Motors On…",
+        "category": "Robot Code",
+        "icon": "$(circle-filled)"
+      },
+      {
+        "command": "robotCode.abb.motorsOff",
+        "title": "ABB: Motors Off…",
+        "category": "Robot Code",
+        "icon": "$(circle-outline)"
+      },
+      {
+        "command": "robotCode.abb.startRapid",
+        "title": "ABB: Start RAPID…",
+        "category": "Robot Code",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "robotCode.abb.stopRapid",
+        "title": "ABB: Stop RAPID",
+        "category": "Robot Code",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "robotCode.abb.resetProgramPointer",
+        "title": "ABB: Program Pointer to Main…",
+        "category": "Robot Code",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "robotCode.abb.loadModule",
+        "title": "ABB: Load Module…",
+        "category": "Robot Code",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "robotCode.abb.unloadModule",
+        "title": "ABB: Unload Module…",
+        "category": "Robot Code",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "robotCode.abb.setSignal",
+        "title": "ABB: Set Output…",
+        "category": "Robot Code",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "robotCode.abb.setRapidData",
+        "title": "ABB: Write RAPID Variable…",
+        "category": "Robot Code",
+        "icon": "$(symbol-variable)"
+      },
+      {
+        "command": "robotCode.abb.requestWriteAccess",
+        "title": "ABB: Request Write Access…",
+        "category": "Robot Code",
+        "icon": "$(unlock)"
+      },
+      {
+        "command": "robotCode.abb.releaseWriteAccess",
+        "title": "ABB: Release Write Access…",
+        "category": "Robot Code",
+        "icon": "$(lock)"
       },
       {
         "command": "robotCode.live.addRobot",
@@ -1270,6 +1512,16 @@
         "when": "editorLangId == fanuc-tp"
       },
       {
+        "command": "robotCode.rapid.gotoLabel",
+        "key": "ctrl+alt+l",
+        "when": "editorLangId == abb-rapid"
+      },
+      {
+        "command": "robotCode.rapid.showCallGraph",
+        "key": "ctrl+alt+g",
+        "when": "editorLangId == abb-rapid"
+      },
+      {
         "command": "robotCode.karel.compile",
         "key": "ctrl+shift+b",
         "when": "editorLangId == fanuc-karel"
@@ -1534,9 +1786,24 @@
           "group": "e@1"
         },
         {
+          "command": "robotCode.lint.folder",
+          "when": "explorerResourceIsFolder",
+          "group": "e@2"
+        },
+        {
           "submenu": "robotCode.tp.submenu",
           "when": "editorLangId == fanuc-tp",
           "group": "f@0"
+        },
+        {
+          "command": "robotCode.abb.convertTarget",
+          "when": "robotCode.abbConnected && editorLangId == abb-rapid",
+          "group": "f@1"
+        },
+        {
+          "command": "robotCode.rapid.showCallGraph",
+          "when": "editorLangId == abb-rapid",
+          "group": "f@2"
         }
       ],
       "robotCode.sync.submenu": [
@@ -1808,6 +2075,16 @@
           "group": "navigation@4"
         },
         {
+          "command": "robotCode.rapid.refresh",
+          "when": "view == robotCode.rapid",
+          "group": "navigation@1"
+        },
+        {
+          "command": "robotCode.abb.addController",
+          "when": "view == robotCode.abbControllers",
+          "group": "navigation@1"
+        },
+        {
           "command": "robotCode.views.toggleLatestOnly",
           "when": "view == robotCode.programs || view == robotCode.pcPrograms",
           "group": "navigation@5"
@@ -1980,6 +2257,102 @@
           "when": "false"
         },
         {
+          "command": "robotCode.rapid.open",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.rapid.refresh",
+          "when": "robotCode.abbActive"
+        },
+        {
+          "command": "robotCode.abb.openPointer",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.abb.openModule",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.abb.convertTarget",
+          "when": "robotCode.abbConnected && editorLangId == abb-rapid"
+        },
+        {
+          "command": "robotCode.abb.backup",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.setSpeed",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.motorsOn",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.motorsOff",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.startRapid",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.stopRapid",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.resetProgramPointer",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.loadModule",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.unloadModule",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.setSignal",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.setRapidData",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.requestWriteAccess",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.releaseWriteAccess",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.addController",
+          "when": "robotCode.abbActive"
+        },
+        {
+          "command": "robotCode.abb.connect",
+          "when": "robotCode.abbActive"
+        },
+        {
+          "command": "robotCode.abb.refresh",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.disconnect",
+          "when": "robotCode.abbConnected"
+        },
+        {
+          "command": "robotCode.abb.removeController",
+          "when": "robotCode.abbActive"
+        },
+        {
+          "command": "robotCode.abb.editController",
+          "when": "robotCode.abbActive"
+        },
+        {
           "command": "robotCode.live.openTaskLine",
           "when": "false"
         },
@@ -2077,6 +2450,121 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "robotCode.abb.connect",
+          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-(disconnected|error)$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "robotCode.abb.openPage",
+          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-/",
+          "group": "inline@0"
+        },
+        {
+          "command": "robotCode.abb.openPage",
+          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-/",
+          "group": "1_controller@0"
+        },
+        {
+          "command": "robotCode.abb.refresh",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "inline@1"
+        },
+        {
+          "command": "robotCode.abb.disconnect",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "inline@2"
+        },
+        {
+          "command": "robotCode.abb.backup",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "1_controller@1"
+        },
+        {
+          "command": "robotCode.abb.showEventLog",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "1_controller@2"
+        },
+        {
+          "command": "robotCode.abb.showSignals",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "1_controller@3"
+        },
+        {
+          "command": "robotCode.abb.setSpeed",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "2_motion@0"
+        },
+        {
+          "command": "robotCode.abb.motorsOn",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "2_motion@1"
+        },
+        {
+          "command": "robotCode.abb.motorsOff",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "2_motion@2"
+        },
+        {
+          "command": "robotCode.abb.startRapid",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "3_rapid@0"
+        },
+        {
+          "command": "robotCode.abb.stopRapid",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "3_rapid@1"
+        },
+        {
+          "command": "robotCode.abb.resetProgramPointer",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "3_rapid@2"
+        },
+        {
+          "command": "robotCode.abb.loadModule",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "4_program@0"
+        },
+        {
+          "command": "robotCode.abb.unloadModule",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "4_program@1"
+        },
+        {
+          "command": "robotCode.abb.setSignal",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "4_program@2"
+        },
+        {
+          "command": "robotCode.abb.setRapidData",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "4_program@3"
+        },
+        {
+          "command": "robotCode.abb.requestWriteAccess",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "5_access@0"
+        },
+        {
+          "command": "robotCode.abb.releaseWriteAccess",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "5_access@1"
+        },
+        {
+          "command": "robotCode.abb.unloadModule",
+          "when": "view == robotCode.abbControllers && viewItem == abb-module",
+          "group": "1_module@0"
+        },
+        {
+          "command": "robotCode.abb.editController",
+          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-/",
+          "group": "9_remove@0"
+        },
+        {
+          "command": "robotCode.abb.removeController",
+          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-/",
+          "group": "9_remove"
+        },
         {
           "command": "robotCode.live.downloadFile",
           "when": "view == robotCode.robots && viewItem == robot-file",
@@ -2321,6 +2809,12 @@
         }
       ]
     },
+    "jsonValidation": [
+      {
+        "fileMatch": ".robotlint.json",
+        "url": "./schemas/robotlint.schema.json"
+      }
+    ],
     "submenus": [
       {
         "id": "robotCode.menu",
@@ -2357,37 +2851,56 @@
           "name": "Controllers",
           "icon": "media/activity.svg",
           "contextualTitle": "Controllers",
-          "when": "config.robotCode.experimental.robotConnections"
+          "when": "config.robotCode.experimental.robotConnections && !robotCode.hideFanuc && !robotCode.fanucOff"
         },
         {
           "id": "robotCode.snapshot",
           "name": "Snapshot",
           "icon": "media/activity.svg",
-          "contextualTitle": "Snapshots"
+          "contextualTitle": "Snapshots",
+          "when": "!robotCode.hideFanuc && !robotCode.fanucOff"
         },
         {
           "id": "robotCode.programs",
           "name": "Programs",
           "icon": "media/activity.svg",
-          "contextualTitle": "Programs"
+          "contextualTitle": "Programs",
+          "when": "!robotCode.hideFanuc && !robotCode.fanucOff"
         },
         {
           "id": "robotCode.pcPrograms",
           "name": "PC programs",
           "icon": "media/activity.svg",
-          "contextualTitle": "PC programs"
+          "contextualTitle": "PC programs",
+          "when": "!robotCode.hideFanuc && !robotCode.fanucOff"
         },
         {
           "id": "robotCode.macros",
           "name": "Macros",
           "icon": "media/activity.svg",
-          "contextualTitle": "Macros"
+          "contextualTitle": "Macros",
+          "when": "!robotCode.hideFanuc && !robotCode.fanucOff"
         },
         {
           "id": "robotCode.registers",
           "name": "Data",
           "icon": "media/activity.svg",
-          "contextualTitle": "Registers, payloads and I/O"
+          "contextualTitle": "Registers, payloads and I/O",
+          "when": "!robotCode.hideFanuc && !robotCode.fanucOff"
+        },
+        {
+          "id": "robotCode.rapid",
+          "name": "RAPID",
+          "icon": "media/activity.svg",
+          "contextualTitle": "ABB RAPID modules",
+          "when": "robotCode.abbActive && !robotCode.hideAbb"
+        },
+        {
+          "id": "robotCode.abbControllers",
+          "name": "ABB Controllers",
+          "icon": "media/activity.svg",
+          "contextualTitle": "ABB controllers (Robot Web Services)",
+          "when": "robotCode.abbActive && !robotCode.hideAbb"
         }
       ]
     },
@@ -2412,6 +2925,14 @@
       {
         "view": "robotCode.macros",
         "contents": "The macro table comes from sysmacro.va in a backup folder."
+      },
+      {
+        "view": "robotCode.abbControllers",
+        "contents": "Connect to an ABB IRC5 over Robot Web Services to see its state, where each RAPID task's program and motion pointers are, and the robot's position.\n[Add ABB Controller](command:robotCode.abb.addController)\nReads happen only when you press Connect or Get or open a module. Nothing is written to the controller except what you confirm: a Back Up, or an action (speed, motors, RAPID start/stop, load a module, an output, a variable, write access) from the controller page or a right-click. With a controller connected, Convert Target on Controller (RAPID editor) turns a jointtarget into a robtarget and back with the controller's own kinematics."
+      },
+      {
+        "view": "robotCode.rapid",
+        "contents": "ABB RAPID modules (.mod, .sys) found in the workspace and backup folders appear here, by backup, task and module. Open an IRC5 backup folder (it holds BACKINFO, RAPID and SYSPAR) to see its tasks.\n[Add Backup Folder](command:robotCode.data.addBackupFolder)"
       },
       {
         "view": "robotCode.pcPrograms",
@@ -2673,6 +3194,48 @@
           "maximum": 64,
           "markdownDescription": "Overrides `robotCode.karel.coreVersion` with one limit for every name. Leave empty to follow the core version."
         },
+        "robotCode.abb.controllers": {
+          "type": "array",
+          "default": [],
+          "markdownDescription": "ABB controllers for the ABB Controllers view (Robot Web Services: IRC5 / RobotWare 6 over RWS 1.0, OmniCore / RobotWare 7-8 over RWS 2.0). Passwords are kept in VS Code's secret storage, not here - add controllers in **Robot Connections** (ABB: Add Controller…).",
+          "items": {
+            "type": "object",
+            "required": ["name", "host"],
+            "properties": {
+              "name": { "type": "string" },
+              "family": { "type": "string", "enum": ["irc5", "omnicore"], "description": "irc5 (RobotWare 6, RWS 1.0) when omitted; omnicore is RobotWare 7, RWS 2.0" },
+              "host": { "type": "string", "description": "192.168.125.1 on the service port" },
+              "port": { "type": "number", "description": "80 when omitted; RobotStudio's virtual controller uses its own" },
+              "https": { "type": "boolean" },
+              "user": { "type": "string", "description": "Default User when omitted" },
+              "mechUnit": { "type": "string", "description": "ROB_1 when omitted" }
+            }
+          }
+        },
+        "robotCode.rapid.format.baseIndent": {
+          "anyOf": [{ "type": "string", "enum": ["auto"] }, { "type": "integer", "minimum": 0, "maximum": 16 }],
+          "default": "auto",
+          "markdownDescription": "Spaces before everything inside `MODULE` when formatting RAPID (Format Document): **auto** or any number from 0 to 16. **auto** keeps what the file already uses (2 when it does not say). Set it per workspace folder to follow a customer's standard."
+        },
+        "robotCode.rapid.format.indentSize": {
+          "anyOf": [{ "type": "string", "enum": ["auto"] }, { "type": "integer", "minimum": 1, "maximum": 16 }],
+          "default": "auto",
+          "markdownDescription": "Spaces each RAPID block (PROC, IF, FOR, WHILE, TEST ... CASE) adds, for Format Document and for Enter: **auto** or any number from 1 to 16. **auto** keeps what the file already uses (4 when it does not say). A tab size picked in the status bar, or **ABB RAPID: Set Indentation…**, overrides it for one file."
+        },
+        "robotCode.rapid.format.insertSpaces": {
+          "anyOf": [{ "type": "string", "enum": ["auto"] }, { "type": "boolean" }],
+          "default": "auto",
+          "markdownDescription": "Indent RAPID with spaces (**true**) or tabs (**false**, one tab per `indentSize`, leftover columns in spaces). **auto** follows what the file already uses (spaces when it does not say)."
+        },
+        "robotCode.fanuc.enabled": {
+          "type": "boolean",
+          "markdownDescription": "FANUC support (TP, KAREL, controller data, FANUC views and tools). **Not set: on unless the workspace holds only ABB files** (an empty folder loads it). Set it true or false to decide for yourself. Takes effect after a window reload."
+        },
+        "robotCode.abb.enabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "ABB RAPID support. **Not set: on by itself when the workspace (or a backup folder) holds ABB files** - a backup with BACKINFO, or .mod / .prg modules. Set it true or false to decide for yourself. Outline, go to definition across the task and the shared modules, hover (instructions, routines, robtargets), completion and diagnostics for `.mod`/`.sys`/`.prg`, and RAPID modules and IRC5 backups in the workspace index. Syntax highlighting and snippets work either way. Reload the window after changing this."
+        },
         "robotCode.karel.diagnostics.lint": {
           "type": "boolean",
           "default": true,
@@ -2716,6 +3279,13 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "When **Initialize Robot Container** creates `.robocode-robot/`, also write a `.gitignore` inside it that excludes `snapshot/` — a full backup is tens of MB of regenerable data. Delete that file to commit snapshots."
+        },
+        "robotCode.views.brands": {
+          "type": "string",
+          "enum": ["auto", "fanuc", "abb", "both"],
+          "enumDescriptions": ["The brands the workspace holds; asks when it holds none", "FANUC views only", "ABB views only (needs robotCode.abb.enabled)", "Both"],
+          "default": "auto",
+          "markdownDescription": "Which robot brands the Robot Code side bar shows. **auto** shows the brands found in the workspace (FANUC programs, ABB modules and backups) and asks the first time the side bar opens on a folder with neither."
         },
         "robotCode.views.listLimit": {
           "type": "number",
@@ -3136,6 +3706,18 @@
       }
     },
     "configurationDefaults": {
+      "[abb-rapid]": {
+        "files.encoding": "iso88591",
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false,
+        "editor.quickSuggestions": {
+          "other": "on",
+          "comments": "off",
+          "strings": "off"
+        },
+        "editor.suggest.snippetsPreventQuickSuggestions": false,
+        "editor.wordBasedSuggestions": "off"
+      },
       "[fanuc-tp]": {
         "editor.quickSuggestions": {
           "other": "on",
@@ -3162,6 +3744,8 @@
     "install-local": "npm run package && node scripts/install-local.mjs",
     "smoke": "node esbuild.mjs && node test/runIntegration.mjs \"../reference-backup\" \".vscode-test\"",
     "smoke:containers": "node esbuild.mjs && node test/runContainersSmoke.mjs \".vscode-test\"",
+    "lint:robot": "node esbuild.mjs --lint-cli && node dist/robot-lint.js",
+    "smoke:abb": "node esbuild.mjs && node test/runAbbSmoke.mjs \".vscode-test\"",
     "smoke:live": "node esbuild.mjs && node test/runLiveSync.mjs",
     "smoke:vim": "node esbuild.mjs && node test/runVim.mjs",
     "smoke:shots": "node esbuild.mjs && node test/runIntegration.mjs \"../reference-backup\" \".vscode-test\" \".vscode-test/shots\" \"../Robotic Utility Kit/RUKUS.Tests/TestData/corpus/ir/irmath.kl\"",

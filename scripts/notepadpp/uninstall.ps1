@@ -16,12 +16,14 @@ Drop (Join-Path $Target 'userDefineLangs\FANUC TP.xml')
 Drop (Join-Path $Target 'userDefineLangs\FANUC KAREL.xml')
 Drop (Join-Path $Target 'functionList\fanuc_tp.xml')
 Drop (Join-Path $Target 'functionList\fanuc_karel.xml')
+Drop (Join-Path $Target 'userDefineLangs\ABB RAPID.xml')
+Drop (Join-Path $Target 'functionList\abb_rapid.xml')
 Drop (Join-Path $Target 'robotcode')
 
 $map = Join-Path $Target 'functionList\overrideMap.xml'
 if (Test-Path $map) {
     $xml = Get-Content $map -Raw
-    $new = $xml -replace '\r?\n[ \t]*<association id="fanuc_(tp|karel)\.xml"[^>]*/>', ''
+    $new = $xml -replace '\r?\n[ \t]*<association id="(fanuc_(tp|karel)|abb_rapid)\.xml"[^>]*/>', ''
     if ($new -ne $xml) { Set-Content $map -Encoding UTF8 -Value $new; $removed += "$map (2 lines)" }
 }
 
@@ -39,7 +41,7 @@ if (-not (Test-Path (Join-Path $Target 'notepad++.exe'))) {
     $app = (Get-ItemProperty 'HKLM:\SOFTWARE\Notepad++' -ErrorAction SilentlyContinue).'(default)'
     if (-not $app) { $app = Join-Path $env:ProgramFiles 'Notepad++' }
 }
-$ac = @('FANUC TP.xml', 'FANUC KAREL.xml') | ForEach-Object { Join-Path $app "autoCompletion\$_" } | Where-Object { Test-Path -LiteralPath $_ }
+$ac = @('FANUC TP.xml', 'FANUC KAREL.xml', 'ABB RAPID.xml') | ForEach-Object { Join-Path $app "autoCompletion\$_" } | Where-Object { Test-Path -LiteralPath $_ }
 if ($ac) {
     try { $ac | ForEach-Object { Remove-Item -LiteralPath $_ -Force }; $removed += $ac }
     catch {

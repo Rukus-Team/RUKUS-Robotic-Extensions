@@ -40,6 +40,8 @@ const FAMILY = {
   io:     { dark: '#98c379', light: '#3f7d1f' },
   vision: { dark: '#e5954b', light: '#b35a0c' },
   misc:   { dark: '#aab4c0', light: '#566170' },
+  // ABB, not a FANUC family: ABB's own red, darkened for light themes
+  abb:    { dark: '#ff5a4f', light: '#c0271c' },
 };
 
 /**
@@ -50,6 +52,12 @@ const FAMILY = {
  * .sv is also SystemVerilog, so only the controller's own system files are claimed.
  * `themeOnly` marks a type that gets an icon in the Robot Code THEME but no language of its
  * own: .txt is every text file on the PC, not a FANUC type, so the language route would be wrong.
+ *
+ * ABB (monorepo phase 3) adds fields a FANUC type never needed: `moreExt` for a language that
+ * owns several extensions (.mod and .prg are both RAPID), `patterns` for file names matched by
+ * glob ON TOP of the extensions (.sys is also the Windows driver extension, so only a .sys inside
+ * a RAPID backup layout is claimed), `firstLine` for content-sniffing and `scope` for a grammar
+ * whose scope is not source.fanuc.<grammar>.
  */
 export const FILE_ICONS = [
   { ext: 'ls',  id: 'fanuc-tp',        family: 'tp',     binary: false, grammar: 'tp',    alias: 'FANUC TP',                        what: 'TP program, ASCII listing' },
@@ -74,6 +82,9 @@ export const FILE_ICONS = [
   { ext: 'pmc', id: 'fanuc-pmc',       family: 'misc',   binary: true,                    alias: 'FANUC PMC Ladder (.pmc)',         what: 'PMC ladder / parameters, binary' },
   { ext: 'stm', id: 'fanuc-stm',       family: 'misc',   binary: false,                   alias: 'FANUC Web Page (.stm)',           what: 'controller web page' },
   { ext: 'txt', id: null,              family: 'misc',   binary: false, themeOnly: true,  alias: 'Text',                            what: 'text file (theme icon only, no language)' },
+  { ext: 'mod', id: 'abb-rapid',       family: 'abb',    binary: false, grammar: 'rapid', alias: 'ABB RAPID',                       what: 'ABB RAPID module',
+    scope: 'source.rapid', moreExt: ['prg'], firstLine: '^\\s*(%%%|MODULE\\s+\\w+)',
+    patterns: ['**/RAPID/**/*.sys', '**/HOME/**/*.sys', '**/SYSMOD/*.sys'] },
 ];
 
 /** the file icon THEME's id in package.json, and the file it is generated into */
@@ -130,7 +141,7 @@ export function renderTheme(seti) {
     const dark = `fanuc-${x.ext}-dark`, light = `fanuc-${x.ext}-light`;
     t.iconDefinitions[dark] = { iconPath: `./${x.ext}-dark.svg` };
     t.iconDefinitions[light] = { iconPath: `./${x.ext}-light.svg` };
-    t.fileExtensions[x.ext] = dark; t.light.fileExtensions[x.ext] = light;
+    for (const e of [x.ext, ...(x.moreExt ?? [])]) { t.fileExtensions[e] = dark; t.light.fileExtensions[e] = light; }
     for (const n of x.match?.filenames ?? []) { t.fileNames[n] = dark; t.light.fileNames[n] = light; }
     if (x.id) { t.languageIds[x.id] = dark; t.light.languageIds[x.id] = light; }
   }
@@ -140,15 +151,17 @@ export function renderTheme(seti) {
 /** the `contributes.languages`, `contributes.grammars` and onLanguage activation events this table implies */
 export function manifestBlocks() {
   const both = list => list.flatMap(e => [e, e.toUpperCase()]);
-  const config = { tp: 'tp', karel: 'karel', va: 'va', cm: 'cm' };
+  const config = { tp: 'tp', karel: 'karel', va: 'va', cm: 'cm', rapid: 'rapid' };
   const languages = FILE_ICONS.filter(t => !t.themeOnly).map(t => ({
     id: t.id,
     aliases: [t.alias],
-    ...(t.match ? { filenames: both(t.match.filenames), filenamePatterns: both(t.match.patterns) } : { extensions: both(['.' + t.ext]) }),
+    ...(t.match ? { filenames: both(t.match.filenames), filenamePatterns: both(t.match.patterns) } : { extensions: both(['.' + t.ext, ...(t.moreExt ?? []).map(e => '.' + e)]) }),
+    ...(t.patterns ? { filenamePatterns: t.patterns.flatMap(p => [p, p.replace(/\.sys$/, '.SYS')]) } : {}),
+    ...(t.firstLine ? { firstLine: t.firstLine } : {}),
     ...(t.grammar ? { configuration: `./language-configs/${config[t.grammar]}.language-configuration.json` } : {}),
     icon: { light: `./media/file-icons/${t.ext}-light.svg`, dark: `./media/file-icons/${t.ext}-dark.svg` },
   }));
-  const grammars = FILE_ICONS.filter(t => t.grammar).map(t => ({ language: t.id, scopeName: `source.fanuc.${t.grammar}`, path: `./syntaxes/${t.grammar}.tmLanguage.json` }));
+  const grammars = FILE_ICONS.filter(t => t.grammar).map(t => ({ language: t.id, scopeName: t.scope ?? `source.fanuc.${t.grammar}`, path: `./syntaxes/${t.grammar}.tmLanguage.json` }));
   const activation = FILE_ICONS.filter(t => t.grammar).map(t => `onLanguage:${t.id}`);
   return { languages, grammars, activation };
 }

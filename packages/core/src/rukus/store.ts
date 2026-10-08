@@ -141,6 +141,31 @@ export interface RukusRobot {
   notes?: string;
   expectedFNumber?: string;
   softwareVersion?: string;
+  /**
+   * RUKUS's "Make", lower-case: 'fanuc' or 'abb'. Clusters are mixed since RUKUS's ABB
+   * integration (RUKUS #28). A robot without one is FANUC - every file from before then.
+   */
+  make: string;
+  /** an ABB robot's Robot Web Services connection; set when make is 'abb' */
+  abb?: RukusAbbRobot;
+}
+
+/** An ABB robot as RUKUS keeps it (AbbRobotProfile). The password may be DPAPI-encrypted - see dpapi.ts. */
+export interface RukusAbbRobot {
+  /** IRC5 = RobotWare 6, RWS 1.0; OmniCore = RobotWare 7+, RWS 2.0 */
+  family: 'irc5' | 'omnicore';
+  /** undefined = the protocol default (80, 443 with HTTPS) */
+  port?: number;
+  https: boolean;
+  /** 'Default User' when RUKUS has none */
+  user: string;
+  /** as the file holds it: plain, or "dpapi:v1:..." when the cluster encrypts passwords */
+  password?: string;
+  mechUnit: string;
+  /** what the controller told RUKUS it is, when RUKUS has read it */
+  systemName?: string;
+  robotWareName?: string;
+  robotType?: string;
 }
 
 export interface RukusCluster {
@@ -167,7 +192,21 @@ export function parseCluster(name: string, file: string, text: string): RukusClu
     const robotName = typeof r.RobotName === 'string' ? r.RobotName.trim() : '';
     if (!robotName) continue;
     const ftpDirectory = typeof r.FTPDirectory === 'string' && r.FTPDirectory.trim() ? r.FTPDirectory.trim() : 'MD:/';
+    const make = makeOf(r);
+    const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
     robots.push({
+      make,
+      ...(make === 'abb' ? {
+        abb: {
+          family: /omnicore/i.test(String(r.Family ?? '')) ? 'omnicore' as const : 'irc5' as const,
+          ...(typeof r.Port === 'number' && r.Port > 0 ? { port: r.Port } : {}),
+          https: r.UseHttps === true,
+          user: str(r.RwsUser) ?? 'Default User',
+          password: typeof r.RwsPassword === 'string' && r.RwsPassword ? r.RwsPassword : undefined,
+          mechUnit: str(r.MechUnit) ?? 'ROB_1',
+          systemName: str(r.SystemName), robotWareName: str(r.RobotWareName), robotType: str(r.RobotType),
+        },
+      } : {}),
       name: robotName,
       host: typeof r.IPAddress === 'string' ? r.IPAddress.trim() : '',
       ftpUser: typeof r.FTPUser === 'string' ? r.FTPUser : '',
@@ -187,6 +226,11 @@ export function parseCluster(name: string, file: string, text: string): RukusClu
     savedUtc: typeof raw.SavedUtc === 'string' ? raw.SavedUtc : undefined,
     savedBy: typeof raw.SavedBy === 'string' ? raw.SavedBy : undefined,
   };
+}
+
+/** A cluster file robot's brand, lower-case; FANUC when it does not say (files from before ABB). */
+export function makeOf(r: any): string {
+  return typeof r?.Make === 'string' && r.Make.trim() ? r.Make.trim().toLowerCase() : 'fanuc';
 }
 
 /** `MD:/` -> `MD:`, `UD1:` stays, `md:` -> `MD:` */
@@ -220,13 +264,19 @@ export function listClusters(dir: string): RukusCluster[] {
 export function clusterControllers(c: RukusCluster): Record<string, CellControllerSpec> {
   const out: Record<string, CellControllerSpec> = {};
   for (const r of c.robots) {
-    if (!r.host) continue;
+    // FANUC only: an ABB robot is not an FTP/HTTP FANUC controller (clusterAbbRobots is its way in)
+    if (!r.host || r.make !== 'fanuc') continue;
     const spec: CellControllerSpec = { host: r.host, device: r.device };
     if (r.ftpUser) spec.ftpUser = r.ftpUser;
     if (r.ftpUser && !/^anonymous$/i.test(r.ftpUser)) spec.useFtp = true;
     out[r.name] = spec;
   }
   return out;
+}
+
+/** A cluster's ABB robots with an address - what the ABB Controllers view takes from the open cluster. */
+export function clusterAbbRobots(c: RukusCluster): RukusRobot[] {
+  return c.robots.filter(r => r.make === 'abb' && r.host && r.abb);
 }
 
 /**
@@ -242,7 +292,11 @@ export function mergeControllersIntoCluster(existingText: string | undefined, co
   if (raw.ClusterType === undefined) raw.ClusterType = 1;   // FanucCluster
   const robots: any[] = Array.isArray(raw.Robots) ? raw.Robots.filter((r: any) => r && typeof r === 'object') : [];
   for (const [name, spec] of Object.entries(controllers)) {
-    const found = robots.find(r => typeof r.RobotName === 'string' && r.RobotName.trim().toLowerCase() === name.toLowerCase());
+    const named = (r: any) => typeof r.RobotName === 'string' && r.RobotName.trim().toLowerCase() === name.toLowerCase();
+    // cell controllers are FANUC: only a FANUC robot of that name is updated. An ABB robot that
+    // happens to share the name is never overwritten with FTP settings, nor shadowed by a new one.
+    const found = robots.find(r => named(r) && makeOf(r) === 'fanuc');
+    if (!found && robots.some(r => named(r))) continue;
     const device = (spec.device ?? 'MD:').toUpperCase().replace(/:?\/?$/, ':/');
     if (found) {
       found.IPAddress = spec.host;
