@@ -412,6 +412,24 @@ export function resolveSymbol(prog: KProgram, upper: string, line: number): KSym
     ?? prog.symbols.find(s => s.upper === upper);
 }
 
+/**
+ * The `name::` declaration a GOTO / GO TO jumps to. Labels are local to the routine (or main
+ * body) they sit in, so the one in the same body as `line` wins; any other is a fallback.
+ */
+export function findLabel(prog: KProgram, upper: string, line: number): KSpan | undefined {
+  const bodyOf = (l: number) => prog.routines.find(r => !r.from && r.line <= l && (r.endLine ?? Number.MAX_SAFE_INTEGER) >= l)?.upper;
+  const here = bodyOf(line);
+  let fallback: KSpan | undefined;
+  for (let i = 0; i < prog.lines.length; i++) {
+    const m = /^(\s*)([A-Za-z_][A-Za-z0-9_]*)\s*::/.exec(stripCommentAndStrings(prog.lines[i]));
+    if (!m || m[2].toUpperCase() !== upper) continue;
+    const span = { line: i, col: m[1].length, len: m[2].length };
+    if (bodyOf(i) === here) return span;
+    fallback ??= span;
+  }
+  return fallback;
+}
+
 export function routineSignature(r: KSymbol): string {
   const params = (r.params ?? []).map(p => `${p.name} : ${p.type}`).join('; ');
   return `ROUTINE ${r.name}${params ? `(${params})` : ''}${r.returnType ? ` : ${r.returnType}` : ''}${r.from ? ` FROM ${r.from}` : ''}`;

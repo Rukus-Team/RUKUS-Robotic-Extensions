@@ -262,20 +262,23 @@ export class RobotsTree implements vscode.TreeDataProvider<Node> {
         const s = el.c.snapshot;
         const run = s?.fetchedAt.has('tasks') ? s.tasks.find(t => t.status === 'RUNNING' && t.current) : undefined;
         const state = el.c.state;
+        // connected on paper, but the heartbeat (or a read) got no answer: red, like a failed connect
+        const lost = state === 'connected' && el.c.reachable === false;
         // The card line: model when it has been read, the IP always, then what the robot is
         // doing - or, when the connection failed, WHY, right here where it can be read.
         const model = [s?.info.application, s?.info.version].filter(Boolean).join(' ');
-        it.description = state === 'connected'
+        it.description = lost ? `${p.host} · not answering${el.c.error ? `: ${el.c.error}` : ''}`
+          : state === 'connected'
           ? [model, p.host, run ? `▶ ${run.current!.program} ${run.current!.line}` : `connected${p.autoRefresh ? ' · auto-refresh' : ''}`].filter(Boolean).join(' · ')
           : state === 'connecting' ? `${p.host} · connecting…`
           : state === 'error' ? `${p.host} · ${el.c.error ?? 'connection failed'}`
           : `${p.host} · not connected`;
         // a status dot, coloured by state, with the state also in words above
-        it.iconPath = icon(state === 'connecting' ? 'sync~spin' : state === 'error' ? 'error' : 'circle-filled', STATE_COLOR[state]);
+        it.iconPath = lost ? icon('error', STATE_COLOR.error) : icon(state === 'connecting' ? 'sync~spin' : state === 'error' ? 'error' : 'circle-filled', STATE_COLOR[state]);
         (it as any).filterText = `${p.name} ${p.host} ${state}`;
         it.contextValue = state === 'connected' ? (p.autoRefresh ? 'robot-connected-auto' : 'robot-connected') : 'robot-disconnected';
         it.tooltip = new vscode.MarkdownString(
-          `**${p.name}** — ${p.host} · **${state}**${el.c.error ? `\n\n${el.c.error}` : ''}\n\n` +
+          `**${p.name}** — ${p.host} · **${lost ? 'not answering' : state}**${el.c.error ? `\n\n${el.c.error}` : ''}\n\n` +
           `HTTP ${p.httpPort} · FTP ${p.ftpPort} · device ${p.device}\n\n` +
           `Auto-refresh **${p.autoRefresh ? `on, every ${(p.pollIntervalMs / 1000).toFixed(1)} s` : 'off'}** — otherwise the controller is only read when you press Get.\n\n` +
           `Click to open the robot page.`);

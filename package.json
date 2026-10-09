@@ -2,7 +2,7 @@
   "name": "robot-code",
   "displayName": "Robot Code — FANUC TP & KAREL (Beta)",
   "description": "BETA - in active development, not yet proven on a live cell. Full IDE support for FANUC robots: TP (.ls) and KAREL (.kl) with hover docs, go-to-definition, diagnostics, register/I-O comment resolution from controller backups, renumbering, call graphs, ktrans integration and more. Built to grow to other robot brands.",
-  "version": "26.109.6",
+  "version": "26.109.7",
   "publisher": "rukus-team",
   "license": "MIT",
   "repository": {
@@ -847,6 +847,27 @@
         "icon": "$(edit)"
       },
       {
+        "command": "robotCode.abb.forgetIdentity",
+        "title": "ABB: Forget Controller Identity",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.abb.findVirtualControllers",
+        "title": "ABB: Find Virtual Controllers",
+        "category": "Robot Code",
+        "icon": "$(search)"
+      },
+      {
+        "command": "robotCode.chooseFeatureProfile",
+        "title": "Choose Feature Profile…",
+        "category": "Robot Code"
+      },
+      {
+        "command": "robotCode.abb.lookupEvent",
+        "title": "ABB: Look Up Event Code…",
+        "category": "Robot Code"
+      },
+      {
         "command": "robotCode.abb.removeController",
         "title": "ABB: Remove Controller",
         "category": "Robot Code",
@@ -957,13 +978,13 @@
       },
       {
         "command": "robotCode.abb.setSignal",
-        "title": "ABB: Set Output…",
+        "title": "ABB: Set Output Signal…",
         "category": "Robot Code",
         "icon": "$(symbol-event)"
       },
       {
         "command": "robotCode.abb.setRapidData",
-        "title": "ABB: Write RAPID Variable…",
+        "title": "ABB: Write RAPID Data…",
         "category": "Robot Code",
         "icon": "$(symbol-variable)"
       },
@@ -1442,57 +1463,112 @@
       {
         "id": "robotCode.readOnlyFile",
         "description": "A file that is on a controller (fanuc://): read-only. Used for its tab, its row under Files and its Explorer entry.",
-        "defaults": { "dark": "#d7a65f", "light": "#8a5a00", "highContrast": "#ffcc66", "highContrastLight": "#6b4500" }
+        "defaults": {
+          "dark": "#d7a65f",
+          "light": "#8a5a00",
+          "highContrast": "#ffcc66",
+          "highContrastLight": "#6b4500"
+        }
       },
       {
         "id": "robotCode.hintComment",
         "description": "In-line hint colour for the controller comment of a register/IO written without one (drawn as a `{comment}` decoration, so no theme can tint its background).",
-        "defaults": { "dark": "#5f6f7f", "light": "#6b7280", "highContrast": "#d0d0d0", "highContrastLight": "#3c3c3c" }
+        "defaults": {
+          "dark": "#5f6f7f",
+          "light": "#6b7280",
+          "highContrast": "#d0d0d0",
+          "highContrastLight": "#3c3c3c"
+        }
       },
       {
         "id": "robotCode.hintStateOn",
         "description": "In-line hint colour for a bit/IO that read ON (muted; `workbench.colorCustomizations` can override).",
-        "defaults": { "dark": "#7fae8a", "light": "#5f8a63", "highContrast": "#b5f27a", "highContrastLight": "#1e6a12" }
+        "defaults": {
+          "dark": "#7fae8a",
+          "light": "#5f8a63",
+          "highContrast": "#b5f27a",
+          "highContrastLight": "#1e6a12"
+        }
       },
       {
         "id": "robotCode.hintStateOff",
         "description": "In-line hint colour for a bit/IO that read OFF.",
-        "defaults": { "dark": "#6b7280", "light": "#8a919b", "highContrast": "#d0d0d0", "highContrastLight": "#3c3c3c" }
+        "defaults": {
+          "dark": "#6b7280",
+          "light": "#8a919b",
+          "highContrast": "#d0d0d0",
+          "highContrastLight": "#3c3c3c"
+        }
       },
       {
         "id": "robotCode.hintValue",
         "description": "In-line hint colour for a numeric value (register, timer, group).",
-        "defaults": { "dark": "#b8935a", "light": "#9a7b3f", "highContrast": "#ffb86b", "highContrastLight": "#8a4200" }
+        "defaults": {
+          "dark": "#b8935a",
+          "light": "#9a7b3f",
+          "highContrast": "#ffb86b",
+          "highContrastLight": "#8a4200"
+        }
       },
       {
         "id": "robotCode.hintString",
         "description": "In-line hint colour for a string value (string register).",
-        "defaults": { "dark": "#7fae8a", "light": "#5f8a63", "highContrast": "#b5f27a", "highContrastLight": "#1e6a12" }
+        "defaults": {
+          "dark": "#7fae8a",
+          "light": "#5f8a63",
+          "highContrast": "#b5f27a",
+          "highContrastLight": "#1e6a12"
+        }
       },
       {
         "id": "robotCode.hintSim",
         "description": "In-line hint colour for a simulated value (a point read as SIM).",
-        "defaults": { "dark": "#b0a45e", "light": "#8a7d2e", "highContrast": "#ffd23f", "highContrastLight": "#6b4d00" }
+        "defaults": {
+          "dark": "#b0a45e",
+          "light": "#8a7d2e",
+          "highContrast": "#ffd23f",
+          "highContrastLight": "#6b4d00"
+        }
       },
       {
         "id": "robotCode.hintStale",
         "description": "In-line hint colour for a value read longer ago than robotCode.live.staleAfterSeconds.",
-        "defaults": { "dark": "#5a6472", "light": "#a3adb8", "highContrast": "#a0a0a0", "highContrastLight": "#5a5a5a" }
+        "defaults": {
+          "dark": "#5a6472",
+          "light": "#a3adb8",
+          "highContrast": "#a0a0a0",
+          "highContrastLight": "#5a5a5a"
+        }
       },
       {
         "id": "robotCode.hintFrameJoint",
         "description": "In-line hint colour for a joint-representation position frame label.",
-        "defaults": { "dark": "#a08ab5", "light": "#7a5f90", "highContrast": "#e39dff", "highContrastLight": "#5c1a8a" }
+        "defaults": {
+          "dark": "#a08ab5",
+          "light": "#7a5f90",
+          "highContrast": "#e39dff",
+          "highContrastLight": "#5c1a8a"
+        }
       },
       {
         "id": "robotCode.hintFrameCart",
         "description": "In-line hint colour for a cartesian-representation position frame label.",
-        "defaults": { "dark": "#6f97b8", "light": "#5a7a9a", "highContrast": "#9ecbff", "highContrastLight": "#0f4a85" }
+        "defaults": {
+          "dark": "#6f97b8",
+          "light": "#5a7a9a",
+          "highContrast": "#9ecbff",
+          "highContrastLight": "#0f4a85"
+        }
       },
       {
         "id": "robotCode.hintFrameOther",
         "description": "In-line hint colour for a position frame label that is neither joint nor cartesian.",
-        "defaults": { "dark": "#6b7280", "light": "#8a919b", "highContrast": "#d0d0d0", "highContrastLight": "#3c3c3c" }
+        "defaults": {
+          "dark": "#6b7280",
+          "light": "#8a919b",
+          "highContrast": "#d0d0d0",
+          "highContrastLight": "#3c3c3c"
+        }
       }
     ],
     "keybindings": [
@@ -2345,6 +2421,18 @@
           "when": "robotCode.abbConnected"
         },
         {
+          "command": "robotCode.abb.forgetIdentity",
+          "when": "robotCode.abbActive"
+        },
+        {
+          "command": "robotCode.abb.findVirtualControllers",
+          "when": "robotCode.abbActive"
+        },
+        {
+          "command": "robotCode.abb.lookupEvent",
+          "when": "robotCode.abbActive"
+        },
+        {
           "command": "robotCode.abb.removeController",
           "when": "robotCode.abbActive"
         },
@@ -2454,6 +2542,11 @@
           "command": "robotCode.abb.connect",
           "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-(disconnected|error)$/",
           "group": "inline@1"
+        },
+        {
+          "command": "robotCode.abb.findVirtualControllers",
+          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-(disconnected|error)$/",
+          "group": "1_connection@9"
         },
         {
           "command": "robotCode.abb.openPage",
@@ -2945,50 +3038,78 @@
         "title": "Robot Code: Getting Started",
         "description": "Full IDE support for FANUC robots — TP (.ls) and KAREL (.kl) programs with hover docs, diagnostics, flow charts, and more.",
         "icon": "media/icon.png",
-        "featuredFor": ["*.ls", "*.kl", "*.va"],
+        "featuredFor": [
+          "*.ls",
+          "*.kl",
+          "*.va"
+        ],
         "steps": [
           {
             "id": "robotCode.walkthrough.addBackup",
             "title": "Open a Controller Backup",
             "description": "Robot Code reads registers, positions, macros, and payloads from `.va` files in a FANUC controller backup folder. Point the extension at one to get register comments, hover values, and diagnostics.",
-            "media": { "markdown": "media/walkthrough/step1-backup.md" },
-            "completionEvents": ["onCommand:robotCode.data.addBackupFolder"]
+            "media": {
+              "markdown": "media/walkthrough/step1-backup.md"
+            },
+            "completionEvents": [
+              "onCommand:robotCode.data.addBackupFolder"
+            ]
           },
           {
             "id": "robotCode.walkthrough.sidebar",
             "title": "Explore the Sidebar",
             "description": "The **Robot Code** panel in the Activity Bar has six sections: **Controllers** (live robots), **Snapshot** (the robot's last known state), **Programs** (TP), **PC programs** (KAREL), **Macros**, and **Data** (registers and I/O).",
-            "media": { "markdown": "media/walkthrough/step2-sidebar.md" },
-            "completionEvents": ["onView:robotCode.robots"]
+            "media": {
+              "markdown": "media/walkthrough/step2-sidebar.md"
+            },
+            "completionEvents": [
+              "onView:robotCode.robots"
+            ]
           },
           {
             "id": "robotCode.walkthrough.tpEditor",
             "title": "Open a TP Program",
             "description": "Open any `.ls` file to see syntax highlighting, hover documentation for every instruction, register comments resolved from the backup, and CodeLens jump counts on labels.",
-            "media": { "markdown": "media/walkthrough/step3-tp-editor.md" },
-            "completionEvents": ["onLanguage:fanuc-tp"]
+            "media": {
+              "markdown": "media/walkthrough/step3-tp-editor.md"
+            },
+            "completionEvents": [
+              "onLanguage:fanuc-tp"
+            ]
           },
           {
             "id": "robotCode.walkthrough.shortcuts",
             "title": "Learn the Shortcuts",
             "description": "Key shortcuts for the most common operations: **Ctrl+Alt+R** renumber, **Ctrl+/** toggle remark, **Ctrl+Alt+L** go to label, **Ctrl+Alt+F** show flow chart, **Ctrl+Shift+B** compile KAREL.",
-            "media": { "markdown": "media/walkthrough/step4-shortcuts.md" },
-            "completionEvents": ["onCommand:workbench.action.showCommands"]
+            "media": {
+              "markdown": "media/walkthrough/step4-shortcuts.md"
+            },
+            "completionEvents": [
+              "onCommand:workbench.action.showCommands"
+            ]
           },
           {
             "id": "robotCode.walkthrough.liveRobot",
             "title": "Connect to a Robot (experimental)",
             "when": "config.robotCode.experimental.robotConnections",
             "description": "Add a FANUC controller or ROBOGUIDE virtual controller by IP for live register, I/O, position, and program state. **Only Push writes to the robot.**",
-            "media": { "markdown": "media/walkthrough/step5-live-robot.md" },
-            "completionEvents": ["onCommand:robotCode.live.addRobot"]
+            "media": {
+              "markdown": "media/walkthrough/step5-live-robot.md"
+            },
+            "completionEvents": [
+              "onCommand:robotCode.live.addRobot"
+            ]
           },
           {
             "id": "robotCode.walkthrough.sync",
             "title": "Keep Your Copy in Sync",
             "description": "The snapshot is the robot's last known state: **Fetch** updates it, **Pull** brings it into your file, **Push** sends your file back - and a push is refused if the robot changed since the snapshot, so a pendant edit is never silently overwritten.",
-            "media": { "markdown": "media/walkthrough/step6-sync.md" },
-            "completionEvents": ["onCommand:robotCode.sync.fetchFile"]
+            "media": {
+              "markdown": "media/walkthrough/step6-sync.md"
+            },
+            "completionEvents": [
+              "onCommand:robotCode.sync.fetchFile"
+            ]
           }
         ]
       }
@@ -3094,7 +3215,10 @@
         },
         "robotCode.tp.completion.fanucPrograms": {
           "type": "string",
-          "enum": ["installed", "all"],
+          "enum": [
+            "installed",
+            "all"
+          ],
           "enumDescriptions": [
             "Only the programs of options the robot has: its options are read from the robot (a program open from it, or in a container bound to it) or from the orderfil.dat of the backup folder the program is in. When neither is known, only the programs every controller has.",
             "Every program in the FANUC catalog, whatever the robot has."
@@ -3177,7 +3301,12 @@
         },
         "robotCode.karel.coreVersion": {
           "type": "string",
-          "enum": ["auto", "V9", "V7-V8", "V6"],
+          "enum": [
+            "auto",
+            "V9",
+            "V7-V8",
+            "V6"
+          ],
           "enumDescriptions": [
             "From the Version= line of robotCode.karel.ktransConfig; V9 when none is set (what ktrans uses without a robot.ini).",
             "V9.x: names up to 36 characters, PROGRAM names too.",
@@ -3188,11 +3317,20 @@
           "markdownDescription": "Controller core version the KAREL name-length check follows. Measured on ktrans: V6.40 allows 12 characters for every name, V7.70/V8.30 allow 36 but only 12 for the `PROGRAM` name, V9.x allows 36 for all."
         },
         "robotCode.karel.maxIdentifierLength": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "default": null,
           "minimum": 8,
           "maximum": 64,
           "markdownDescription": "Overrides `robotCode.karel.coreVersion` with one limit for every name. Leave empty to follow the core version."
+        },
+        "robotCode.abb.allowRealOmniCoreWrites": {
+          "type": "boolean",
+          "default": false,
+          "scope": "machine",
+          "markdownDescription": "Let the ABB Actions (speed, motors, RAPID start, modules, outputs, RAPID data, write access) change a **real** OmniCore. Off: on an OmniCore they work on RobotStudio virtual controllers only - write access and writes were checked there (RobotWare 8.2.1), not yet on a real controller. Turn on only to validate one. IRC5 is not affected; Stop RAPID is never held back."
         },
         "robotCode.abb.controllers": {
           "type": "array",
@@ -3200,30 +3338,98 @@
           "markdownDescription": "ABB controllers for the ABB Controllers view (Robot Web Services: IRC5 / RobotWare 6 over RWS 1.0, OmniCore / RobotWare 7-8 over RWS 2.0). Passwords are kept in VS Code's secret storage, not here - add controllers in **Robot Connections** (ABB: Add Controller…).",
           "items": {
             "type": "object",
-            "required": ["name", "host"],
+            "required": [
+              "name",
+              "host"
+            ],
             "properties": {
-              "name": { "type": "string" },
-              "family": { "type": "string", "enum": ["irc5", "omnicore"], "description": "irc5 (RobotWare 6, RWS 1.0) when omitted; omnicore is RobotWare 7, RWS 2.0" },
-              "host": { "type": "string", "description": "192.168.125.1 on the service port" },
-              "port": { "type": "number", "description": "80 when omitted; RobotStudio's virtual controller uses its own" },
-              "https": { "type": "boolean" },
-              "user": { "type": "string", "description": "Default User when omitted" },
-              "mechUnit": { "type": "string", "description": "ROB_1 when omitted" }
+              "name": {
+                "type": "string"
+              },
+              "family": {
+                "type": "string",
+                "enum": [
+                  "irc5",
+                  "omnicore"
+                ],
+                "description": "irc5 (RobotWare 6, RWS 1.0) when omitted; omnicore is RobotWare 7, RWS 2.0"
+              },
+              "host": {
+                "type": "string",
+                "description": "192.168.125.1 on the service port"
+              },
+              "port": {
+                "type": "number",
+                "description": "80 when omitted; RobotStudio's virtual controller uses its own"
+              },
+              "https": {
+                "type": "boolean"
+              },
+              "user": {
+                "type": "string",
+                "description": "Default User when omitted"
+              },
+              "mechUnit": {
+                "type": "string",
+                "description": "ROB_1 when omitted"
+              },
+              "controllerName": {
+                "type": "string",
+                "description": "The controller this profile is for, by its own name (/ctrl/identity ctrl-name). Optional: without it the first controller that answers is remembered."
+              },
+              "controllerId": {
+                "type": "string",
+                "description": "The controller's system id (/rw/system sysid, a GUID). Another controller at the same address (every service port is 192.168.125.1) is refused."
+              }
             }
           }
         },
         "robotCode.rapid.format.baseIndent": {
-          "anyOf": [{ "type": "string", "enum": ["auto"] }, { "type": "integer", "minimum": 0, "maximum": 16 }],
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "auto"
+              ]
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 16
+            }
+          ],
           "default": "auto",
           "markdownDescription": "Spaces before everything inside `MODULE` when formatting RAPID (Format Document): **auto** or any number from 0 to 16. **auto** keeps what the file already uses (2 when it does not say). Set it per workspace folder to follow a customer's standard."
         },
         "robotCode.rapid.format.indentSize": {
-          "anyOf": [{ "type": "string", "enum": ["auto"] }, { "type": "integer", "minimum": 1, "maximum": 16 }],
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "auto"
+              ]
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16
+            }
+          ],
           "default": "auto",
           "markdownDescription": "Spaces each RAPID block (PROC, IF, FOR, WHILE, TEST ... CASE) adds, for Format Document and for Enter: **auto** or any number from 1 to 16. **auto** keeps what the file already uses (4 when it does not say). A tab size picked in the status bar, or **ABB RAPID: Set Indentation…**, overrides it for one file."
         },
         "robotCode.rapid.format.insertSpaces": {
-          "anyOf": [{ "type": "string", "enum": ["auto"] }, { "type": "boolean" }],
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "auto"
+              ]
+            },
+            {
+              "type": "boolean"
+            }
+          ],
           "default": "auto",
           "markdownDescription": "Indent RAPID with spaces (**true**) or tabs (**false**, one tab per `indentSize`, leftover columns in spaces). **auto** follows what the file already uses (spaces when it does not say)."
         },
@@ -3243,7 +3449,9 @@
         },
         "robotCode.karel.diagnostics.lintIgnore": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [],
           "markdownDescription": "Lint rules to keep quiet, by code: `cStyle`, `declAfterBegin`, `directivePlacement`, `commentLength`, `stringLength`, `integerRange`, `reservedName`, `duplicate`, `assignConst`, `argCount`, `returnValue`, `lockGroup`, `noBegin`, `elseif` (with or without the `karel.lint.` prefix)."
         },
@@ -3280,17 +3488,58 @@
           "default": true,
           "markdownDescription": "When **Initialize Robot Container** creates `.robocode-robot/`, also write a `.gitignore` inside it that excludes `snapshot/` — a full backup is tens of MB of regenerable data. Delete that file to commit snapshots."
         },
+        "robotCode.featureProfile": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "all",
+            "fanucOnly",
+            "abbOnly",
+            "custom"
+          ],
+          "enumDescriptions": [
+            "Every feature decides for itself: the brands the workspace holds load",
+            "FANUC and ABB both on",
+            "FANUC on, ABB off",
+            "ABB on, FANUC off",
+            "Each feature On, Off or Auto as set one by one (FANUC / ABB enabled, Experimental: Robot Connections, RUKUS, file icons)"
+          ],
+          "default": "auto",
+          "markdownDescription": "Which features are on, at once. A profile sets the feature settings themselves (`robotCode.fanuc.enabled`, `robotCode.abb.enabled`, `robotCode.views.brands`): **On** writes true, **Off** false, **Auto** removes the setting so the workspace decides. Change one of them by hand and this turns to **Custom**. **Robot Code: Choose Feature Profile…** sets every feature in one go. A change of brand takes a window reload."
+        },
         "robotCode.views.brands": {
           "type": "string",
-          "enum": ["auto", "fanuc", "abb", "both"],
-          "enumDescriptions": ["The brands the workspace holds; asks when it holds none", "FANUC views only", "ABB views only (needs robotCode.abb.enabled)", "Both"],
+          "enum": [
+            "auto",
+            "fanuc",
+            "abb",
+            "both"
+          ],
+          "enumDescriptions": [
+            "The brands the workspace holds; asks when it holds none",
+            "FANUC views only",
+            "ABB views only (needs robotCode.abb.enabled)",
+            "Both"
+          ],
           "default": "auto",
           "markdownDescription": "Which robot brands the Robot Code side bar shows. **auto** shows the brands found in the workspace (FANUC programs, ABB modules and backups) and asks the first time the side bar opens on a folder with neither."
         },
         "robotCode.views.listLimit": {
           "type": "number",
-          "enum": [10, 50, 100, 250, 0],
-          "enumItemLabels": ["10", "50", "100", "250", "All"],
+          "enum": [
+            10,
+            50,
+            100,
+            250,
+            0
+          ],
+          "enumItemLabels": [
+            "10",
+            "50",
+            "100",
+            "250",
+            "All"
+          ],
           "default": 100,
           "markdownDescription": "How many entries a long group in the Registers view shows at a time (registers, position registers, I/O, ...). A **Show more…** row at the end of the group shows the next ones; All shows everything. The dashboard and the Controller Options page have their own **Show** picker under each list."
         },
@@ -3397,7 +3646,10 @@
         },
         "robotCode.controllers.scope": {
           "type": "string",
-          "enum": ["workspace", "user"],
+          "enum": [
+            "workspace",
+            "user"
+          ],
           "default": "workspace",
           "description": "Where new robot controller profiles are saved. 'workspace' stores them in the .robocode-cell/cell.json container (shared with the team). 'user' stores them in VS Code user settings (personal)."
         },

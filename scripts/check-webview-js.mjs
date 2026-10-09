@@ -1,6 +1,6 @@
 // Syntax-checks the <script> blocks embedded in webview template strings (after TS template unescaping).
 import * as fs from 'node:fs';
-const files = ['packages/fanuc/src/live/optionsView.ts', 'packages/core/src/live/dashboard.ts', 'packages/core/src/live/robotForm.ts', 'packages/fanuc/src/tp/flowView.ts', 'packages/fanuc/src/tp/callGraph.ts', 'packages/fanuc/src/data/registerTable.ts', 'packages/fanuc/src/tools/index.ts'];
+const files = ['packages/fanuc/src/live/optionsView.ts', 'packages/core/src/live/dashboard.ts', 'packages/core/src/live/robotForm.ts', 'packages/fanuc/src/tp/flowView.ts', 'packages/fanuc/src/tp/callGraph.ts', 'packages/fanuc/src/data/registerTable.ts', 'packages/fanuc/src/tools/index.ts', 'packages/abb/src/live/dashboard.ts'];
 // Shared client-side snippets a page pastes in with ${NAME}: checked in place, as the page gets them
 const style = fs.readFileSync('packages/core/src/webviewStyle.ts', 'utf8');
 const snippet = name => (new RegExp('export const ' + name + ' = `([\\s\\S]*?)`;').exec(style)?.[1] ?? '')

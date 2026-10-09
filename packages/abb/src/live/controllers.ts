@@ -11,8 +11,13 @@
  */
 import * as vscode from 'vscode';
 import * as os from 'node:os';
+import { setLiveSignalSource, type SignalType } from '../signals';
+import { StatusWatch, type StatusUpdate } from './liveStatus';
+import { identityMismatch, expectationOf, controllerLabel, type ControllerIdentity, type ExpectedController } from './identity';
+import { cfgInstances, ipSettings, wirelessEnabled, reachability, type PortSetting, type Reachability } from './network';
+import { rememberEvents, type EventCatalog } from './eventCatalog';
 import { takeBackup, type BackupProgress, type BackupResult } from './backup';
-import { RwsClient, RwsError, type RwsSystem, type RwsPanel, type RwsTask, type RwsPointer, type RwsJointTarget, type RwsRobTarget, type RwsModuleInfo, type RwsModuleText, type RwsSignal, type RwsEvent, type RwsWriteAccess } from '../rws/client';
+import { RwsClient, RwsError, type RwsSystem, type RwsPanel, type RwsTask, type RwsPointer, type RwsJointTarget, type RwsRobTarget, type RwsModuleInfo, type RwsModuleText, type RwsSignal, type RwsEvent, type RwsWriteAccess, type RwsIdentity, isControlStationId, newControlStationId } from '../rws/client';
 
 export interface AbbProfile {
   name: string;
@@ -28,12 +33,21 @@ export interface AbbProfile {
   user?: string;
   /** the mechanical unit whose position is read; 'ROB_1' when omitted */
   mechUnit?: string;
+  /**
+   * The controller this profile is for, by its own name (/ctrl/identity ctrl-name) and system id
+   * (/rw/system sysid). Optional: without them the first controller that answers is remembered.
+   * A different controller at the same address is refused (identity.ts).
+   */
+  controllerName?: string;
+  controllerId?: string;
 }
 
 export type AbbState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export interface AbbSnapshot {
   system?: RwsSystem;
+  /** `/ctrl/identity`, read on Connect: name, id, virtual or real */
+  identity?: RwsIdentity;
   panel?: RwsPanel;
   /** who holds write access (RW 8) / mastership (RW 6), read with the state */
   access?: RwsWriteAccess;
@@ -46,6 +60,8 @@ export interface AbbSnapshot {
   tcp?: RwsRobTarget;
   /** read on request (the controller page, the I/O and event log pages) */
   signals?: RwsSignal[];
+  /** the ports and their addresses, and whether the controller can be reached off the service port (network.ts) */
+  network?: { ports: PortSetting[]; wireless?: boolean; reach: Reachability };
   events?: RwsEvent[];
   /** when each part was read */
   at: Map<string, number>;
@@ -59,11 +75,27 @@ export interface AbbConnection {
   error?: string;
   client?: RwsClient;
   snapshot: AbbSnapshot;
+  /**
+   * Does the controller answer now? `connected` says it answered once; this keeps it true. False
+   * after a dropped event socket, a failed poll, or a read that got no answer - the status is red
+   * then until the controller answers again. Undefined while not connected.
+   */
+  reachable?: boolean;
+  /** keeps state, mode and execution current: RWS events, polling as the fallback (liveStatus.ts) */
+  watch?: StatusWatch;
+  /** this PC's RW 8 control station id for this controller ({@link AbbControllers.stationId}) */
+  stationId?: string;
 }
 
 const SECRET = (name: string) => `robotCode.abb.password.${name}`;
 /** the PIN of the remote control station an OmniCore allows (Request Write Access); secret like a password */
 const PIN = (name: string) => `robotCode.abb.stationPin.${name}`;
+/** the GUID this PC registers under as that remote control station (RW 8); kept so the holder stays the same */
+const STATION = (name: string) => `robotCode.abb.stationGuid.${name}`;
+/** the controller (name, system id) a profile met at its first connect, in globalState */
+const IDENTITY = (name: string) => `robotCode.abb.identity.${name}`;
+/** the event codes read from controllers, in globalState (eventCatalog.ts) */
+const EVENT_CATALOG = 'robotCode.abb.eventCatalog';
 
 /** The name this PC registers under as an OmniCore remote control station: what the pendant shows as the holder. */
 export function controlStationName(): string { return `Robot Code ${os.hostname()}`.slice(0, 40); }
@@ -75,8 +107,13 @@ export class AbbControllers implements vscode.Disposable {
   private readonly conns = new Map<string, AbbConnection>();
   private readonly subs: vscode.Disposable[] = [];
 
-  constructor(private readonly secrets: vscode.SecretStorage, private readonly output: vscode.OutputChannel) {
+  /** `memento` keeps which controller each profile met first (identity.ts); without one nothing is remembered */
+  constructor(private readonly secrets: vscode.SecretStorage, private readonly output: vscode.OutputChannel, private readonly memento?: vscode.Memento) {
     this.load();
+    // RAPID completion offers the signals a connected controller has read (signals.ts)
+    setLiveSignalSource(() => this.connected().flatMap(c => (c.snapshot.signals ?? [])
+      .filter(x => /^(DI|DO|AI|AO|GI|GO)$/.test(x.type))
+      .map(x => ({ name: x.name, type: x.type as SignalType, device: x.path.split('/').slice(-2, -1)[0] || undefined }))));
     this.subs.push(vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration('robotCode.abb.controllers')) { this.load(); this._onDidChange.fire(undefined); } }));
   }
 
@@ -112,9 +149,9 @@ export class AbbControllers implements vscode.Disposable {
     for (const [p, rukusCluster] of entries) {
       const old = this.conns.get(p.name);
       if (old && JSON.stringify(old.profile) === JSON.stringify(p)) { old.rukusCluster = rukusCluster; next.set(p.name, old); }
-      else { if (old?.client) void old.client.logout(); next.set(p.name, { profile: p, rukusCluster, state: 'disconnected', snapshot: { at: new Map() } }); }
+      else { if (old) void this.endSession(old); next.set(p.name, { profile: p, rukusCluster, state: 'disconnected', snapshot: { at: new Map() } }); }
     }
-    for (const [n, c] of this.conns) if (!next.has(n) && c.client) void c.client.logout();
+    for (const [n, c] of this.conns) if (!next.has(n)) void this.endSession(c);
     this.conns.clear();
     for (const [n, c] of next) this.conns.set(n, c);
   }
@@ -127,12 +164,72 @@ export class AbbControllers implements vscode.Disposable {
   async getStationPin(name: string) { return this.secrets.get(PIN(name)); }
   async forgetStationPin(name: string) { await this.secrets.delete(PIN(name)); }
 
-  /** Whether this session holds write access: RW 6 mastership it took, RW 8 the holder is this PC's control station. */
+  /**
+   * This PC's control station id for a controller (RW 8): a GUID in braces, made once and kept.
+   * Any GUID is taken (checked on RobotWare 8.2.1); keeping it makes the holder the pendant shows,
+   * and `held-by-control-station-Id`, the same from one session to the next.
+   */
+  async stationId(name: string): Promise<string> {
+    const kept = await this.secrets.get(STATION(name));
+    if (kept && isControlStationId(kept)) { const c = this.conns.get(name); if (c) c.stationId = kept; return kept; }
+    const id = newControlStationId();
+    await this.secrets.store(STATION(name), id);
+    const c = this.conns.get(name); if (c) c.stationId = id;
+    return id;
+  }
+
+  /**
+   * Whether this session holds write access. RW 8: the status names this PC's control station id as
+   * the holder (`held-by-control-station-Id`). RW 6/7: mastership this session took.
+   */
   holdsAccess(name: string): boolean {
     const c = this.conns.get(name);
     if (!c?.client) return false;
-    return c.profile.family === 'omnicore' ? c.snapshot.access?.holder === controlStationName() : c.client.holdsMastership;
+    if (!c.client.usesControlStation) return c.client.holdsMastership;
+    const holderId = c.snapshot.access?.holderId?.toLowerCase();
+    return !!holderId && holderId === c.stationId?.toLowerCase();
   }
+
+  /**
+   * Writes to an OmniCore are let through on a virtual controller only: write access and a write
+   * were proved on a RobotWare 8.2.1 VC, not yet on a real controller. A real OmniCore stays
+   * read-only until `robotCode.abb.allowRealOmniCoreWrites` is turned on (to validate one).
+   * Undefined when writes may go ahead, else why not.
+   */
+  writeBlocked(name: string): string | undefined {
+    const c = this.conns.get(name);
+    if (!c || c.profile.family !== 'omnicore') return undefined;
+    if (c.snapshot.identity?.virtual === true) return undefined;
+    if (vscode.workspace.getConfiguration('robotCode').get<boolean>('abb.allowRealOmniCoreWrites', false)) return undefined;
+    const what = c.snapshot.identity?.virtual === false ? `a real OmniCore (${c.snapshot.identity.type ?? 'not virtual'})` : 'an OmniCore that did not say it is virtual';
+    return `${name} is ${what}. Changing an OmniCore has been checked on RobotStudio virtual controllers only, so on a real one Robot Code only reads. To validate a real controller, turn on "robotCode.abb.allowRealOmniCoreWrites".`;
+  }
+
+  /** The controller as it described itself on Connect (/ctrl/identity and /rw/system). */
+  identityOf(c: AbbConnection): ControllerIdentity {
+    const s = c.snapshot;
+    return { ctrlName: s.identity?.name, ctrlId: s.identity?.id, systemName: s.system?.name, systemId: s.system?.sysid, virtual: s.identity?.virtual, robotWare: s.system?.robotWareName ?? s.system?.robotWare };
+  }
+
+  /** The controller a profile is for: as set in the profile, else as remembered from its first connect. */
+  expected(c: AbbConnection): ExpectedController | undefined {
+    if (c.profile.controllerId || c.profile.controllerName) return { id: c.profile.controllerId, name: c.profile.controllerName };
+    return this.memento?.get<ExpectedController>(IDENTITY(c.profile.name));
+  }
+
+  /** Every event code this PC has read from a controller, with its title, cause and remedy (eventCatalog.ts). */
+  eventCatalog(): EventCatalog { return this.memento?.get<EventCatalog>(EVENT_CATALOG) ?? {}; }
+
+  /** Keep what a controller's event log said, for looking codes up later. */
+  async rememberEvents(controller: string, events: readonly RwsEvent[]): Promise<void> {
+    if (!this.memento || !events.length) return;
+    const cat = { ...this.eventCatalog() };
+    if (rememberEvents(cat, events, controller)) this.log(controller, `event catalogue: ${Object.keys(cat).length} codes`);
+    await this.memento.update(EVENT_CATALOG, cat);
+  }
+
+  /** Forget the remembered controller, so the next Connect takes whichever one answers (not one set in the profile). */
+  async forgetIdentity(name: string): Promise<void> { await this.memento?.update(IDENTITY(name), undefined); }
 
   /** Log in and read who the controller is. The password comes from secret storage. */
   async connect(name: string): Promise<void> {
@@ -140,16 +237,26 @@ export class AbbControllers implements vscode.Disposable {
     if (!c) throw new Error(`No ABB controller named ${name}.`);
     const password = await this.secrets.get(SECRET(name));
     if (password === undefined) throw new Error(`No password stored for ${name}.`);
-    if (c.client) await c.client.logout();
+    await this.endSession(c);
     c.client = new RwsClient({ host: c.profile.host, port: c.profile.port, family: c.profile.family, https: c.profile.https ?? c.profile.family === 'omnicore', user: c.profile.user ?? 'Default User', password });
     c.state = 'connecting'; c.error = undefined; this._onDidChange.fire(name);
     try {
       c.snapshot = { at: new Map() };
       c.snapshot.system = await c.client.system(); c.snapshot.at.set('system', Date.now());
-      c.state = 'connected';
-      this.log(name, `connected: ${c.snapshot.system.name ?? '?'} RobotWare ${c.snapshot.system.robotWareName ?? c.snapshot.system.robotWare ?? '?'}`);
+      // virtual or real, and the controller's own name and id (an older RobotWare may not have it)
+      try { c.snapshot.identity = await c.client.identity(); } catch { c.snapshot.identity = undefined; }
+      // which controller answered, by its own name and id: the address cannot say (every service port is 192.168.125.1)
+      const seen = this.identityOf(c);
+      const mismatch = identityMismatch(name, c.profile.host, this.expected(c), seen);
+      if (mismatch) throw new Error(mismatch);
+      if (!this.expected(c)?.id && (seen.systemId || seen.ctrlId)) await this.memento?.update(IDENTITY(name), expectationOf(seen));
+      if (c.profile.family === 'omnicore') c.stationId = (await this.secrets.get(STATION(name))) ?? c.stationId;
+      c.state = 'connected'; c.reachable = true;
+      this.log(name, `connected: ${controllerLabel(seen) ?? '?'}${seen.systemId ? ` (system id ${seen.systemId})` : ''}${seen.virtual ? ', virtual' : ''}, RobotWare ${c.snapshot.system.robotWareName ?? c.snapshot.system.robotWare ?? '?'}`);
+      await this.startWatch(c);
     } catch (e: any) {
-      c.state = 'error'; c.error = e?.message ?? String(e);
+      c.state = 'error'; c.reachable = undefined; c.error = e?.message ?? String(e);
+      await this.endSession(c).catch(() => undefined);   // give back a session a wrong controller opened
       this.log(name, `connect failed: ${c.error}`);
     }
     this._onDidChange.fire(name);
@@ -159,8 +266,10 @@ export class AbbControllers implements vscode.Disposable {
   async disconnect(name: string): Promise<void> {
     const c = this.conns.get(name);
     if (!c) return;
-    if (c.client) { await c.client.logout(); this.log(name, `disconnected after ${c.client.requests} request(s)`); }
-    c.client = undefined; c.state = 'disconnected'; c.error = undefined;
+    const requests = c.client?.requests;
+    await this.endSession(c);
+    if (requests !== undefined) this.log(name, `disconnected after ${requests} request(s)`);
+    c.client = undefined; c.state = 'disconnected'; c.error = undefined; c.reachable = undefined;
     this._onDidChange.fire(name);
   }
 
@@ -193,9 +302,10 @@ export class AbbControllers implements vscode.Disposable {
         const mu = c.profile.mechUnit ?? 'ROB_1';
         s.joints = await cl.jointTarget(mu); s.tcp = await cl.robTarget(mu); s.at.set('position', now());
       }
-      c.error = undefined;
+      c.error = undefined; c.reachable = true;
     } catch (e: any) {
       c.error = e?.message ?? String(e);
+      this.noAnswer(c, e);
       this.log(name, `read failed: ${c.error}`);
       this._onDidChange.fire(name);
       throw e;
@@ -205,16 +315,26 @@ export class AbbControllers implements vscode.Disposable {
     this._onDidChange.fire(name);
   }
 
-  /** The I/O signals or the newest event log messages, read now and kept in the snapshot with their time. */
-  async readExtra(name: string, what: 'signals' | 'events'): Promise<void> {
+  /**
+   * The I/O signals, the newest event log messages, or the network setup (network.ts), read now
+   * and kept in the snapshot with their time.
+   */
+  async readExtra(name: string, what: 'signals' | 'events' | 'network'): Promise<void> {
     const c = this.conns.get(name);
     if (!c?.client || c.state !== 'connected') throw new Error(`${name} is not connected.`);
     const before = c.client.requests;
     try {
       if (what === 'signals') c.snapshot.signals = await c.client.signals();
-      else c.snapshot.events = await c.client.eventLog(0, 100);
+      else if (what === 'events') { c.snapshot.events = await c.client.eventLog(0, 100); await this.rememberEvents(name, c.snapshot.events); }
+      else {
+        const ports = ipSettings(cfgInstances(await c.client.cfg('SIO', 'IP_SETTING')));
+        // no wireless gateway type on this RobotWare is not an error: there is none
+        let wireless: boolean | undefined;
+        try { wireless = wirelessEnabled(cfgInstances(await c.client.cfg('SIO', 'CSGW_WIRELESS'))); } catch (e) { if (!(e instanceof RwsError)) throw e; }
+        c.snapshot.network = { ports, wireless, reach: reachability(c.profile.family === 'omnicore' ? 'omnicore' : 'irc5', ports, wireless, c.snapshot.system?.options ?? []) };
+      }
       c.snapshot.at.set(what, Date.now());
-    } catch (e: any) { this.log(name, `read ${what} failed: ${e?.message ?? e}`); throw e; }
+    } catch (e: any) { this.log(name, `read ${what} failed: ${e?.message ?? e}`); if (this.noAnswer(c, e)) this._onDidChange.fire(name); throw e; }
     finally { this.log(name, `read ${what}: ${c.client.requests - before} request(s)`); }
     this._onDidChange.fire(name);
   }
@@ -259,6 +379,9 @@ export class AbbControllers implements vscode.Disposable {
   async control<T>(name: string, what: string, fn: (c: RwsClient, conn: AbbConnection) => Promise<T>, reread: ReadonlyArray<'state' | 'tasks' | 'position'> = ['state']): Promise<T> {
     const c = this.conns.get(name);
     if (!c?.client || c.state !== 'connected') throw new Error(`${name} is not connected.`);
+    // a real OmniCore only reads until one has been validated; stopping RAPID is never held back
+    const blocked = what === 'RAPID stop' ? undefined : this.writeBlocked(name);
+    if (blocked) { this.log(name, `WRITE ${what} not sent: ${blocked}`); throw new Error(blocked); }
     const before = c.client.requests;
     this.log(name, `WRITE ${what}`);
     try {
@@ -266,6 +389,7 @@ export class AbbControllers implements vscode.Disposable {
     } catch (e: any) {
       const msg = e?.message ?? String(e);
       this.log(name, `WRITE ${what} refused: ${msg}`);
+      if (this.noAnswer(c, e)) this._onDidChange.fire(name);
       if (c.profile.family === 'omnicore' && e instanceof RwsError && e.status === 403) {
         const held = c.snapshot.access?.holder;
         const remoteOff = c.snapshot.access?.externalControl === false;
@@ -280,10 +404,50 @@ export class AbbControllers implements vscode.Disposable {
     }
   }
 
+  /** Start keeping the status current: RWS events first, polling when they cannot be had. */
+  private async startWatch(c: AbbConnection): Promise<void> {
+    const name = c.profile.name, client = c.client!;
+    const watch = new StatusWatch(client, {
+      update: (u: StatusUpdate) => {
+        if (c.watch !== watch) return;
+        const s = c.snapshot;
+        s.panel = { ...s.panel, ...(u.ctrlState !== undefined ? { ctrlState: u.ctrlState } : {}), ...(u.opMode !== undefined ? { opMode: u.opMode } : {}) };
+        s.execution = { ...s.execution, ...(u.execState !== undefined ? { state: u.execState } : {}), ...(u.cycle !== undefined ? { cycle: u.cycle } : {}) };
+        this._onDidChange.fire(name);
+      },
+      reachable: (ok, why) => {
+        if (c.watch !== watch || c.state !== 'connected') return;
+        const was = c.reachable;
+        c.reachable = ok;
+        if (!ok) c.error = `not answering: ${why ?? 'no reply'}`;
+        else if (c.error?.startsWith('not answering')) c.error = undefined;
+        if (was !== ok) { this.log(name, ok ? 'answering again' : `not answering: ${why ?? 'no reply'}`); this._onDidChange.fire(name); }
+      },
+      log: msg => this.log(name, msg),
+    });
+    c.watch = watch;
+    await watch.start();
+  }
+
+  /** Stop the status watch and give the session back. */
+  private async endSession(c: AbbConnection): Promise<void> {
+    const w = c.watch; c.watch = undefined;
+    try { await w?.stop(); } catch { /* best effort */ }
+    if (c.client) await c.client.logout();
+  }
+
+  /** A failure with no answer from the controller (refused, timed out, reset) makes it not reachable. True when that changed. */
+  private noAnswer(c: AbbConnection, e: unknown): boolean {
+    if (e instanceof RwsError && e.status > 0) return false;
+    if (c.reachable === false) return false;
+    c.reachable = false;
+    return true;
+  }
+
   private log(name: string, msg: string) { this.output.appendLine(`[${new Date().toLocaleTimeString()}] ABB ${name}: ${msg}`); }
 
   dispose() {
-    for (const c of this.conns.values()) if (c.client) void c.client.logout();
+    for (const c of this.conns.values()) void this.endSession(c);
     for (const d of this.subs) d.dispose();
     this._onDidChange.dispose();
   }

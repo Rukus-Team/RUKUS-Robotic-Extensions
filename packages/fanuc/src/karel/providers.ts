@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { type KProgram, type KSymbol, resolveSymbol, routineSignature, stripCommentAndStrings, KAREL_KEYWORDS } from './parser';
+import { type KProgram, type KSymbol, resolveSymbol, findLabel, routineSignature, stripCommentAndStrings, KAREL_KEYWORDS } from './parser';
 import { KAREL_BUILTINS, KAREL_BUILTIN_LIST, KAREL_SYSVARS, type KBuiltin } from './builtins';
 import { KAREL_BUILTIN_DETAILS } from './karelReference';
 import { alarmAt, alarmHover } from '../alarms/alarmHover';
@@ -214,6 +214,9 @@ class KDefinition implements vscode.DefinitionProvider {
       }
       return new vscode.Location(doc.uri, spanToRange(sym.span));
     }
+    // GOTO / GO TO label → its `label::` line (labels are not symbols)
+    const label = findLabel(prog, upper, pos.line);
+    if (label) return new vscode.Location(doc.uri, spanToRange(label));
     // "ROUTINE x FROM prog" → prog; also CALL_PROG('NAME'
     const fromM = /\bFROM\s+([A-Za-z_][A-Za-z0-9_]*)/i.exec(lineText);
     if (fromM && fromM[1].toUpperCase() === upper) { const info = this.s.index.get(upper, doc.uri); if (info) return new vscode.Location(info.uri, new vscode.Position(0, 0)); }

@@ -8,6 +8,7 @@ import { registerAbbTools } from '@abb/tools';
 import { registerBrandViews } from './brandViews';
 import { decideBrands } from './brandAuto';
 import { registerBrandOffStubs } from './brandOff';
+import { registerFeatureProfiles } from './featureProfile';
 import { fanucBrand } from '@fanuc/brand';
 import { abbBrand } from '@abb/brand';
 import { registerRapidProviders } from '@abb/rapid/providers';
@@ -105,6 +106,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   // a brand that is off: its commands say so (and offer to turn it on) instead of "command not found",
   // and opening one of its files offers the same
   registerBrandOffStubs(ctx, { fanuc, abb });
+  registerFeatureProfiles(ctx);
 
   if (fanuc) ctx.subscriptions.push(
     vscode.commands.registerCommand('robotCode.data.refresh', async () => {

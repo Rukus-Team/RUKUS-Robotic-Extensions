@@ -1,4 +1,14 @@
 /**
+ * A network failure - nothing answered (refused, timed out, unreachable, reset) - as opposed to
+ * an answer that was an error (a 404, a parse error). The first turns a robot's status red.
+ */
+export function isNoAnswer(e: unknown): boolean {
+  const code = (e as NodeJS.ErrnoException | undefined)?.code;
+  if (code && /^(ECONNREFUSED|ECONNRESET|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH|EHOSTDOWN|ENOTFOUND|EPIPE|ECONNABORTED)$/.test(code)) return true;
+  return /\b(timed? ?out|did not answer|not answering|socket hang up)\b/i.test((e as Error | undefined)?.message ?? '');
+}
+
+/**
  * The likely cause of a failed robot request, in words a cell engineer can act on. Shared by
  * the robot form's Test button, Connect, and the push messages, so a robot that cannot be
  * reached says the same thing wherever it shows up. undefined when nothing specific is known.

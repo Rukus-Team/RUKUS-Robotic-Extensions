@@ -77,7 +77,7 @@ Each panel is its own **Get** button, reading exactly one file over the web serv
 
 - In a local program: **Ctrl+Alt+Shift+D** downloads the robot's copy over the local file (the old text is kept, Ctrl+Z undoes), **Ctrl+Alt+Shift+C** downloads and diffs first, **Ctrl+Alt+Shift+U** uploads the program to the robot, **Ctrl+Alt+Shift+E** starts live edit (every save is sent, until you stop it).
 
-Upload is the one thing that writes to a robot: it asks first, names what it replaces, refuses a program the controller reports as running or that RUKUS has write-locked, is logged here and in RUKUS's write audit log, and reads the program back. Everything else only reads. ROBOGUIDE virtual controllers work on `127.0.0.1`. Without a robot, `npm run mock` serves any backup folder as a fake controller for trying it out.
+Upload is the one thing that writes to a robot: it asks first, names what it replaces, refuses a program the controller reports as running or that RUKUS has write-locked, is logged here and in RUKUS's write audit log, and reads the program back. Everything else only reads. ROBOGUIDE virtual controllers work on `127.0.0.1`.
 
 ### Teaching positions from the robot
 
@@ -366,46 +366,6 @@ All under `robotCode.*`; see the Settings UI. The ones you will touch:
   check and your plant's own list of what counts as work.
 - `tp.diagnostics.crossReference` — what the robot's other programs do with a register or output.
 - `karel.diagnostics.undeclared` — KAREL names used but never declared (**ktrans does not check this**).
-
-## Building
-
-```
-npm install
-npm test          # parses every program in ../reference-backup and the RUKUS KAREL corpus,
-                  # and compiles + exercises every grammar under Oniguruma
-npm run version:id     # this branch's version id (YY.MT.DDIII) into package.json; -- --show to only look, -- --release for a release id
-npm run package   # → robot-code-<version>.vsix
-npm run install-local
-npm run release   # tag + GitHub release with the .vsix, and bundle it into ../Robotic Utility Kit
-```
-
-A version is a **version id**, the same shape RUKUS uses: `26.92.19005` is a bug fix (type 2)
-for issue #5, started on 19 September 2026 - the year, the month and change type run together,
-then the start day and the issue number run together. A release is `26.99.1`: September's first.
-`npm run version:id` works it out from the branch: the issue from the `#5` in its name, the type
-from its prefix, the start date from its first commit. `docs/VERSIONING.md` is the walkthrough -
-reading one, making one, and what to do when `npm run release` says the number is not higher.
-
-The `.vsix` is not in this repo's history. Each version is kept in two places: as the asset of
-the GitHub release `v<version>`, and in the RUKUS repo on GitLab as `Assets/VSCode/robot-code.vsix`
-(LFS), which is what RUKUS installs from. `npm run release` does both (`--dry-run` to see the
-commands; `--github-only` / `--rukus-only`; the RUKUS commit is not pushed unless `--push-rukus`).
-
-Themes: see *Color themes* above.
-
-Press `F5` in VS Code to launch the Extension Development Host. The default config, **Launch Extension (F5: local dev host)**, builds, opens a dev host on the last workspace you used (else a scratch copy of `test/fixtures-cell` at `.vscode-test/debug-cell`, gitignored), and attaches to its inspector on `127.0.0.1:9229`. It exists because the built-in `extensionHost` debugger can time out attaching to the extension host on Windows: its target discovery races `127.0.0.1` and `[::1]` and treats the always-refused IPv6 side as fatal. Attaching with an explicit `address: "127.0.0.1"` avoids that race. **Attach to Running Extension Host (127.0.0.1)** attaches without launching (for `npm run dev:debug`); the built-in `Run Extension …` configs remain for a machine where that debugger works.
-
-To test a build **without** the F5 debugger (the editor's `extensionHost` debugger can fail to attach to the extension host), use the local runner:
-
-```
-npm run dev                 # build + open a dev host on the last workspace used
-npm run dev -- <folder>     # build + open a dev host on that folder (remembered next time)
-npm run dev:debug           # the same, but with the inspector on 127.0.0.1:9229
-```
-
-`npm run dev` needs no task and no debugger, so it always opens a working host. For breakpoints, `npm run dev:debug` (or the **debug host** task) launches with `--inspect-extensions=9229`, then pick **Attach to Extension Host (127.0.0.1)** — it attaches to `127.0.0.1` explicitly, avoiding the `localhost`/IPv6 race in the built-in debugger. `--clean` kills leftover dev-host processes first (the debug task does this).
-
-See `RUKUS-INTEGRATION.md` for how RUKUS installs the `.vsix`, and `ROADMAP.md` for the live-robot plan.
 
 ## AI assistance
 

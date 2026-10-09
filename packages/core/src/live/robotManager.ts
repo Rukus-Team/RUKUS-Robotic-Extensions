@@ -15,6 +15,7 @@ import { httpGet, httpGetText, httpGetBinary, httpList } from './http';
 import { ftpGetText, ftpList, FtpClient } from './ftp';
 import { robotUri } from './fs';
 import { parseControllerInfo, parseCurPos, parsePrgState, parseIoState } from './parsers';
+import { isNoAnswer } from './connectionHints';
 import { FETCH_KINDS } from './types';
 import type { RobotProfile, LiveSnapshot, ConnectionState, RemoteFile, FetchKind, ControllerOptionEntry, OptionHighlight } from './types';
 import type { CellControllerSpec } from '../robotContainers';
@@ -455,8 +456,11 @@ export class RobotManager implements vscode.Disposable {
           c.snapshot.fetchedAt.set(kind, Date.now());
           if (kind !== 'info') c.snapshot.fetchedAt.set('info', Date.now());
           c.snapshot.errors.delete(kind);
+          c.reachable = true;
         } catch (e: any) {
           failed.push(kind);
+          // no answer at all (refused, timed out, unreachable): red now, not at the next heartbeat
+          if (isNoAnswer(e)) { c.reachable = false; c.error = e?.message ?? String(e); c.pingedAt = Date.now(); }
           c.snapshot.errors.set(kind, e?.message ?? String(e));
           this.log(name, `${unit.label}: ${e?.message ?? e}`);
         }
