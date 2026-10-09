@@ -131,7 +131,7 @@ function datasetSuggestions(s: Services, robots: RobotManager): string[] {
 }
 
 function hintFor(err: string, p: RobotProfile): string {
-  return connectionHint(err, p) ?? 'See the Robot Code output channel for the full log.';
+  return connectionHint(err, p) ?? 'See the RUKUS Robotic Extensions output channel for the full log.';
 }
 
 function html(): string {

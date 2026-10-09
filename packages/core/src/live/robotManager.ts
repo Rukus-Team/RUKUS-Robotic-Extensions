@@ -69,7 +69,7 @@ export class WebServerUnreachableError extends Error {
 }
 
 /** The fetch kinds whose file is a register dump, read by the brand's own parser. */
-export type RegisterFetchKind = 'numregs' | 'strregs' | 'posregs';
+export type RegisterFetchKind = 'numregs' | 'strregs' | 'posregs' | 'ualarms';
 
 /**
  * Readers for the register dumps, installed by the brand that talks to this controller
@@ -102,6 +102,8 @@ export const FETCH_UNITS: Record<FetchKind, FetchUnit> = {
   io: { kind: 'io', label: 'I/O state', file: 'IOSTATE.DG', apply: (s, t) => { s.io = new Map(parseIoState(t).map(p => [`${p.kind}:${p.index}`, p])); } },
   strregs: { kind: 'strregs', label: 'String registers', file: 'STRREG.VA', apply: (s, t) => registerReaders.strregs?.(s, t) },
   posregs: { kind: 'posregs', label: 'Position registers', file: 'POSREG.VA', apply: (s, t) => registerReaders.posregs?.(s, t) },
+  // the user alarm texts live in SYSTEM.VA with every other system variable: megabytes, so only on request
+  ualarms: { kind: 'ualarms', label: 'User alarms', file: 'SYSTEM.VA', apply: (s, t) => registerReaders.ualarms?.(s, t) },
 };
 
 /** what "Get values" on the Registers node pulls in one go */
@@ -523,7 +525,7 @@ export class RobotManager implements vscode.Disposable {
    * With the experimental switch off nothing leaves the PC, whichever path asked.
    */
   private gate() {
-    if (!robotConnectionsEnabled()) throw new Error('Robot connections are an experimental feature and are turned off (Settings > Robot Code > Experimental: Robot Connections).');
+    if (!robotConnectionsEnabled()) throw new Error('Robot connections are an experimental feature and are turned off (Settings > RUKUS Robotic Extensions > Experimental: Robot Connections).');
   }
 
   /** record one request against a robot, whether it succeeded or not */
@@ -653,6 +655,7 @@ export class RobotManager implements vscode.Disposable {
       const age = (k: FetchKind) => { const t = s.fetchedAt.get(k); return t === undefined ? undefined : Date.now() - t; };
       if (kind === 'R') { const r = s.numregs.get(index); const a = age('numregs'); if (r && a !== undefined) return { robot: c.profile.name, text: String(r.value), age: a }; }
       else if (kind === 'SR') { const r = s.strregs.get(index); const a = age('strregs'); if (r && a !== undefined) return { robot: c.profile.name, text: `'${r.value}'`, age: a }; }
+      else if (kind === 'UALM') { const r = s.ualarms.get(index); const a = age('ualarms'); if (r && a !== undefined) return { robot: c.profile.name, text: `'${r.message}'${r.severity ? ` (${r.severity})` : ''}`, age: a }; }
       else if (kind === 'PR') { const r = s.posregs.get(index); const a = age('posregs'); if (r && a !== undefined) return { robot: c.profile.name, text: r.kind === 'uninit' ? 'uninit' : r.summary, age: a }; }
       else { const p = s.io.get(`${kind}:${index}`); const a = age('io'); if (p && a !== undefined) return { robot: c.profile.name, text: `${p.value}${p.simulated ? ' (SIM)' : ''}`, age: a }; }
     }
@@ -689,5 +692,5 @@ function stripEmpty<T extends object>(o: T): Partial<T> {
 }
 
 export function emptySnapshot(robot: string): LiveSnapshot {
-  return { robot, fetchedAt: new Map(), info: {}, numregs: new Map(), posregs: new Map(), strregs: new Map(), io: new Map(), tasks: [], errors: new Map() };
+  return { robot, fetchedAt: new Map(), info: {}, numregs: new Map(), posregs: new Map(), strregs: new Map(), ualarms: new Map(), io: new Map(), tasks: [], errors: new Map() };
 }

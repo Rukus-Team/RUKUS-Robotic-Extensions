@@ -1,5 +1,36 @@
 # Changelog
 
+## 26.109.8 - 2026-10-09 - RUKUS Robotic Extensions: controller search, RAPID data, user alarms, KAREL flowcharts
+
+Beta list 7. Checked against ROBOGUIDE (two robots on 127.0.0.2 / .3) and RobotStudio virtual controllers
+(IRC5 RobotWare 6.16, OmniCore RobotWare 8.2.1).
+
+### Changed
+- **The extension is now RUKUS Robotic Extensions** (it was Robot Code), since it covers FANUC and ABB. Commands
+  are under **RUKUS:** in the Command Palette. The extension id `rukus-team.robot-code`, every `robotCode.*`
+  setting and a theme already picked stay as they were.
+- **ABB controller options are sorted** into Options (bought, with an ABB order number), Robot (the robot type,
+  e.g. IRB 7600-150/3.5), Hardware (drive system, drive units, calibration, process hardware), System (RobotWare /
+  RobotControl base, language) and Other. The controller page shows the robot type on its own line and counts
+  only real options.
+
+### Added
+- **ABB: Search for Controllers…** searches this PC (RobotStudio virtual controllers), the service port address
+  192.168.125.1 and every wired network of this PC for Robot Web Services, and adds the one picked (or points
+  its profile at the address it has now). WiFi networks are searched only when you say yes.
+- **FANUC: Search for Controllers…** does the same for FANUC: ROBOGUIDE robots on this PC (127.0.0.x) and wired
+  networks (WiFi on a yes), found by the controller's web server and listed with host name and F number.
+- **ABB RAPID data from the controller:** a **Data** branch under each task in ABB Controllers and
+  **ABB: Show RAPID Data** list every VAR, PERS and CONST (bool, num, dnum, string, robtarget, tooldata...) with its
+  value. Read when opened, read-only.
+- **FANUC register values in Controllers:** R, PR and SR expand to each register with its comment and value, the
+  set and commented ones first.
+- **FANUC user alarms (UALM):** a **User alarms** section (Get reads SYSTEM.VA), a **UALM** tab in the register
+  table from a backup's system.va, and the message and severity in the hover over `UALM[n]`.
+- **KAREL: Show Routine Flow (flowchart)** (Ctrl+Alt+F in a .kl file): the flowchart of the routine under the
+  cursor, or the main body - IF / SELECT / FOR / WHILE / REPEAT, labels and GO TO, RETURN - with Copy as
+  Mermaid, as TP programs have.
+
 ## 26.109.7 - 2026-10-08 - ABB: write access on OmniCore, live status, virtual controller discovery, feature profiles
 
 Beta list 6. Checked against RobotStudio virtual controllers: IRC5 RobotWare 6.16 (every Action) and OmniCore

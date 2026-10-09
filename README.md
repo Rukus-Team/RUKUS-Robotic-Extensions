@@ -1,4 +1,4 @@
-# Robot Code — FANUC TP & KAREL for VS Code
+# RUKUS Robotic Extensions — FANUC & ABB for VS Code
 
 > ## BETA
 >
@@ -11,17 +11,18 @@
 >
 > Nothing here writes to a controller. Every edit lands in the file, and undo puts it back.
 
-Full editor support for FANUC robot programming, from the RUKUS team. Install it from the
+Editor and controller support for FANUC and ABB robots, from the RUKUS team: FANUC TP and KAREL, ABB RAPID, controller backups, and live FANUC and ABB controllers. Install it from the
 [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=rukus-team.robot-code), or
 download the `.vsix` from [Releases](https://github.com/Rukus-Team/RUKUS-Robotic-Extensions/releases)
-(Extensions view -> `...` -> **Install from VSIX...**). It is built to grow to other robot brands
-(ABB RAPID, KUKA KRL, Yaskawa INFORM).
+(Extensions view -> `...` -> **Install from VSIX...**). It is built to grow to more robot brands
+(KUKA KRL, Yaskawa INFORM). It was called **Robot Code** before 26.109.8; the extension id
+(`rukus-team.robot-code`) and every `robotCode.*` setting are unchanged.
 
 ## Feedback & issues
 
 This is a beta, so reports are very welcome:
 
-- **In VS Code:** run **Robot Code: Report an Issue** from the command palette (or the `...` menu of
+- **In VS Code:** run **RUKUS: Report an Issue** from the command palette (or the `...` menu of
   the Robots view). It opens the bug form with your versions already filled in.
 - **On GitHub:** [open an issue](https://github.com/Rukus-Team/RUKUS-Robotic-Extensions/issues/new/choose)
   (bug report or feature request).
@@ -190,11 +191,11 @@ If RUKUS is not installed, the buttons offer the download rather than failing. T
 
 ### Linting
 
-One set of checks for TP, KAREL and ABB RAPID, in the editor, over a whole folder or backup (**Robot Code: Lint Folder…**), and from a command line (`robot-lint`, shipped as `dist/robot-lint.js`). It covers what the controller or ktrans will refuse, plus house-style rules: a WAIT with no timeout, a missing program comment, TODO left in, unused LOCAL data, and opt-in length, naming and case rules. Rules and severities live in a `.robotlint.json`. See [docs/LINT.md](docs/LINT.md).
+One set of checks for TP, KAREL and ABB RAPID, in the editor, over a whole folder or backup (**RUKUS: Lint Folder…**), and from a command line (`robot-lint`, shipped as `dist/robot-lint.js`). It covers what the controller or ktrans will refuse, plus house-style rules: a WAIT with no timeout, a missing program comment, TODO left in, unused LOCAL data, and opt-in length, naming and case rules. Rules and severities live in a `.robotlint.json`. See [docs/LINT.md](docs/LINT.md).
 
 ### Controller data views
 
-Activity bar → **Robot Code**, six sections with a count or status on each header: **Controllers** ("1 of 2 live"; each row a status dot, model, IP and what it is running — or why it failed), **Backup** (each backup folder: date, counts, data files read, any bracket arguments the parser had to guess at), **Programs** (TP, with call/caller trees; compiled-only `.tp` dimmed; **+** starts a new one), **PC programs** (KAREL sources and `.pc`), **Macros** (the macro table, with whether each target exists), **Data** (R, PR, SR, payload schedules, I/O). One colour and one icon per kind — amber TP, blue PC, teal macro, grey data — the same in the editor's call-target tints and the status bar. The *Registers & I/O Table* command opens a filterable table with one-click "find uses" and copy-as-`R[5:Comment]`. Under a connected controller the panels are grouped *Controller*, *Device*, *RUKUS*; each is dim until read, dated once read.
+Activity bar → **RUKUS Robotic Extensions**, six sections with a count or status on each header: **Controllers** ("1 of 2 live"; each row a status dot, model, IP and what it is running — or why it failed), **Backup** (each backup folder: date, counts, data files read, any bracket arguments the parser had to guess at), **Programs** (TP, with call/caller trees; compiled-only `.tp` dimmed; **+** starts a new one), **PC programs** (KAREL sources and `.pc`), **Macros** (the macro table, with whether each target exists), **Data** (R, PR, SR, payload schedules, I/O). One colour and one icon per kind — amber TP, blue PC, teal macro, grey data — the same in the editor's call-target tints and the status bar. The *Registers & I/O Table* command opens a filterable table with one-click "find uses" and copy-as-`R[5:Comment]`. Under a connected controller the panels are grouped *Controller*, *Device*, *RUKUS*; each is dim until read, dated once read.
 
 Data comes from the workspace or from folders listed in `robotCode.data.backupFolders` ("Add Controller Backup Folder…"). Point it at an *All of the above* backup; `.va` files are read directly.
 
@@ -286,12 +287,12 @@ Syntax highlighting for `.va` / `.dt` / `.dg` / `.io` dumps and `.cm` / `.cf` co
 
 ### Color themes
 
-Preferences ▸ Color Theme (`Ctrl+K Ctrl+T`), all under **Robot Code**:
+Preferences ▸ Color Theme (`Ctrl+K Ctrl+T`), all under **RUKUS**:
 
 - **Dark**, **Light**, **High Contrast** and **Light High Contrast** — the originals.
-- **Purple**, **Red**, **Blue** and **Green**, each as Dark and Light — Robot Code Dark / Light
+- **Purple**, **Red**, **Blue** and **Green**, each as Dark and Light — RUKUS Dark / Light
   with that color as the accent and a tint of it in the editor and side bars.
-- One Dark and one Light per **RUKUS skin**, so the editor matches the app: **RUKUS**,
+- One Dark and one Light per **RUKUS skin**, so the editor matches the app: **Blueprint** (the RUKUS skin),
   **Phanook Flakes**, **All-Berry Bites**, **Kooka Puffs**, **Ciao Crunch**, **Kowabunga Krispies**,
   **Halloween**, **Christmas** and **Pixel**. Backgrounds, text, accent and the error / warning /
   success colors are the skin's own; program, routine and label names take its heading color.
@@ -302,7 +303,7 @@ The syntax colors are the same in every theme, so a program reads the same which
 
 Every FANUC file type has its own icon in the Explorer, on editor tabs and in Quick Open. They
 are **on by default**: the first time the extension runs it switches the file icon theme to
-**Robot Code**, which is Seti - the theme a fresh VS Code shows - with the FANUC types on top, so
+**RUKUS**, which is Seti - the theme a fresh VS Code shows - with the FANUC types on top, so
 no other file loses its icon. `robotCode.fileIcons.enabled` turns this off and puts the theme
 you had back; if you pick another theme yourself, that stands (turn the setting off and on to
 come back). The icon is the extension and nothing else - a big coloured **VA**, no tile behind it:

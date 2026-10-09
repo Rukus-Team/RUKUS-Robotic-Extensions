@@ -1,8 +1,8 @@
 {
   "name": "robot-code",
-  "displayName": "Robot Code — FANUC TP & KAREL (Beta)",
-  "description": "BETA - in active development, not yet proven on a live cell. Full IDE support for FANUC robots: TP (.ls) and KAREL (.kl) with hover docs, go-to-definition, diagnostics, register/I-O comment resolution from controller backups, renumbering, call graphs, ktrans integration and more. Built to grow to other robot brands.",
-  "version": "26.109.7",
+  "displayName": "RUKUS Robotic Extensions — FANUC & ABB (Beta)",
+  "description": "BETA - in active development, not yet proven on a live cell. One extension for FANUC and ABB robots: FANUC TP (.ls) and KAREL (.kl), ABB RAPID (.mod/.sys/.prg) with hover docs, go-to-definition, diagnostics, linting, flowcharts and call graphs; controller backups and live controllers (FANUC over HTTP/FTP, ABB IRC5 and OmniCore over Robot Web Services) with registers, RAPID data, I/O, alarms and positions; ktrans integration and the RUKUS desktop app.",
+  "version": "26.109.8",
   "publisher": "rukus-team",
   "license": "MIT",
   "repository": {
@@ -32,7 +32,13 @@
     "karel",
     "ls",
     "kl",
-    "roboguide"
+    "roboguide",
+    "abb",
+    "rapid",
+    "irc5",
+    "omnicore",
+    "robotstudio",
+    "rukus"
   ],
   "icon": "media/icon.png",
   "main": "./dist/extension.js",
@@ -456,152 +462,182 @@
     ],
     "themes": [
       {
-        "label": "Robot Code Dark",
+        "id": "Robot Code Dark",
+        "label": "RUKUS Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Light",
+        "id": "Robot Code Light",
+        "label": "RUKUS Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-light-color-theme.json"
       },
       {
-        "label": "Robot Code High Contrast",
+        "id": "Robot Code High Contrast",
+        "label": "RUKUS High Contrast",
         "uiTheme": "hc-black",
         "path": "./themes/robot-code-high-contrast-color-theme.json"
       },
       {
-        "label": "Robot Code Light High Contrast",
+        "id": "Robot Code Light High Contrast",
+        "label": "RUKUS Light High Contrast",
         "uiTheme": "hc-light",
         "path": "./themes/robot-code-light-high-contrast-color-theme.json"
       },
       {
-        "label": "Robot Code Purple Dark",
+        "id": "Robot Code Purple Dark",
+        "label": "RUKUS Purple Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-purple-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Red Dark",
+        "id": "Robot Code Red Dark",
+        "label": "RUKUS Red Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-red-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Blue Dark",
+        "id": "Robot Code Blue Dark",
+        "label": "RUKUS Blue Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-blue-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Green Dark",
+        "id": "Robot Code Green Dark",
+        "label": "RUKUS Green Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-green-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Purple Light",
+        "id": "Robot Code Purple Light",
+        "label": "RUKUS Purple Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-purple-light-color-theme.json"
       },
       {
-        "label": "Robot Code Red Light",
+        "id": "Robot Code Red Light",
+        "label": "RUKUS Red Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-red-light-color-theme.json"
       },
       {
-        "label": "Robot Code Blue Light",
+        "id": "Robot Code Blue Light",
+        "label": "RUKUS Blue Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-blue-light-color-theme.json"
       },
       {
-        "label": "Robot Code Green Light",
+        "id": "Robot Code Green Light",
+        "label": "RUKUS Green Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-green-light-color-theme.json"
       },
       {
-        "label": "Robot Code RUKUS Dark",
+        "id": "Robot Code RUKUS Dark",
+        "label": "RUKUS Blueprint Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-rukus-dark-color-theme.json"
       },
       {
-        "label": "Robot Code RUKUS Light",
+        "id": "Robot Code RUKUS Light",
+        "label": "RUKUS Blueprint Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-rukus-light-color-theme.json"
       },
       {
-        "label": "Robot Code Phanook Flakes Dark",
+        "id": "Robot Code Phanook Flakes Dark",
+        "label": "RUKUS Phanook Flakes Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-phanook-flakes-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Phanook Flakes Light",
+        "id": "Robot Code Phanook Flakes Light",
+        "label": "RUKUS Phanook Flakes Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-phanook-flakes-light-color-theme.json"
       },
       {
-        "label": "Robot Code All-Berry Bites Dark",
+        "id": "Robot Code All-Berry Bites Dark",
+        "label": "RUKUS All-Berry Bites Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-all-berry-bites-dark-color-theme.json"
       },
       {
-        "label": "Robot Code All-Berry Bites Light",
+        "id": "Robot Code All-Berry Bites Light",
+        "label": "RUKUS All-Berry Bites Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-all-berry-bites-light-color-theme.json"
       },
       {
-        "label": "Robot Code Kooka Puffs Dark",
+        "id": "Robot Code Kooka Puffs Dark",
+        "label": "RUKUS Kooka Puffs Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-kooka-puffs-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Kooka Puffs Light",
+        "id": "Robot Code Kooka Puffs Light",
+        "label": "RUKUS Kooka Puffs Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-kooka-puffs-light-color-theme.json"
       },
       {
-        "label": "Robot Code Ciao Crunch Dark",
+        "id": "Robot Code Ciao Crunch Dark",
+        "label": "RUKUS Ciao Crunch Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-ciao-crunch-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Ciao Crunch Light",
+        "id": "Robot Code Ciao Crunch Light",
+        "label": "RUKUS Ciao Crunch Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-ciao-crunch-light-color-theme.json"
       },
       {
-        "label": "Robot Code Kowabunga Krispies Dark",
+        "id": "Robot Code Kowabunga Krispies Dark",
+        "label": "RUKUS Kowabunga Krispies Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-kowabunga-krispies-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Kowabunga Krispies Light",
+        "id": "Robot Code Kowabunga Krispies Light",
+        "label": "RUKUS Kowabunga Krispies Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-kowabunga-krispies-light-color-theme.json"
       },
       {
-        "label": "Robot Code Halloween Dark",
+        "id": "Robot Code Halloween Dark",
+        "label": "RUKUS Halloween Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-halloween-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Halloween Light",
+        "id": "Robot Code Halloween Light",
+        "label": "RUKUS Halloween Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-halloween-light-color-theme.json"
       },
       {
-        "label": "Robot Code Christmas Dark",
+        "id": "Robot Code Christmas Dark",
+        "label": "RUKUS Christmas Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-christmas-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Christmas Light",
+        "id": "Robot Code Christmas Light",
+        "label": "RUKUS Christmas Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-christmas-light-color-theme.json"
       },
       {
-        "label": "Robot Code Pixel Dark",
+        "id": "Robot Code Pixel Dark",
+        "label": "RUKUS Pixel Dark",
         "uiTheme": "vs-dark",
         "path": "./themes/robot-code-pixel-dark-color-theme.json"
       },
       {
-        "label": "Robot Code Pixel Light",
+        "id": "Robot Code Pixel Light",
+        "label": "RUKUS Pixel Light",
         "uiTheme": "vs",
         "path": "./themes/robot-code-pixel-light-color-theme.json"
       }
@@ -647,12 +683,12 @@
       {
         "command": "robotCode.tp.insertHeader",
         "title": "Insert Program Header (customer template)…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.insertTemplate",
         "title": "Insert Program Template at Cursor…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.toggleRemark",
@@ -699,18 +735,18 @@
       {
         "command": "robotCode.lint.folder",
         "title": "Lint Folder…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(checklist)"
       },
       {
         "command": "robotCode.lint.clear",
         "title": "Clear Lint Folder Results",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.lint.createConfig",
         "title": "Create Lint Config (.robotlint.json)",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.karel.precheck",
@@ -727,7 +763,7 @@
       {
         "command": "robotCode.live.liveEdit",
         "title": "Live Edit on Robot (send every save)",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(broadcast)"
       },
       {
@@ -751,48 +787,48 @@
       {
         "command": "robotCode.data.refresh",
         "title": "Rescan Controller Data (.va files)",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(refresh)"
       },
       {
         "command": "robotCode.data.openRegisterTable",
         "title": "Open Register & I/O Table",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(table)"
       },
       {
         "command": "robotCode.data.addBackupFolder",
         "title": "Add Controller Backup Folder…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(folder-opened)"
       },
       {
         "command": "robotCode.data.removeBackupFolder",
         "title": "Remove from Backup Panel",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(close)"
       },
       {
         "command": "robotCode.reportIssue",
         "title": "Report an Issue…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(report)"
       },
       {
         "command": "robotCode.data.restoreBackupFolders",
         "title": "Show Removed Backups Again…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(eye)"
       },
       {
         "command": "robotCode.views.revealInEditor",
         "title": "Reveal",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.rapid.open",
         "title": "Open RAPID Module",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.rapid.gotoLabel",
@@ -813,91 +849,97 @@
       {
         "command": "robotCode.rapid.refresh",
         "title": "RAPID: Refresh",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(refresh)"
       },
       {
         "command": "robotCode.abb.addController",
         "title": "ABB: Add Controller…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(add)"
       },
       {
         "command": "robotCode.abb.connect",
         "title": "ABB: Connect",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(plug)"
       },
       {
         "command": "robotCode.abb.refresh",
         "title": "ABB: Get (read state, tasks, position)",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.abb.disconnect",
         "title": "ABB: Disconnect",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(debug-disconnect)"
       },
       {
         "command": "robotCode.abb.editController",
         "title": "ABB: Edit Connection…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(edit)"
       },
       {
         "command": "robotCode.abb.forgetIdentity",
         "title": "ABB: Forget Controller Identity",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.abb.findVirtualControllers",
         "title": "ABB: Find Virtual Controllers",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(search)"
+      },
+      {
+        "command": "robotCode.abb.searchControllers",
+        "title": "ABB: Search for Controllers…",
+        "category": "RUKUS",
+        "icon": "$(radio-tower)"
       },
       {
         "command": "robotCode.chooseFeatureProfile",
         "title": "Choose Feature Profile…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.abb.lookupEvent",
         "title": "ABB: Look Up Event Code…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.abb.removeController",
         "title": "ABB: Remove Controller",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(trash)"
       },
       {
         "command": "robotCode.abb.openPointer",
         "title": "ABB: Open Pointer",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.abb.openModule",
         "title": "ABB: Open Module from Controller",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.abb.convertTarget",
         "title": "ABB: Convert Target on Controller (jointtarget ⇄ robtarget)",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.abb.openPage",
         "title": "ABB: Open Controller Page",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(dashboard)"
       },
       {
         "command": "robotCode.abb.compareBackups",
         "title": "ABB: Compare Two Backups…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(diff)"
       },
       {
@@ -913,208 +955,220 @@
       {
         "command": "robotCode.abb.showEventLog",
         "title": "ABB: Show Event Log",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(output)"
       },
       {
         "command": "robotCode.abb.showSignals",
         "title": "ABB: Show I/O Signals",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(symbol-event)"
+      },
+      {
+        "command": "robotCode.abb.showRapidData",
+        "title": "ABB: Show RAPID Data",
+        "category": "RUKUS",
+        "icon": "$(symbol-variable)"
       },
       {
         "command": "robotCode.abb.backup",
         "title": "ABB: Back Up and Download…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(archive)"
       },
       {
         "command": "robotCode.abb.setSpeed",
         "title": "ABB: Set Speed Override…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(dashboard)"
       },
       {
         "command": "robotCode.abb.motorsOn",
         "title": "ABB: Motors On…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(circle-filled)"
       },
       {
         "command": "robotCode.abb.motorsOff",
         "title": "ABB: Motors Off…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(circle-outline)"
       },
       {
         "command": "robotCode.abb.startRapid",
         "title": "ABB: Start RAPID…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(debug-start)"
       },
       {
         "command": "robotCode.abb.stopRapid",
         "title": "ABB: Stop RAPID",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(debug-stop)"
       },
       {
         "command": "robotCode.abb.resetProgramPointer",
         "title": "ABB: Program Pointer to Main…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(debug-restart)"
       },
       {
         "command": "robotCode.abb.loadModule",
         "title": "ABB: Load Module…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-upload)"
       },
       {
         "command": "robotCode.abb.unloadModule",
         "title": "ABB: Unload Module…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(trash)"
       },
       {
         "command": "robotCode.abb.setSignal",
         "title": "ABB: Set Output Signal…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(symbol-event)"
       },
       {
         "command": "robotCode.abb.setRapidData",
         "title": "ABB: Write RAPID Data…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(symbol-variable)"
       },
       {
         "command": "robotCode.abb.requestWriteAccess",
         "title": "ABB: Request Write Access…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(unlock)"
       },
       {
         "command": "robotCode.abb.releaseWriteAccess",
         "title": "ABB: Release Write Access…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(lock)"
       },
       {
         "command": "robotCode.live.addRobot",
         "title": "Add Robot…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(add)"
+      },
+      {
+        "command": "robotCode.live.searchRobots",
+        "title": "FANUC: Search for Controllers…",
+        "category": "RUKUS",
+        "icon": "$(radio-tower)"
       },
       {
         "command": "robotCode.live.removeRobot",
         "title": "Remove Robot",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(trash)"
       },
       {
         "command": "robotCode.live.connect",
         "title": "Connect to Robot",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(plug)"
       },
       {
         "command": "robotCode.live.disconnect",
         "title": "Disconnect Robot",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(debug-disconnect)"
       },
       {
         "command": "robotCode.live.refresh",
         "title": "Refresh Robot Data Now",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(refresh)"
       },
       {
         "command": "robotCode.live.setPassword",
         "title": "Set Robot FTP Password…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(key)"
       },
       {
         "command": "robotCode.live.downloadFile",
         "title": "Download (editable local copy)…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(desktop-download)"
       },
       {
         "command": "robotCode.showFeatures",
         "title": "What Can I Do Here? (all features and shortcuts)…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(question)"
       },
       {
         "command": "robotCode.live.openRobotFile",
         "title": "Open File from Robot…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(file)"
       },
       {
         "command": "robotCode.live.compareWithRobot",
         "title": "Compare Program with Robot Copy",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(diff)"
       },
       {
         "command": "robotCode.live.pullBackup",
         "title": "Download Backup from Robot…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.live.openAsWorkspaceFolder",
         "title": "Add Robot Device as Workspace Folder",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(folder-library)"
       },
       {
         "command": "robotCode.live.revealRunning",
         "title": "Reveal Running Line",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(debug-start)"
       },
       {
         "command": "robotCode.live.focusView",
         "title": "Show Robots View",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.live.openTaskLine",
         "title": "Open Task Line",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.live._state",
         "title": "Dump Live State (debug)",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tools.diffBackups",
         "title": "Compare Two Backups…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(diff-multiple)"
       },
       {
         "command": "robotCode.tools.xrefReport",
         "title": "Register & I/O Cross-Reference Report",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(references)"
       },
       {
         "command": "robotCode.tools.unusedPrograms",
         "title": "Report: Programs Never Called",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(trash)"
       },
       {
         "command": "robotCode.views.toggleLatestOnly",
         "title": "Programs: Show Latest Backups Only / All Backups",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(filter)"
       },
       {
@@ -1130,7 +1184,7 @@
       {
         "command": "robotCode.live.manageRobots",
         "title": "Robot Connections…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(settings-gear)"
       },
       {
@@ -1140,81 +1194,93 @@
         "icon": "$(list-tree)"
       },
       {
+        "command": "robotCode.karel.showFlow",
+        "title": "Show Routine Flow (flowchart)",
+        "category": "FANUC KAREL",
+        "icon": "$(list-tree)"
+      },
+      {
         "command": "robotCode.live.getInfo",
         "title": "Get Controller Info",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.live.getOptions",
         "title": "Get Controller Options",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.live.showOptions",
         "title": "Show Controller Options…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(checklist)"
       },
       {
         "command": "robotCode.live.getPosition",
         "title": "Get Current Position",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.live.getTasks",
         "title": "Get Program State",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.live.getRegisters",
         "title": "Get Register Values",
-        "category": "Robot Code",
+        "category": "RUKUS",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "robotCode.live.getUserAlarms",
+        "title": "Get User Alarms (UALM)",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.live.getIo",
         "title": "Get I/O State",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.live.dashboard",
         "title": "Robot Page",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(dashboard)"
       },
       {
         "command": "robotCode.live.getFiles",
         "title": "List Files on Robot",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.live.getAll",
         "title": "Read Everything from Robot Now",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.live.getSection",
         "title": "Get",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.live.toggleFilesShow",
         "title": "Files: Show Programs Only / All Files",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(filter)"
       },
       {
         "command": "robotCode.live.toggleAutoRefresh",
         "title": "Toggle Auto-Refresh for Robot",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(watch)"
       },
       {
@@ -1268,94 +1334,94 @@
       {
         "command": "robotCode.tp.teachPosition",
         "title": "Teach Position from Current Position…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(record)"
       },
       {
         "command": "robotCode.tp.teachFromPosReg",
         "title": "Teach Position from PR[n]…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.recordPosition",
         "title": "Record New Position from Current Position…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.sync.fetchFile",
         "title": "Fetch Current File from Robot",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(repo-fetch)"
       },
       {
         "command": "robotCode.sync.pullFile",
         "title": "Pull Current File from Robot (overwrite local)",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(repo-pull)"
       },
       {
         "command": "robotCode.sync.pushFile",
         "title": "Push Current File to Robot…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(repo-push)"
       },
       {
         "command": "robotCode.sync.compareFile",
         "title": "Compare with Snapshot",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(git-compare)"
       },
       {
         "command": "robotCode.sync.revertFile",
         "title": "Revert Working Copy from Snapshot",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(discard)"
       },
       {
         "command": "robotCode.sync.pullToWorking",
         "title": "Pull into Working Folder…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(repo-pull)"
       },
       {
         "command": "robotCode.sync.diffOpen",
         "title": "Diff Open File with Snapshot",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(diff)"
       },
       {
         "command": "robotCode.sync.comparePositions",
         "title": "Compare Positions with Snapshot…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(diff)"
       },
       {
         "command": "robotCode.sync.compareRegisters",
         "title": "Compare Registers with Snapshot…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(diff)"
       },
       {
         "command": "robotCode.sync.history",
         "title": "Snapshot History…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(history)"
       },
       {
         "command": "robotCode.sync.errors",
         "title": "Get Controller Errors",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(warning)"
       },
       {
         "command": "robotCode.tp.offsetPositions",
         "title": "Offset Positions…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.setAxisValues",
         "title": "Set / Add Axis Values on Positions… (e.g. E1=0 on P[1-9])",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.comparePositions",
@@ -1366,96 +1432,96 @@
       {
         "command": "robotCode.tp.remapRegister",
         "title": "Renumber Register / I-O…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.extractProgram",
         "title": "Extract Selection to New Program…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.inlineProgram",
         "title": "Inline Called Program Here",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp._teachPlan",
         "title": "Show Teach Plan (diagnostic)",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.convertFrame",
         "title": "Convert Positions to Another Frame…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.mirrorPositions",
         "title": "Mirror Positions Across a Plane…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.relabelFrames",
         "title": "Relabel Position Frames (keep the numbers)…",
-        "category": "Robot Code"
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.cleanupPositions",
         "title": "Clean Up Unused Positions…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(trash)"
       },
       {
         "command": "robotCode.containers.initCell",
         "title": "Initialize Cell Container…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(home)"
       },
       {
         "command": "robotCode.containers.initRobot",
         "title": "Initialize Robot Container…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(add)"
       },
       {
         "command": "robotCode.data.snapshotFromBackup",
         "title": "Snapshot from Backup Folder…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(archive)"
       },
       {
         "command": "robotCode.data.snapshotFromRobot",
         "title": "Snapshot from Robot…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(plug)"
       },
       {
         "command": "robotCode.sync.fetch",
         "title": "Fetch from Robot…",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.sync.fetchFolder",
         "title": "Fetch Folder from Robot (update snapshot)",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(cloud-download)"
       },
       {
         "command": "robotCode.sync.pullFolder",
         "title": "Pull Folder from Robot (overwrite local files)",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(repo-pull)"
       },
       {
         "command": "robotCode.sync.fetchCompareAll",
         "title": "Compare All with Robot",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(sync)"
       },
       {
         "command": "robotCode.containers.diffWithSnapshot",
         "title": "Diff Working Copy with Snapshot",
-        "category": "Robot Code",
+        "category": "RUKUS",
         "icon": "$(diff)"
       }
     ],
@@ -1621,6 +1687,11 @@
         "command": "robotCode.tp.showFlow",
         "key": "ctrl+alt+f",
         "when": "editorLangId == fanuc-tp"
+      },
+      {
+        "command": "robotCode.karel.showFlow",
+        "key": "ctrl+alt+f",
+        "when": "editorLangId == fanuc-karel"
       },
       {
         "command": "robotCode.tp.teachPosition",
@@ -1814,6 +1885,11 @@
           "command": "robotCode.karel.compile",
           "when": "editorLangId == fanuc-karel",
           "group": "navigation@0.9"
+        },
+        {
+          "command": "robotCode.karel.showFlow",
+          "when": "editorLangId == fanuc-karel",
+          "group": "navigation@0.7"
         }
       ],
       "editor/title/context": [
@@ -2116,6 +2192,11 @@
           "group": "navigation@1"
         },
         {
+          "command": "robotCode.live.searchRobots",
+          "when": "view == robotCode.robots",
+          "group": "navigation@1"
+        },
+        {
           "command": "robotCode.live.refresh",
           "when": "view == robotCode.robots",
           "group": "navigation@2"
@@ -2157,6 +2238,11 @@
         },
         {
           "command": "robotCode.abb.addController",
+          "when": "view == robotCode.abbControllers",
+          "group": "navigation@1"
+        },
+        {
+          "command": "robotCode.abb.searchControllers",
           "when": "view == robotCode.abbControllers",
           "group": "navigation@1"
         },
@@ -2218,6 +2304,10 @@
         },
         {
           "command": "robotCode.live.addRobot",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.searchRobots",
           "when": "config.robotCode.experimental.robotConnections"
         },
         {
@@ -2290,6 +2380,10 @@
         },
         {
           "command": "robotCode.live.getRegisters",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.live.getUserAlarms",
           "when": "config.robotCode.experimental.robotConnections"
         },
         {
@@ -2426,6 +2520,10 @@
         },
         {
           "command": "robotCode.abb.findVirtualControllers",
+          "when": "robotCode.abbActive"
+        },
+        {
+          "command": "robotCode.abb.searchControllers",
           "when": "robotCode.abbActive"
         },
         {
@@ -2580,6 +2678,11 @@
         },
         {
           "command": "robotCode.abb.showSignals",
+          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "group": "1_controller@3"
+        },
+        {
+          "command": "robotCode.abb.showRapidData",
           "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
           "group": "1_controller@3"
         },
@@ -2795,7 +2898,7 @@
         },
         {
           "command": "robotCode.live.getSection",
-          "when": "view == robotCode.robots && viewItem =~ /^section-(controller|position|tasks|registers|io|files)(-loaded)?$/",
+          "when": "view == robotCode.robots && viewItem =~ /^section-(controller|position|tasks|registers|ualarms|io|files)(-loaded)?$/",
           "group": "inline@0"
         },
         {
@@ -2911,7 +3014,7 @@
     "submenus": [
       {
         "id": "robotCode.menu",
-        "label": "Robot Code"
+        "label": "RUKUS"
       },
       {
         "id": "robotCode.tp.submenu",
@@ -2926,7 +3029,7 @@
       "activitybar": [
         {
           "id": "robotCode",
-          "title": "Robot Code",
+          "title": "RUKUS Robotic Extensions",
           "icon": "media/activity.svg"
         }
       ]
@@ -3035,7 +3138,7 @@
     "walkthroughs": [
       {
         "id": "robotCode.gettingStarted",
-        "title": "Robot Code: Getting Started",
+        "title": "RUKUS Robotic Extensions: Getting Started",
         "description": "Full IDE support for FANUC robots — TP (.ls) and KAREL (.kl) programs with hover docs, diagnostics, flow charts, and more.",
         "icon": "media/icon.png",
         "featuredFor": [
@@ -3047,7 +3150,7 @@
           {
             "id": "robotCode.walkthrough.addBackup",
             "title": "Open a Controller Backup",
-            "description": "Robot Code reads registers, positions, macros, and payloads from `.va` files in a FANUC controller backup folder. Point the extension at one to get register comments, hover values, and diagnostics.",
+            "description": "The extension reads registers, positions, macros, and payloads from `.va` files in a FANUC controller backup folder. Point the extension at one to get register comments, hover values, and diagnostics.",
             "media": {
               "markdown": "media/walkthrough/step1-backup.md"
             },
@@ -3058,7 +3161,7 @@
           {
             "id": "robotCode.walkthrough.sidebar",
             "title": "Explore the Sidebar",
-            "description": "The **Robot Code** panel in the Activity Bar has six sections: **Controllers** (live robots), **Snapshot** (the robot's last known state), **Programs** (TP), **PC programs** (KAREL), **Macros**, and **Data** (registers and I/O).",
+            "description": "The **RUKUS Robotic Extensions** panel in the Activity Bar has six sections: **Controllers** (live robots), **Snapshot** (the robot's last known state), **Programs** (TP), **PC programs** (KAREL), **Macros**, and **Data** (registers and I/O).",
             "media": {
               "markdown": "media/walkthrough/step2-sidebar.md"
             },
@@ -3117,17 +3220,17 @@
     "iconThemes": [
       {
         "id": "robot-code-icons",
-        "label": "Robot Code (Seti + FANUC file icons)",
+        "label": "RUKUS (Seti + FANUC file icons)",
         "path": "./media/file-icons/robot-code-icon-theme.json"
       }
     ],
     "configuration": {
-      "title": "Robot Code",
+      "title": "RUKUS Robotic Extensions",
       "properties": {
         "robotCode.fileIcons.enabled": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Show the FANUC file icons - the extension in big coloured letters (`LS` `VA` `TP` `KL` ... and `TXT`) - by switching the file icon theme to **Robot Code** the first time the extension runs. It is Seti, the theme a fresh VS Code shows, with the FANUC types on top, so no other file loses its icon. Turn off to keep your own icon theme: the theme you had is put back. Picking another theme yourself is respected too; turn this off and on again to switch back."
+          "markdownDescription": "Show the FANUC file icons - the extension in big coloured letters (`LS` `VA` `TP` `KL` ... and `TXT`) - by switching the file icon theme to **RUKUS** the first time the extension runs. It is Seti, the theme a fresh VS Code shows, with the FANUC types on top, so no other file loses its icon. Turn off to keep your own icon theme: the theme you had is put back. Picking another theme yourself is respected too; turn this off and on again to switch back."
         },
         "robotCode.tp.autoRenumber": {
           "type": "string",
@@ -3505,7 +3608,7 @@
             "Each feature On, Off or Auto as set one by one (FANUC / ABB enabled, Experimental: Robot Connections, RUKUS, file icons)"
           ],
           "default": "auto",
-          "markdownDescription": "Which features are on, at once. A profile sets the feature settings themselves (`robotCode.fanuc.enabled`, `robotCode.abb.enabled`, `robotCode.views.brands`): **On** writes true, **Off** false, **Auto** removes the setting so the workspace decides. Change one of them by hand and this turns to **Custom**. **Robot Code: Choose Feature Profile…** sets every feature in one go. A change of brand takes a window reload."
+          "markdownDescription": "Which features are on, at once. A profile sets the feature settings themselves (`robotCode.fanuc.enabled`, `robotCode.abb.enabled`, `robotCode.views.brands`): **On** writes true, **Off** false, **Auto** removes the setting so the workspace decides. Change one of them by hand and this turns to **Custom**. **RUKUS: Choose Feature Profile…** sets every feature in one go. A change of brand takes a window reload."
         },
         "robotCode.views.brands": {
           "type": "string",
@@ -3522,7 +3625,7 @@
             "Both"
           ],
           "default": "auto",
-          "markdownDescription": "Which robot brands the Robot Code side bar shows. **auto** shows the brands found in the workspace (FANUC programs, ABB modules and backups) and asks the first time the side bar opens on a folder with neither."
+          "markdownDescription": "Which robot brands the side bar shows. **auto** shows the brands found in the workspace (FANUC programs, ABB modules and backups) and asks the first time the side bar opens on a folder with neither."
         },
         "robotCode.views.listLimit": {
           "type": "number",
@@ -3725,7 +3828,7 @@
           "type": "boolean",
           "default": false,
           "order": 0,
-          "markdownDescription": "**Experimental.** Talk to robots: the **Controllers** view, connecting over FTP/HTTP, reading registers, I/O, position and files off a controller, teach and record from the current position, snapshot from robot, download a backup, upload and live edit. Off, nothing in Robot Code sends a single request to a controller; backups, the editors, diagnostics, reports and RUKUS clusters all work without it."
+          "markdownDescription": "**Experimental.** Talk to robots: the **Controllers** view, connecting over FTP/HTTP, reading registers, I/O, position and files off a controller, teach and record from the current position, snapshot from robot, download a backup, upload and live edit. Off, nothing in this extension sends a single request to a controller; backups, the editors, diagnostics, reports and RUKUS clusters all work without it."
         },
         "robotCode.rukus.enabled": {
           "type": "boolean",

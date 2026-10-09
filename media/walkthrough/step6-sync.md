@@ -2,7 +2,7 @@
 
 Think of it the way git thinks of a working tree, an index and a remote:
 
-| Git | Robot Code |
+| Git | RUKUS Robotic Extensions |
 |---|---|
 | working tree | your working program folders |
 | index | the snapshot (`.robocode-robot/snapshot/`) - the robot's **last known state** |

@@ -11,7 +11,7 @@ export const ABB_OPTION_DOCS: readonly OptionDoc[] = [
     short: 'PC software (Robot Web Services, PC SDK) can reach the controller off the service port.',
     full: [
       'On an IRC5, Robot Web Services and PC SDK applications answer on the WAN (factory network) port only with this option; without it, only on the service port, 192.168.125.1.',
-      'It also brings Socket Messaging for RAPID. Robot Code\'s Network card uses it to say whether the controller can be reached without the service port.',
+      'It also brings Socket Messaging for RAPID. The Network card of the controller page uses it to say whether the controller can be reached without the service port.',
     ],
   },
   {
@@ -84,6 +84,48 @@ export const ABB_OPTION_DOCS: readonly OptionDoc[] = [
 /** What an ABB order number alone says, when no entry matches. */
 export function abbCodeNote(code: string): string | undefined {
   return /^\d{3,4}-\d+$/.test(code) ? `${code} is an ABB order number.` : undefined;
+}
+
+/**
+ * What an entry of the controller's "options" list really is. RWS (/rw/system) and system.xml
+ * list everything the system was built with: the options bought (with an order number), but also
+ * the robot itself (IRB 6700-300/2.70), its drive system and drive units, the calibration method,
+ * the language, the RobotWare base and process hardware. Only the first kind is an option.
+ */
+export type AbbOptionKind = 'option' | 'robot' | 'hardware' | 'system' | 'other';
+
+export const ABB_OPTION_KINDS: ReadonlyArray<{ kind: AbbOptionKind; title: string; hint: string }> = [
+  { kind: 'option', title: 'Options', hint: 'Software options bought for this controller (ABB order number first).' },
+  { kind: 'robot', title: 'Robot', hint: 'The robot type and variant this system is configured for: not an option.' },
+  { kind: 'hardware', title: 'Hardware', hint: 'Drive system, drive units, calibration method, cabinet and process hardware the system is configured for: not options.' },
+  { kind: 'system', title: 'System', hint: 'The RobotWare / RobotControl base, the language and built-in services every system has: not options.' },
+  { kind: 'other', title: 'Other', hint: 'Add-ins and entries without an order number that are not recognised here.' },
+];
+
+const LANGUAGES = /^(english|german|deutsch|french|fran[cç]ais|spanish|espa[nñ]ol|italian|italiano|portuguese|swedish|svenska|dutch|danish|finnish|norwegian|polish|czech|hungarian|turkish|russian|greek|romanian|slovenian|japanese|chinese|korean|thai|hindi|bulgarian|simplified chinese|traditional chinese)$/i;
+const ROBOT = /^(IRB|IRBP|IRT|CRB|YuMi)\s?\d|^(Robots? Base|IRB \d+ Base)$/i;
+const SYSTEM = /^(RobotWare|RobotControl) Base$|^Service Info System$|^Statistic functionality$|^System without axis computer$/i;
+const HARDWARE = /drive system|^ADU\b|axis computer|main computer|^V\d{3}|^E\d+\b|\bfans?\b|\bfuses?\b|calibration|commutation|\bpump\b|heated|level meter|doser|applicator|\bdrives?\b|\d+\s?ccm\b|in position\b|cabinet|\bkeyless\b/i;
+
+export function classifyAbbOption(text: string): AbbOptionKind {
+  const { code, name } = splitAbbOption(text);
+  if (ROBOT.test(name)) return 'robot';
+  if (SYSTEM.test(name) || LANGUAGES.test(name)) return 'system';
+  if (code) return 'option';
+  if (HARDWARE.test(name)) return 'hardware';
+  if (ABB_OPTION_DOCS.some(d => d.match.test(name) && d.title !== 'RobotWare base')) return 'option';
+  return 'other';
+}
+
+/** The entries grouped by kind, in {@link ABB_OPTION_KINDS} order, each keeping its index in the list. */
+export function groupAbbOptions(list: readonly string[]): Array<{ kind: AbbOptionKind; title: string; hint: string; items: Array<{ text: string; index: number }> }> {
+  return ABB_OPTION_KINDS.map(k => ({ ...k, items: list.map((text, index) => ({ text, index })).filter(x => classifyAbbOption(x.text) === k.kind) })).filter(g => g.items.length);
+}
+
+/** The robot type from the list (`IRB 7600-150/3.5`): the most specific robot entry, not "IRB 7600 Base". */
+export function abbRobotType(list: readonly string[]): string | undefined {
+  const robots = list.filter(o => classifyAbbOption(o) === 'robot' && !/base$/i.test(o));
+  return robots.sort((a, b) => b.length - a.length)[0];
 }
 
 /** "616-1 PC Interface" -> { code: "616-1", name: "PC Interface" }; a plain name keeps no code. */

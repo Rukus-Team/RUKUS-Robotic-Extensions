@@ -220,7 +220,7 @@ exports.run = async function () {
     const s1 = await waitFor(async () => { const s = await st(); return s.lines.some(l => /Program pointer/.test(l)) ? s : undefined; }, 10000) ?? await st();
     const txt = s1.lines.join('\n');
     check('controllers: Connect logs in and reads state (motors, mode, speed, execution)', /MOCK — .*connected · Motors Off · Auto · 100% · RAPID Stopped/.test(txt), s1.lines[0]);
-    check('controllers: the controller identity (name, RobotWare)', /Controller — 6700-805115 · RobotWare 6\.16\.01\.00/.test(txt), txt.slice(0, 400));
+    check('controllers: the controller identity (name, robot type, RobotWare)', /Controller — 6700-805115 · IRB 6700-300\/2\.70 · RobotWare 6\.16\.01\.00/.test(txt), txt.slice(0, 400));
     check('controllers: tasks, the motion task marked', /T_ROB1 — motion task/.test(txt) && /SC_CBC — Semistatic/.test(txt), txt);
     check('controllers: program and motion pointers with module, routine and line', /Program pointer — STYLE_35L › MOV_R01_Pick_35L · line 77/.test(txt) && /Motion pointer — MAIN_MODULE › HomeRobot · line 259/.test(txt), txt);
     check('controllers: position, joints and TCP', /Joints — 0\.00 · -34\.59 · 27\.72/.test(txt) && /TCP — X 949\.1\d · Y -0\.0\d · Z 1274\.27/.test(txt), s1.lines.filter(l => /Joints|TCP|Position/.test(l)).join(' | '));

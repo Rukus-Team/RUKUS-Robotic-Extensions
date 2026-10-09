@@ -4,7 +4,7 @@ import { escapeHtml } from '@core/util';
 import { WEBVIEW_BASE_CSS, emptyState } from '@core/webviewStyle';
 import { findUses } from '@core/views/findUses';
 import type { Dataset } from './dataStore';
-import { describePayload } from './vaParser';
+import { describePayload, ualmSeverityName } from './vaParser';
 import { isIdentityFrame } from './sysFrameParser';
 import { fmtFrame } from '../tp/frameHover';
 import type { Xyzwpr } from '../tp/frameMath';
@@ -14,7 +14,7 @@ let current: string | undefined;
 
 /** colour family per tab: registers get their own hue, inputs vs outputs differ */
 function kindClass(id: string): string {
-  if (id === 'R') return 'r'; if (id === 'PR') return 'pr'; if (id === 'SR') return 'sr'; if (id === 'MACRO') return 'macro'; if (id === 'PAYLOAD') return 'payload';
+  if (id === 'R') return 'r'; if (id === 'PR') return 'pr'; if (id === 'SR') return 'sr'; if (id === 'MACRO') return 'macro'; if (id === 'PAYLOAD' || id === 'UALM') return 'payload';
   if (id === 'F' || id === 'M') return 'flag';
   return /I$/.test(id) ? 'in' : 'out';
 }
@@ -58,6 +58,7 @@ function render(s: FanucServices): string {
     const prs = [...d.posregs.values()].filter(r => r.group === 1).sort((a, b) => a.index - b.index);
     if (prs.length) tabs.push({ id: 'PR', title: `PR (${prs.length})`, rows: prs.map(r => [`PR[${r.index}]`, r.comment, r.kind === 'uninit' ? '(uninit)' : `${r.uf !== undefined ? `UF${r.uf} ` : ''}${r.ut !== undefined ? `UT${r.ut} ` : ''}${r.summary}`, `PR[${r.index}${r.comment ? `:${r.comment}` : ''}]`, r.index]) });
     if (d.strregs.size) tabs.push({ id: 'SR', title: `SR (${d.strregs.size})`, rows: [...d.strregs.values()].map(r => [`SR[${r.index}]`, r.comment, r.value, `SR[${r.index}${r.comment ? `:${r.comment}` : ''}]`, r.index]) });
+    if (d.ualarms.size) tabs.push({ id: 'UALM', title: `UALM (${d.ualarms.size})`, rows: [...d.ualarms.values()].sort((a, b) => a.index - b.index).map(a => [`UALM[${a.index}]`, a.message, ualmSeverityName(a.severity) ?? '', `UALM[${a.index}]`, a.index]) });
     for (const [kind, arr] of d.ioByKind()) tabs.push({ id: kind, title: `${kind} (${arr.length})`, rows: arr.map(e => [`${kind}[${e.index}]`, e.comment, '', `${kind}[${e.index}:${e.comment}]`, e.index]) });
     if (d.macros.size) tabs.push({ id: 'MACRO', title: `Macros (${d.macros.size})`, rows: [...d.macros.values()].sort((a, b) => a.index - b.index).map(m => [`#${m.index}`, m.macroName, `→ ${m.progName}`, m.macroName, m.index]) });
     if (d.payloads.size) tabs.push({ id: 'PAYLOAD', title: `Payloads (${[...d.payloads.values()].filter(p => p.initialized).length})`, rows: [...d.payloads.values()].map(p => [`PAYLOAD[${p.index}]`, p.initialized ? p.comment : '(uninit)', p.initialized ? describePayload(p) : '', `PAYLOAD[${p.index}]`, p.index]) });

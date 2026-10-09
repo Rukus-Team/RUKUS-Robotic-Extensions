@@ -40,7 +40,7 @@ function hintFor(err: string, p: AbbProfile): string {
   if (/timeout|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH/i.test(err)) return p.host === ABB_SERVICE_PORT_IP ? 'No answer on the service port. Is the PC cabled to the controller\'s service port (X2 on IRC5, MGMT on OmniCore) with DHCP or a fixed 192.168.125.x address?' : 'No answer. Check the IP and that the PC is on the robot network.';
   if (/\b401\b/.test(err)) return 'Login refused. The factory login is Default User / robotics; a controller with UAS set up needs a user it grants Remote Login.';
   if (/\b503\b/.test(err)) return 'The controller has no free RWS session. Sessions expire after a few minutes of no use, or restart the controller\'s web services.';
-  return 'See the Robot Code output channel for the full log.';
+  return 'See the RUKUS Robotic Extensions output channel for the full log.';
 }
 
 export function abbConnectionKind(ctrls: AbbControllers): ConnectionKind {

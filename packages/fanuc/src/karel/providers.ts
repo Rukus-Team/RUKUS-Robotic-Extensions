@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as fs from 'node:fs';
+import { showKarelFlow } from '../tp/flowView';
 import * as path from 'node:path';
 import { type KProgram, type KSymbol, resolveSymbol, findLabel, routineSignature, stripCommentAndStrings, KAREL_KEYWORDS } from './parser';
 import { KAREL_BUILTINS, KAREL_BUILTIN_LIST, KAREL_SYSVARS, type KBuiltin } from './builtins';
@@ -599,6 +600,13 @@ function registerKarelCommands(ctx: vscode.ExtensionContext, s: FanucServices) {
       if (!ed || ed.document.languageId !== 'fanuc-karel') { vscode.window.showInformationMessage('Open a KAREL (.kl) file first.'); return; }
       if (ed.document.isDirty) await ed.document.save();
       await compileKarel(ed.document, s);
+    }),
+    vscode.commands.registerCommand('robotCode.karel.showFlow', (uri?: vscode.Uri) => {
+      const ed = vscode.window.activeTextEditor;
+      const target = uri instanceof vscode.Uri ? uri : ed?.document.languageId === 'fanuc-karel' ? ed.document.uri : undefined;
+      if (!target) { vscode.window.showInformationMessage('Open a KAREL (.kl) file first.'); return; }
+      const line = ed && ed.document.uri.toString() === target.toString() ? ed.selection.active.line : undefined;
+      return showKarelFlow(ctx, s, target, line);
     }),
     vscode.commands.registerCommand('robotCode.karel.newProgram', async () => {
       const name = await vscode.window.showInputBox({ prompt: 'KAREL program name (max 12 characters)', placeHolder: 'my_prog', validateInput: v => /^[A-Za-z_][A-Za-z0-9_]{0,11}$/.test(v) ? undefined : 'Letters, digits, underscore; max 12; start with a letter' });

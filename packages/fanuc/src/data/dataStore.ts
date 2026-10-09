@@ -13,7 +13,7 @@ import * as path from 'node:path';
 export { robotNameFromFolder } from './vaParser';
 import { parseSysFrames } from './sysFrameParser';
 import type { Xyzwpr } from '../tp/frameMath';
-import { parseNumReg, parsePosReg, parseStrReg, parseIoComments, parseMacroTable, parsePayloads, KNOWN_VA_FILES, robotNameFromFolder, type NumRegEntry, type PosRegEntry, type StrRegEntry, type IoEntry, type MacroEntry, type PayloadEntry } from './vaParser';
+import { parseNumReg, parsePosReg, parseStrReg, parseIoComments, parseMacroTable, parsePayloads, parseUserAlarms, KNOWN_VA_FILES, robotNameFromFolder, type UserAlarmEntry, type NumRegEntry, type PosRegEntry, type StrRegEntry, type IoEntry, type MacroEntry, type PayloadEntry } from './vaParser';
 import { windowFolders, isHiddenBackup, onDidChangeBackupLists } from '@core/util';
 import { classifyPath, markerOf, type RobotMarker } from '@core/robotContainers';
 
@@ -24,6 +24,8 @@ export class Dataset {
   /** key "group:index" */
   readonly posregs = new Map<string, PosRegEntry>();
   readonly strregs = new Map<number, StrRegEntry>();
+  /** user alarm messages from system.va - what `UALM[n]` raises */
+  readonly ualarms = new Map<number, UserAlarmEntry>();
   /** key "DI:25" */
   readonly io = new Map<string, IoEntry>();
   /** upper-case macro name → entry */
@@ -174,6 +176,7 @@ export class DataStore implements vscode.Disposable {
       if (base === 'numreg.va') { const e = parseNumReg(text); for (const r of e) ds.numregs.set(r.index, r); ds.sources.push({ file, kind: 'Numeric registers', entries: e.length }); }
       else if (base === 'posreg.va') { const e = parsePosReg(text); for (const r of e) ds.posregs.set(`${r.group}:${r.index}`, r); ds.sources.push({ file, kind: 'Position registers', entries: e.length }); }
       else if (base === 'strreg.va') { const e = parseStrReg(text); for (const r of e) ds.strregs.set(r.index, r); ds.sources.push({ file, kind: 'String registers', entries: e.length }); }
+      else if (base === 'system.va') { const e = parseUserAlarms(text); for (const a of e) ds.ualarms.set(a.index, a); if (e.length) ds.sources.push({ file, kind: 'User alarms', entries: e.length }); }
       else if (base === 'diocfgsv.va') { const e = parseIoComments(text); for (const r of e) ds.io.set(`${r.kind}:${r.index}`, r); ds.sources.push({ file, kind: 'I/O comments', entries: e.length }); }
       else if (base === 'sysmacro.va') { const e = parseMacroTable(text); for (const r of e) ds.macros.set(r.macroName.toUpperCase(), r); ds.sources.push({ file, kind: 'Macro table', entries: e.length }); }
       else if (base === 'sysframe.va') {

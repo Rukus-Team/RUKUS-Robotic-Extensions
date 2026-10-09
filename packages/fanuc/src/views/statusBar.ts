@@ -36,8 +36,8 @@ export function registerContextStatus(ctx: vscode.ExtensionContext, s: FanucServ
   // open file's sync marker. Clicking the robot connects / reveals / opens the Controllers view.
   const conn = vscode.window.createStatusBarItem('robotCode.robot', vscode.StatusBarAlignment.Right, 91);
   const sync = vscode.window.createStatusBarItem('robotCode.sync', vscode.StatusBarAlignment.Right, 90);
-  conn.name = 'Robot Code: robot';
-  sync.name = 'Robot Code: sync';
+  conn.name = 'RUKUS: robot';
+  sync.name = 'RUKUS: sync';
   conn.command = 'robotCode.live.focusView';
   sync.command = 'robotCode.sync.compareFile';
   ctx.subscriptions.push(conn, sync, contextChanged);
@@ -204,7 +204,7 @@ export function registerContextStatus(ctx: vscode.ExtensionContext, s: FanucServ
     conn.text = `${glyph} ${displayName}`;
     conn.color = color;
     conn.command = command;
-    conn.tooltip = tips.join('\n') || 'Robot Code';
+    conn.tooltip = tips.join('\n') || 'RUKUS Robotic Extensions';
     conn.show();
     updateSync();
   };

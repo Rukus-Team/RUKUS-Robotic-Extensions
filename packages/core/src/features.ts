@@ -28,7 +28,7 @@ export const FEATURES: readonly Feature[] = [
   { id: 'abb', label: 'ABB (RAPID, controllers)', setting: 'abb.enabled', auto: 'on when the workspace holds ABB files', reload: true },
   { id: 'robotConnections', label: 'Robot connections (experimental)', setting: 'experimental.robotConnections', auto: 'off', reload: false },
   { id: 'rukus', label: 'RUKUS hand-off buttons', setting: 'rukus.enabled', auto: 'on', reload: false },
-  { id: 'fileIcons', label: 'Robot Code file icons', setting: 'fileIcons.enabled', auto: 'on', reload: false },
+  { id: 'fileIcons', label: 'RUKUS file icons', setting: 'fileIcons.enabled', auto: 'on', reload: false },
 ];
 
 export const PROFILES: readonly { id: ProfileId; label: string; detail: string; modes?: Record<string, FeatureMode>; brands?: string }[] = [

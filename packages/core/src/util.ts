@@ -45,7 +45,7 @@ export function windowFolders(key: WindowFolderList, output?: vscode.OutputChann
   const insp = vscode.workspace.getConfiguration('robotCode').inspect<string[]>(key);
   if (insp?.globalValue?.length && !ignoredUserLevelSaid && output) {
     ignoredUserLevelSaid = true;
-    output.appendLine(`[Robot Code] ignoring robotCode.${key} in user settings (${insp.globalValue.join('; ')}): backup folders belong to a workspace, so a new window starts without them. Add them again from the Backup panel.`);
+    output.appendLine(`[RUKUS] ignoring robotCode.${key} in user settings (${insp.globalValue.join('; ')}): backup folders belong to a workspace, so a new window starts without them. Add them again from the Backup panel.`);
   }
   return [...(insp?.workspaceValue ?? [])];
 }
@@ -88,7 +88,7 @@ export function viewDeclared(ctx: vscode.ExtensionContext, id: string): boolean 
   if (views.some(v => v.id === id)) return true;
   if (!reloadSaid) {
     reloadSaid = true;
-    void vscode.window.showInformationMessage('Robot Code was updated. Reload the window to finish - some sidebar sections are not available until then.', 'Reload Window')
+    void vscode.window.showInformationMessage('RUKUS Robotic Extensions was updated. Reload the window to finish - some sidebar sections are not available until then.', 'Reload Window')
       .then(pick => { if (pick) void vscode.commands.executeCommand('workbench.action.reloadWindow'); });
   }
   return false;

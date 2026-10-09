@@ -20,7 +20,8 @@ import type { RemoteFile, FetchKind } from './types';
 import { config } from '../util';
 import { filesToShow } from './fileFilter';
 
-type SectionKind = 'controller' | 'position' | 'tasks' | 'registers' | 'io' | 'files' | 'rukus' | 'errors';
+type SectionKind = 'controller' | 'position' | 'tasks' | 'registers' | 'ualarms' | 'io' | 'files' | 'rukus' | 'errors';
+type RegKind = 'R' | 'PR' | 'SR';
 
 type Node =
   | { t: 'group'; label: string; scope: 'workspace' | 'user' }
@@ -29,6 +30,7 @@ type Node =
   | { t: 'sep'; label: string; tooltip?: string }
   | { t: 'section'; c: RobotConnection; kind: SectionKind }
   | { t: 'task'; c: RobotConnection; i: number }
+  | { t: 'regs'; c: RobotConnection; kind: RegKind }
   | { t: 'file'; c: RobotConnection; f: RemoteFile }
   | { t: 'text'; label: string; desc?: string; icon?: string; color?: string; tooltip?: string; cmd?: vscode.Command };
 
@@ -38,6 +40,7 @@ const SECTION_FETCH: Partial<Record<SectionKind, { kinds: FetchKind[]; cmd: stri
   position: { kinds: ['position'], cmd: 'robotCode.live.getPosition' },
   tasks: { kinds: ['tasks'], cmd: 'robotCode.live.getTasks' },
   registers: { kinds: REGISTER_KINDS, cmd: 'robotCode.live.getRegisters' },
+  ualarms: { kinds: ['ualarms'], cmd: 'robotCode.live.getUserAlarms' },
   io: { kinds: ['io'], cmd: 'robotCode.live.getIo' },
 };
 
@@ -52,8 +55,8 @@ const SECTION_FETCH: Partial<Record<SectionKind, { kinds: FetchKind[]; cmd: stri
  */
 const FILES_CMD = 'robotCode.live.getFiles';
 
-const SECTION_LABEL: Record<SectionKind, string> = { controller: 'Info', position: 'Position', tasks: 'Tasks', registers: 'Registers', io: 'I/O', files: 'Files', rukus: 'In RUKUS', errors: 'Read errors' };
-const SECTION_ICON: Record<SectionKind, string> = { controller: 'server', position: 'location', tasks: 'list-tree', registers: 'symbol-number', io: 'circuit-board', files: 'folder', rukus: 'rocket', errors: 'warning' };
+const SECTION_LABEL: Record<SectionKind, string> = { controller: 'Info', position: 'Position', tasks: 'Tasks', registers: 'Registers', ualarms: 'User alarms', io: 'I/O', files: 'Files', rukus: 'In RUKUS', errors: 'Read errors' };
+const SECTION_ICON: Record<SectionKind, string> = { controller: 'server', position: 'location', tasks: 'list-tree', registers: 'symbol-number', ualarms: 'bell', io: 'circuit-board', files: 'folder', rukus: 'rocket', errors: 'warning' };
 
 /** the one place the state → colour mapping lives */
 const STATE_COLOR = { connected: 'testing.iconPassed', connecting: 'charts.yellow', error: 'errorForeground', disconnected: 'disabledForeground' } as const;
@@ -156,6 +159,7 @@ export class RobotsTree implements vscode.TreeDataProvider<Node> {
       out.push({ t: 'section', c, kind: 'position' });
       out.push({ t: 'section', c, kind: 'tasks' });
       out.push({ t: 'section', c, kind: 'registers' });
+      out.push({ t: 'section', c, kind: 'ualarms' });
       out.push({ t: 'section', c, kind: 'io' });
       if (c.snapshot.errors.size) out.push({ t: 'section', c, kind: 'errors' });
       out.push({ t: 'sep', label: 'Device', tooltip: `Programs and data files on ${p.device}.` });
@@ -175,6 +179,7 @@ export class RobotsTree implements vscode.TreeDataProvider<Node> {
       });
       return out;
     }
+    if (el.t === 'regs') return regRows(el.c, el.kind);
     if (el.t === 'section') {
       const c = el.c;
       const s = c.snapshot!;
@@ -214,11 +219,10 @@ export class RobotsTree implements vscode.TreeDataProvider<Node> {
           return out;
         }
         case 'tasks': return s.tasks.length ? s.tasks.map((_, i) => ({ t: 'task', c, i })) : [{ t: 'text', label: 'No tasks reported', icon: 'question' }];
-        case 'registers': return [
-          { t: 'text', label: 'R', desc: `${s.numregs.size} numeric`, icon: 'symbol-number', color: 'charts.orange', cmd: { command: 'robotCode.data.openRegisterTable', title: '' } },
-          { t: 'text', label: 'PR', desc: `${s.posregs.size} position`, icon: 'location', color: 'charts.blue', cmd: { command: 'robotCode.data.openRegisterTable', title: '' } },
-          { t: 'text', label: 'SR', desc: `${s.strregs.size} string`, icon: 'symbol-string', color: 'charts.green', cmd: { command: 'robotCode.data.openRegisterTable', title: '' } },
-        ];
+        case 'registers': return (['R', 'PR', 'SR'] as const).map(kind => ({ t: 'regs', c, kind }));
+        case 'ualarms': return s.ualarms.size
+          ? [...s.ualarms].sort((a, b) => a[0] - b[0]).map(([i, a]): Node => ({ t: 'text', label: `UALM[${i}]`, desc: `${a.message}${a.severity ? `  · ${a.severity}` : ''}`, icon: 'bell', color: a.severity && a.severity !== 'WARN' ? 'charts.red' : 'charts.yellow', tooltip: `UALM[${i}]: ${a.message}${a.severity ? `\nSeverity ${a.severity}` : ''}` }))
+          : [{ t: 'text', label: 'No user alarm has a message', icon: 'info' }];
         case 'io': {
           const on = [...s.io.values()].filter(x => x.value === 'ON' || (typeof x.value === 'number' && x.value !== 0));
           return [
@@ -311,6 +315,7 @@ export class RobotsTree implements vscode.TreeDataProvider<Node> {
           position: s.position ? `G${s.position.group}` : '',
           tasks: `${s.tasks.filter(t => t.status === 'RUNNING').length} running · ${s.tasks.length} total`,
           registers: `${s.numregs.size} R · ${s.posregs.size} PR · ${s.strregs.size} SR`,
+          ualarms: s.fetchedAt.has('ualarms') ? `${s.ualarms.size} with a message` : 'SYSTEM.VA',
           io: `${s.io.size} points`,
           files: `${el.c.profile.device}${config<string>('live.filesShow', 'programs') === 'programs' ? ' · programs' : ' · all files'}`,
           rukus: '',
@@ -342,6 +347,15 @@ export class RobotsTree implements vscode.TreeDataProvider<Node> {
         if (t.current) it.command = { command: 'robotCode.live.openTaskLine', title: 'Open', arguments: [el.c.profile.name, t.current.program, t.current.line, t.current.type] };
         return it;
       }
+      case 'regs': {
+        const s = el.c.snapshot!;
+        const n = el.kind === 'R' ? s.numregs.size : el.kind === 'PR' ? s.posregs.size : s.strregs.size;
+        const it = new vscode.TreeItem(el.kind, n ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+        it.description = `${n} ${REG_WORD[el.kind]}`;
+        it.iconPath = icon(REG_ICON[el.kind][0], REG_ICON[el.kind][1]);
+        it.tooltip = `${REG_WORD[el.kind]} registers read from ${el.c.profile.name}: expand for each value. Set ones and commented ones first; the backup's table is under Open Register Table.`;
+        return it;
+      }
       case 'file': {
         const it = new vscode.TreeItem(el.f.name, el.f.isDir ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
         it.description = el.f.size !== undefined ? fmtBytes(el.f.size) : '';
@@ -353,4 +367,29 @@ export class RobotsTree implements vscode.TreeDataProvider<Node> {
       }
     }
   }
+}
+
+const REG_WORD: Record<RegKind, string> = { R: 'numeric', PR: 'position', SR: 'string' };
+const REG_ICON: Record<RegKind, [string, string]> = { R: ['symbol-number', 'charts.orange'], PR: ['location', 'charts.blue'], SR: ['symbol-string', 'charts.green'] };
+/** a tree can hold this many rows comfortably; the rest is in the register table */
+const REG_ROWS = 500;
+
+type Row = { t: 'text'; label: string; desc?: string; icon?: string; color?: string; tooltip?: string };
+
+/**
+ * One row per register, as read: R[5: Part count] = 12. Registers that hold something or carry a
+ * comment come first, the untouched rest after (a controller has hundreds of empty ones).
+ */
+function regRows(c: RobotConnection, kind: RegKind): Row[] {
+  const s = c.snapshot!;
+  const [ic, color] = REG_ICON[kind];
+  const rows: Array<{ i: number; used: boolean; row: Row }> = [];
+  const label = (i: number, comment: string) => `${kind}[${i}${comment ? `: ${comment}` : ''}]`;
+  if (kind === 'R') for (const [i, r] of s.numregs) rows.push({ i, used: !!r.comment || (r.value !== 0 && r.value !== '0'), row: { t: 'text', label: label(i, r.comment), desc: `= ${r.value}`, icon: ic, color } });
+  if (kind === 'SR') for (const [i, r] of s.strregs) rows.push({ i, used: !!r.comment || !!r.value, row: { t: 'text', label: label(i, r.comment), desc: `= '${r.value}'`, icon: ic, color } });
+  if (kind === 'PR') for (const [i, r] of s.posregs) rows.push({ i, used: !!r.comment || r.kind !== 'uninit', row: { t: 'text', label: label(i, r.comment), desc: r.kind === 'uninit' ? 'uninitialized' : r.summary, icon: ic, color, tooltip: `${kind}[${i}] ${r.comment}\n${r.kind}: ${r.summary}` } });
+  rows.sort((a, b) => +b.used - +a.used || a.i - b.i);
+  const out = rows.slice(0, REG_ROWS).map(r => r.row);
+  if (rows.length > REG_ROWS) out.push({ t: 'text', label: `… ${rows.length - REG_ROWS} more`, desc: 'empty ones; all of them are in the register table', icon: 'ellipsis' });
+  return out;
 }

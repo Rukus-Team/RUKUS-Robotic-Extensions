@@ -37,8 +37,8 @@ export function registerFeatureFinder(ctx: vscode.ExtensionContext) {
       }
     }
     items.push({ label: 'More', kind: vscode.QuickPickItemKind.Separator },
-      { label: '$(keyboard) Change these keyboard shortcuts…', run: 'workbench.action.openGlobalKeybindings', args: ['Robot Code'] },
-      { label: '$(settings-gear) Robot Code settings…', run: 'workbench.action.openSettings', args: ['@ext:' + ctx.extension.id] },
+      { label: '$(keyboard) Change these keyboard shortcuts…', run: 'workbench.action.openGlobalKeybindings', args: ['RUKUS'] },
+      { label: '$(settings-gear) RUKUS Robotic Extensions settings…', run: 'workbench.action.openSettings', args: ['@ext:' + ctx.extension.id] },
       { label: '$(mortar-board) Getting started walkthrough', run: 'workbench.action.openWalkthrough', args: [`${ctx.extension.id}#robotCode.gettingStarted`, false] });
 
     const pick = await vscode.window.showQuickPick(items, { placeHolder: 'Type what you want to do - teach, offset, compare, download, renumber…', matchOnDescription: true });

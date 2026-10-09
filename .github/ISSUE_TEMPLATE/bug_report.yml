@@ -1,15 +1,15 @@
 name: Bug report
-description: Something in Robot Code does not work the way it should
+description: Something in RUKUS Robotic Extensions does not work the way it should
 labels: [bug, beta]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for testing the Robot Code beta. **This repository is public:** do not paste customer
+        Thanks for testing the RUKUS Robotic Extensions beta. **This repository is public:** do not paste customer
         programs, plant or customer names, IP addresses, or anything else you would not post online.
         A small made-up `.ls`/`.kl` that shows the problem is the most useful thing you can attach.
 
-        Tip: **Robot Code: Report an Issue** in VS Code's command palette opens this form with the
+        Tip: **RUKUS: Report an Issue** in VS Code's command palette opens this form with the
         versions below already filled in.
   - type: textarea
     id: what-happened
@@ -44,8 +44,8 @@ body:
   - type: input
     id: extension-version
     attributes:
-      label: Robot Code version
-      description: Extensions view -> Robot Code, or filled in by the Report an Issue command
+      label: RUKUS Robotic Extensions version
+      description: Extensions view -> RUKUS Robotic Extensions, or filled in by the Report an Issue command
     validations:
       required: true
   - type: input
@@ -65,5 +65,5 @@ body:
     id: logs
     attributes:
       label: Output or error text
-      description: View -> Output -> pick "Robot Code" in the list, and paste anything relevant.
+      description: View -> Output -> pick "RUKUS Robotic Extensions" in the list, and paste anything relevant.
       render: text

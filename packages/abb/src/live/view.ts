@@ -30,6 +30,11 @@ import { registerConnectionKind } from '@core/live/connectionKinds';
 import { ctrlStateLabel, opModeLabel, execStateLabel, runModeLabel, taskTypeLabel } from './names';
 import { controllerLabel } from './identity';
 import { discoverVirtualControllers, matchEndpoint, MANUAL_STEPS, type VcEndpoint } from './vcDiscovery';
+import { searchAbbControllers, sourceLabel, type AbbFound } from './search';
+import { abbRobotType, groupAbbOptions } from './optionDocs';
+import { sortData, formatRapidData, oneLine, type RapidDatum } from './rapidData';
+import { SERVICE_PORT_IP } from './network';
+import { chooseScanScope, scopeSummary, withScanProgress } from '@core/live/scanPrompt';
 import { eventMarkdown, parseEventCode } from './eventCatalog';
 import { AbbControllers, ago, type AbbConnection, type AbbProfile } from './controllers';
 import type { RwsPointer, RwsModuleInfo, RwsEvent, RwsSignal } from '../rws/client';
@@ -57,12 +62,29 @@ type Node =
   | { type: 'modules'; c: AbbConnection; task: string; list: RwsModuleInfo[] }
   | { type: 'module'; c: AbbConnection; task: string; m: RwsModuleInfo }
   | { type: 'position'; c: AbbConnection }
-  | { type: 'readout'; c: AbbConnection; which: 'eventlog' | 'signals' }
+  | { type: 'readout'; c: AbbConnection; which: Readout }
+  | { type: 'data'; c: AbbConnection; task: string }
+  | { type: 'datum'; c: AbbConnection; d: RapidDatum }
   | { type: 'row'; label: string; description: string; tooltip?: string };
 
-/** abb-info:/<controller>/eventlog.log | signals.txt - read-only documents read when opened */
+/** abb-info:/<controller>/eventlog.log | signals.txt | data.txt - read-only documents read when opened */
 const INFO = 'abb-info';
-const infoUri = (ctrl: string, which: 'eventlog' | 'signals') => vscode.Uri.from({ scheme: INFO, path: `/${encodeURIComponent(ctrl)}/${which === 'eventlog' ? 'eventlog.log' : 'signals.txt'}` });
+type Readout = 'eventlog' | 'signals' | 'data';
+const INFO_FILE: Record<Readout, string> = { eventlog: 'eventlog.log', signals: 'signals.txt', data: 'data.txt' };
+const infoUri = (ctrl: string, which: Readout) => vscode.Uri.from({ scheme: INFO, path: `/${encodeURIComponent(ctrl)}/${INFO_FILE[which]}` });
+
+/** Read every data declaration of `tasks` and its value; values one by one on the controller's queue. */
+async function readRapidData(ctrls: AbbControllers, ctrl: string, tasks: string[]): Promise<RapidDatum[]> {
+  return ctrls.calc(ctrl, 'RAPID data', async c => {
+    const out: RapidDatum[] = [];
+    for (const task of tasks) {
+      for (const d of await c.searchData(task)) {
+        try { out.push({ ...d, value: await c.dataValue(d.path) }); } catch (e: any) { out.push({ ...d, error: e?.message ?? String(e) }); }
+      }
+    }
+    return out;
+  });
+}
 
 const f2 = (n: number) => (Math.abs(n) < 0.005 ? '0.00' : n.toFixed(2));
 
@@ -72,7 +94,13 @@ class AbbTree implements vscode.TreeDataProvider<Node> {
   constructor(private readonly ctrls: AbbControllers) { ctrls.onDidChange(() => this._onDidChange.fire(undefined)); }
   refresh() { this._onDidChange.fire(undefined); }
 
-  getChildren(el?: Node): Node[] {
+  getChildren(el?: Node): Node[] | Promise<Node[]> {
+    if (el?.type === 'data') {
+      // read when expanded: a controller can hold thousands of data, and each value is a request
+      return readRapidData(this.ctrls, el.c.profile.name, [el.task]).then(
+        list => list.length ? sortData(list).map(d => ({ type: 'datum' as const, c: el.c, d })) : [{ type: 'row' as const, label: 'No data', description: `${el.task} declares none` }],
+        e => [{ type: 'row' as const, label: 'Could not read', description: e?.message ?? String(e) }]);
+    }
     if (!el) return this.ctrls.list().map(c => ({ type: 'ctrl', c }));
     if (el.type === 'ctrl') {
       if (el.c.state !== 'connected') return [];
@@ -83,6 +111,7 @@ class AbbTree implements vscode.TreeDataProvider<Node> {
         { type: 'position', c: el.c },
         { type: 'readout', c: el.c, which: 'eventlog' },
         { type: 'readout', c: el.c, which: 'signals' },
+        { type: 'readout', c: el.c, which: 'data' },
       ];
     }
     if (el.type === 'task') {
@@ -92,6 +121,7 @@ class AbbTree implements vscode.TreeDataProvider<Node> {
         ...(p?.program ? [{ type: 'pointer' as const, c: el.c, task: el.task, which: 'program' as const, p: p.program }] : []),
         ...(p?.motion ? [{ type: 'pointer' as const, c: el.c, task: el.task, which: 'motion' as const, p: p.motion }] : []),
         ...(mods?.length ? [{ type: 'modules' as const, c: el.c, task: el.task, list: mods }] : []),
+        { type: 'data' as const, c: el.c, task: el.task },
       ];
     }
     if (el.type === 'modules') {
@@ -137,8 +167,9 @@ class AbbTree implements vscode.TreeDataProvider<Node> {
     if (el.type === 'info') {
       const sys = el.c.snapshot.system;
       const it = new vscode.TreeItem('Controller', vscode.TreeItemCollapsibleState.None);
-      it.description = [sys?.name, sys?.robotWareName ? `RobotWare ${sys.robotWareName}` : undefined].filter(Boolean).join(' · ');
-      it.tooltip = sys ? `${sys.name}\nRobotWare ${sys.robotWareName} (${sys.robotWare})\nsystem ${sys.sysid ?? '?'}\nstarted ${sys.started ?? '?'}\n\n${sys.options.join('\n')}` : undefined;
+      it.description = [sys?.name, sys ? abbRobotType(sys.options) : undefined, sys?.robotWareName ? `RobotWare ${sys.robotWareName}` : undefined].filter(Boolean).join(' · ');
+      const robot = sys ? abbRobotType(sys.options) : undefined;
+      it.tooltip = sys ? `${sys.name}${robot ? ` · ${robot}` : ''}\nRobotWare ${sys.robotWareName} (${sys.robotWare})\nsystem ${sys.sysid ?? '?'}\nstarted ${sys.started ?? '?'}${groupAbbOptions(sys.options).map(g => `\n\n${g.title}:\n${g.items.map(x => x.text).join('\n')}`).join('')}` : undefined;
       it.iconPath = icon('server');
       return it;
     }
@@ -185,12 +216,29 @@ class AbbTree implements vscode.TreeDataProvider<Node> {
       return it;
     }
     if (el.type === 'readout') {
-      const log = el.which === 'eventlog';
-      const it = new vscode.TreeItem(log ? 'Event log' : 'I/O signals', vscode.TreeItemCollapsibleState.None);
+      const r = READOUT[el.which];
+      const it = new vscode.TreeItem(r.label, vscode.TreeItemCollapsibleState.None);
       it.description = 'click to read';
-      it.tooltip = log ? 'The newest messages of the common event log (every category), read from the controller when opened (read-only).' : 'Every I/O signal with its value, read from the controller when opened (read-only).';
-      it.iconPath = icon(log ? 'output' : 'symbol-event');
-      it.command = { command: log ? 'robotCode.abb.showEventLog' : 'robotCode.abb.showSignals', title: 'Open', arguments: [el.c.profile.name] };
+      it.tooltip = r.tooltip;
+      it.iconPath = icon(r.icon);
+      it.command = { command: r.command, title: 'Open', arguments: [el.c.profile.name] };
+      return it;
+    }
+    if (el.type === 'data') {
+      const it = new vscode.TreeItem('Data', vscode.TreeItemCollapsibleState.Collapsed);
+      it.description = 'expand to read';
+      it.tooltip = `Every VAR, PERS and CONST declared in ${el.task} (bool, num, dnum, string, robtarget, tooldata...) with its value, read from the controller when expanded. Get on the controller reads it again.`;
+      it.iconPath = icon('symbol-variable');
+      return it;
+    }
+    if (el.type === 'datum') {
+      const d = el.d;
+      const it = new vscode.TreeItem(d.name, vscode.TreeItemCollapsibleState.None);
+      it.description = `${d.type}${d.dims ? `{${d.dims}}` : ''} = ${d.error ? '(not read)' : oneLine(d.value ?? '')}`;
+      it.tooltip = new vscode.MarkdownString().appendCodeblock(`${d.local ? 'LOCAL ' : ''}${d.storage} ${d.type} ${d.name}${d.dims ? `{${d.dims}}` : ''} := ${d.value ?? '?'};`, 'abb-rapid')
+        .appendMarkdown(`\n\n${d.module ? `module \`${d.module}\` · ` : ''}task \`${d.task}\`${d.error ? `\n\nNot read: ${d.error}` : ''}`);
+      it.iconPath = icon(d.storage === 'CONST' ? 'symbol-constant' : d.storage === 'PERS' ? 'symbol-field' : 'symbol-variable');
+      it.contextValue = 'abb-datum';
       return it;
     }
     const it = new vscode.TreeItem(el.label, vscode.TreeItemCollapsibleState.None);
@@ -224,6 +272,12 @@ export function formatSignals(ctrl: string, signals: RwsSignal[]): string {
   for (const s of list) out.push(`${s.name.padEnd(w)}  ${s.type.padEnd(4)}  ${s.value.padEnd(5)}  ${s.path}${s.state && s.state !== 'not simulated' ? `  (${s.state})` : ''}`);
   return out.join('\n') + '\n';
 }
+
+const READOUT: Record<Readout, { label: string; tooltip: string; icon: string; command: string }> = {
+  eventlog: { label: 'Event log', icon: 'output', command: 'robotCode.abb.showEventLog', tooltip: 'The newest messages of the common event log (every category), read from the controller when opened (read-only).' },
+  signals: { label: 'I/O signals', icon: 'symbol-event', command: 'robotCode.abb.showSignals', tooltip: 'Every I/O signal with its value, read from the controller when opened (read-only).' },
+  data: { label: 'RAPID data', icon: 'symbol-variable', command: 'robotCode.abb.showRapidData', tooltip: 'Every VAR, PERS and CONST of every task (bool, num, dnum, string, robtarget...) with its value, read from the controller when opened (read-only).' },
+};
 
 /** The module in the workspace index with this name (RAPID names are case-insensitive), preferring a working copy. */
 function findModule(s: Services, name: string): vscode.Uri | undefined {
@@ -384,6 +438,60 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
     await cfg.update('abb.controllers', [...cfg.get<AbbProfile[]>('abb.controllers', []), profile], vscode.workspace.workspaceFolders ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
     vscode.window.showInformationMessage(`Added ${profile.name} (127.0.0.1:${ep.port}).`);
   });
+  /**
+   * Search for ABB controllers (search.ts): virtual controllers on this PC, the service port
+   * address 192.168.125.1, wired networks, and WiFi when the user says yes. Pick one to add it,
+   * or to point the profile that is for it at its address.
+   */
+  reg('robotCode.abb.searchControllers', async () => {
+    const scope = await chooseScanScope('ABB'); if (!scope) return;
+    const found = await withScanProgress('Searching for ABB controllers…', (token, progress) =>
+      searchAbbControllers({ adapters: scope.adapters, wifi: scope.wifi, signal: token, progress }));
+    if (!found.length) {
+      vscode.window.showInformationMessage(`No ABB controller answered Robot Web Services on ${scopeSummary(scope)} or ${SERVICE_PORT_IP}.`,
+        { detail: 'A real IRC5 answers on its WAN port only with the PC Interface option (616-1); on the service port it always answers. A RobotStudio virtual controller has to be running.' });
+      return;
+    }
+    const label = (f: AbbFound) => f.ctrlName ?? f.systemName ?? f.host;
+    const known = (f: AbbFound) => ctrls.list().find(x => x.profile.host === f.host && (x.profile.port ?? (x.profile.https ? 443 : 80)) === f.port)
+      ?? ctrls.list().find(x => !!matchEndpoint([{ ...f, pid: 0, image: '' }], ctrls.expected(x) ?? { name: x.profile.name }));
+    const pick = await vscode.window.showQuickPick(found.map(f => {
+      const owner = known(f);
+      return {
+        label: label(f),
+        description: `${f.host}:${f.port} · ${f.family === 'omnicore' ? 'OmniCore' : 'IRC5'}${f.virtual ? ' · virtual' : ''} · ${sourceLabel(f.source)}`,
+        detail: owner ? `already added as ${owner.profile.name}` : f.error ? `could not log in with the factory login: ${f.error}` : undefined,
+        f, owner,
+      };
+    }), { title: `${found.length} ABB controller${found.length === 1 ? '' : 's'} found - pick one to add it` });
+    if (!pick) return;
+    const f = pick.f;
+    const patch = { host: f.host, port: f.port, family: f.family, https: f.https };
+    const cfg = vscode.workspace.getConfiguration('robotCode');
+    if (pick.owner) {
+      const name = pick.owner.profile.name;
+      if (ctrls.clusterOf(name)) { vscode.window.showInformationMessage(`${name} comes from RUKUS: change its address there (${f.host}:${f.port}).`); return; }
+      const inspect = cfg.inspect<AbbProfile[]>('abb.controllers');
+      for (const [where, value] of [[vscode.ConfigurationTarget.Workspace, inspect?.workspaceValue], [vscode.ConfigurationTarget.Global, inspect?.globalValue]] as const) {
+        if (!value?.some(p => p.name === name)) continue;
+        await cfg.update('abb.controllers', value.map(p => (p.name === name ? { ...p, ...patch } : p)), where);
+        break;
+      }
+      vscode.window.showInformationMessage(`${name}: ${f.host}:${f.port}.`, 'Connect').then(go => { if (go) void vscode.commands.executeCommand('robotCode.abb.connect', name); });
+      return;
+    }
+    const taken = new Set(ctrls.list().map(x => x.profile.name));
+    let name = label(f);
+    for (let i = 2; taken.has(name); i++) name = `${label(f)} (${i})`;
+    const profile: AbbProfile = {
+      name, host: f.host,
+      ...(f.port !== (f.https ? 443 : 80) ? { port: f.port } : {}),
+      ...(f.family === 'omnicore' ? { family: 'omnicore' as const } : {}), ...(f.https ? { https: true } : {}),
+      ...(f.ctrlName ? { controllerName: f.ctrlName } : {}), ...(f.systemId ? { controllerId: f.systemId } : {}),
+    };
+    await cfg.update('abb.controllers', [...cfg.get<AbbProfile[]>('abb.controllers', []), profile], vscode.workspace.workspaceFolders ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
+    vscode.window.showInformationMessage(`Added ${name} (${f.host}:${f.port}).${f.error ? ' Set its login with Edit Connection before connecting.' : ''}`, 'Connect').then(go => { if (go) void vscode.commands.executeCommand('robotCode.abb.connect', name); });
+  });
   reg('robotCode.abb.refresh', async (node?: any) => {
     const name = await nameOf(node, c => c.state === 'connected'); if (!name) return;
     try { await ctrls.refresh(name); } catch (e) { show(e); }
@@ -397,7 +505,7 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   ctx.subscriptions.push(onDidChangeInfo, vscode.workspace.registerTextDocumentContentProvider(INFO, {
     onDidChange: onDidChangeInfo.event,
     provideTextDocumentContent: async uri => {
-      const m = /^\/([^/]+)\/(eventlog\.log|signals\.txt)$/.exec(uri.path);
+      const m = /^\/([^/]+)\/(eventlog\.log|signals\.txt|data\.txt)$/.exec(uri.path);
       if (!m) return '';
       const ctrl = decodeURIComponent(m[1]);
       try {
@@ -406,11 +514,15 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
           await ctrls.rememberEvents(ctrl, events);   // the codes, for ABB: Look Up Event Code
           return formatEventLog(ctrl, events);
         }
+        if (m[2] === 'data.txt') {
+          const tasks = ctrls.get(ctrl)?.snapshot.tasks?.map(t => t.name) ?? (await ctrls.calc(ctrl, 'tasks', c => c.tasks())).map(t => t.name);
+          return formatRapidData(ctrl, await readRapidData(ctrls, ctrl, tasks));
+        }
         return formatSignals(ctrl, await ctrls.calc(ctrl, 'signals', c => c.signals()));
       } catch (e: any) { return `Could not read from ${ctrl}: ${e?.message ?? e}\n`; }
     },
   }));
-  const showInfo = async (which: 'eventlog' | 'signals', node?: any) => {
+  const showInfo = async (which: Readout, node?: any) => {
     const name = await nameOf(node, c => c.state === 'connected'); if (!name) return;
     const uri = infoUri(name, which);
     onDidChangeInfo.fire(uri);   // read again when it is already open
@@ -420,6 +532,7 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   reg('robotCode.abb.openPage', async (node?: any) => { const name = await nameOf(node); if (name) openAbbPage(ctx, ctrls, name); });
   reg('robotCode.abb.showEventLog', (node?: any) => showInfo('eventlog', node));
   reg('robotCode.abb.showSignals', (node?: any) => showInfo('signals', node));
+  reg('robotCode.abb.showRapidData', (node?: any) => showInfo('data', node));
 
   // the controller's module text, read when a module is opened and again when it is opened while open
   const onDidChangeModule = new vscode.EventEmitter<vscode.Uri>();
@@ -574,7 +687,9 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   reg('robotCode.abb._state', async () => {
     const lines: string[] = [];
     const walk = async (n: Node | undefined, depth: number) => {
-      for (const k of tree.getChildren(n)) {
+      // RAPID data is read only when expanded: the state listing leaves it closed
+      if (n?.type === 'data') return;
+      for (const k of await tree.getChildren(n)) {
         const it = tree.getTreeItem(k);
         lines.push(`${'  '.repeat(depth)}${typeof it.label === 'string' ? it.label : it.label?.label ?? ''}${it.description ? ` — ${it.description}` : ''}`);
         await walk(k, depth + 1);

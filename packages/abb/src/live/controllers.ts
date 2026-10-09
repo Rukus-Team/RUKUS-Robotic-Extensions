@@ -202,7 +202,7 @@ export class AbbControllers implements vscode.Disposable {
     if (c.snapshot.identity?.virtual === true) return undefined;
     if (vscode.workspace.getConfiguration('robotCode').get<boolean>('abb.allowRealOmniCoreWrites', false)) return undefined;
     const what = c.snapshot.identity?.virtual === false ? `a real OmniCore (${c.snapshot.identity.type ?? 'not virtual'})` : 'an OmniCore that did not say it is virtual';
-    return `${name} is ${what}. Changing an OmniCore has been checked on RobotStudio virtual controllers only, so on a real one Robot Code only reads. To validate a real controller, turn on "robotCode.abb.allowRealOmniCoreWrites".`;
+    return `${name} is ${what}. Changing an OmniCore has been checked on RobotStudio virtual controllers only, so on a real one this extension only reads. To validate a real controller, turn on "robotCode.abb.allowRealOmniCoreWrites".`;
   }
 
   /** The controller as it described itself on Connect (/ctrl/identity and /rw/system). */

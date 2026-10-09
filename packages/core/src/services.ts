@@ -37,7 +37,7 @@ export interface ControllerData extends vscode.Disposable {
 export class Services<D extends ControllerData = ControllerData> implements vscode.Disposable {
   readonly containers = new ContainerIndex();
   readonly index = new WorkspaceIndex();
-  readonly output = vscode.window.createOutputChannel('Robot Code');
+  readonly output = vscode.window.createOutputChannel('RUKUS Robotic Extensions');
   /** live-controller tier; set by the extension after construction */
   live: RobotManager | undefined;
   /** RUKUS's clusters and backup store on this PC; set by the extension after construction */

@@ -266,8 +266,8 @@ function reportOutcome(s: Services, marker: RobotMarker, conn: RobotConnection, 
   if (outcome.changed) bits.push(`${outcome.changed} changed`);
   if (outcome.failed) bits.push(`${outcome.failed} failed`);
   vscode.window.setStatusBarMessage(`$(cloud-download) Snapshot ${marker.name}: ${what} fetched · ${bits.join(' · ')}`, 8000);
-  s.output.appendLine(`[Robot Code] snapshot fetch ${marker.name} (${conn.profile.name}): ${bits.join(', ')}${outcome.errors.length ? `\n  ${outcome.errors.join('\n  ')}` : ''}`);
-  if (outcome.failed) void vscode.window.showWarningMessage(`${outcome.failed} file(s) could not be fetched from ${conn.profile.name}. See the Robot Code output.`, 'Open Output').then(p => { if (p) s.output.show(true); });
+  s.output.appendLine(`[RUKUS] snapshot fetch ${marker.name} (${conn.profile.name}): ${bits.join(', ')}${outcome.errors.length ? `\n  ${outcome.errors.join('\n  ')}` : ''}`);
+  if (outcome.failed) void vscode.window.showWarningMessage(`${outcome.failed} file(s) could not be fetched from ${conn.profile.name}. See the RUKUS Robotic Extensions output.`, 'Open Output').then(p => { if (p) s.output.show(true); });
 }
 
 // ── folder-scoped fetch / pull (right-click a folder) ───────────────────────
@@ -404,8 +404,8 @@ async function folderCommand(s: Services, arg: unknown, pull: boolean): Promise<
   if (pull) bits.push(`${pulled} written`);
   if (outcome.failed) bits.push(`${outcome.failed} failed`);
   vscode.window.setStatusBarMessage(`$(cloud-download) ${scope.label} · ${bits.join(' · ')} · ${conn.profile.name}`, 8000);
-  s.output.appendLine(`[Robot Code] ${pull ? 'pull' : 'fetch'} ${scope.label} from ${conn.profile.name}: ${bits.join(', ')}${outcome.errors.length ? `\n  ${outcome.errors.join('\n  ')}` : ''}`);
-  if (outcome.failed) void vscode.window.showWarningMessage(`${outcome.failed} file(s) could not be read from ${conn.profile.name}. See the Robot Code output.`, 'Open Output').then(p => { if (p) s.output.show(true); });
+  s.output.appendLine(`[RUKUS] ${pull ? 'pull' : 'fetch'} ${scope.label} from ${conn.profile.name}: ${bits.join(', ')}${outcome.errors.length ? `\n  ${outcome.errors.join('\n  ')}` : ''}`);
+  if (outcome.failed) void vscode.window.showWarningMessage(`${outcome.failed} file(s) could not be read from ${conn.profile.name}. See the RUKUS Robotic Extensions output.`, 'Open Output').then(p => { if (p) s.output.show(true); });
 }
 
 /**
@@ -457,7 +457,7 @@ async function fetchCompareAllCommand(s: Services, arg?: unknown): Promise<void>
   const bits = [`${compared} compared`, differs ? `${differs} differ` : 'all match'];
   if (failed) bits.push(`${failed} failed`);
   vscode.window.setStatusBarMessage(`$(sync) ${marker.name}: ${bits.join(' · ')}`, 8000);
-  if (failed) void vscode.window.showWarningMessage(`${failed} program(s) could not be read from ${conn.profile.name}. See the Robot Code output.`, 'Open Output').then(p => { if (p) s.output.show(true); });
+  if (failed) void vscode.window.showWarningMessage(`${failed} program(s) could not be read from ${conn.profile.name}. See the RUKUS Robotic Extensions output.`, 'Open Output').then(p => { if (p) s.output.show(true); });
 }
 
 // ── pull / revert ───────────────────────────────────────────────────────────
@@ -685,7 +685,7 @@ async function errorsCommand(s: Services, arg?: unknown): Promise<void> {
     { location: vscode.ProgressLocation.Window, title: `Reading errors from ${conn.profile.name}` },
     () => fetchControllerErrors(s, conn));
   if (!alarms.length) { vscode.window.showInformationMessage(`No controller errors read from ${conn.profile.name}.`); return; }
-  s.output.appendLine(`[Robot Code] ${conn.profile.name} errors:\n  ${alarms.map(a => `${a.time} ${a.code ?? ''} ${a.message}`).join('\n  ')}`);
+  s.output.appendLine(`[RUKUS] ${conn.profile.name} errors:\n  ${alarms.map(a => `${a.time} ${a.code ?? ''} ${a.message}`).join('\n  ')}`);
   const pick = await vscode.window.showWarningMessage(`${alarms.length} controller error(s) on ${conn.profile.name}: ${alarms[0].message}`, 'Open Output', 'Error Watcher in RUKUS');
   if (pick === 'Open Output') s.output.show(true);
   if (pick === 'Error Watcher in RUKUS') await vscode.commands.executeCommand('robotCode.rukus.alarms', conn.profile.name);

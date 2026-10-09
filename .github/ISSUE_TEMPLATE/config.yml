@@ -3,6 +3,6 @@ contact_links:
   - name: Download the latest .vsix
     url: https://github.com/Rukus-Team/RUKUS-Robotic-Extensions/releases/latest
     about: Check you are on the newest beta before reporting.
-  - name: Robot Code on the VS Code Marketplace
+  - name: RUKUS Robotic Extensions on the VS Code Marketplace
     url: https://marketplace.visualstudio.com/items?itemName=rukus-team.robot-code
     about: Install or update from inside VS Code.

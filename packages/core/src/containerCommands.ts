@@ -51,7 +51,7 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
     if (marker) return marker;
     const markers = s.containers.markers;
     if (!markers.length) {
-      vscode.window.showInformationMessage('No robot containers in this workspace. Run "Robot Code: Initialize Robot Container…" first.');
+      vscode.window.showInformationMessage('No robot containers in this workspace. Run "RUKUS: Initialize Robot Container…" first.');
       return undefined;
     }
     if (markers.length === 1) return markers[0];
@@ -118,13 +118,13 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
 
       const spec: CellControllerSpec = { host: host.trim(), useFtp: useFtp.value, device: device.trim() || 'MD:' };
       controllers[ctrlName.trim()] = spec;
-      vscode.window.setStatusBarMessage(`Robot Code: controller "${ctrlName.trim()}" added to cell`, 3000);
+      vscode.window.setStatusBarMessage(`RUKUS: controller "${ctrlName.trim()}" added to cell`, 3000);
     }
 
     const cellName = name.trim() || path.basename(root.fsPath);
     writeCellJson(root.fsPath, cellName, Object.keys(controllers).length ? controllers : undefined);
     await s.containers.refresh();
-    vscode.window.setStatusBarMessage(`Robot Code: cell container created for ${cellName}`, 5000);
+    vscode.window.setStatusBarMessage(`RUKUS: cell container created for ${cellName}`, 5000);
     // The cell is a RUKUS cluster in waiting (beta list 4, item 3): sent now when RUKUS is
     // here and the user wants it, otherwise remembered and offered once RUKUS turns up.
     if (s.rukus?.available) {
@@ -310,7 +310,7 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
         files: snapshotFileTimes(marker.snapshotDir, now),
       });
       await refreshAfterSnapshot();
-      vscode.window.setStatusBarMessage(`Robot Code: ${marker.name} snapshot — ${count} files from ${path.basename(srcDir)}`, 5000);
+      vscode.window.setStatusBarMessage(`RUKUS: ${marker.name} snapshot — ${count} files from ${path.basename(srcDir)}`, 5000);
     } catch (e: unknown) {
       void showRecoverableError(`Snapshot failed: ${e instanceof Error ? e.message : String(e)}`, s.output, () => vscode.commands.executeCommand('robotCode.data.snapshotFromBackup', node));
     }
@@ -402,7 +402,7 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
       });
       await refreshAfterSnapshot();
       live.log(profile.name, `snapshot into ${marker.name}: ${ok} files, ${failed} failed`);
-      vscode.window.setStatusBarMessage(`Robot Code: ${marker.name} snapshot — ${ok} files from ${profile.name}${failed ? `, ${failed} failed (see Output)` : ''}`, 5000);
+      vscode.window.setStatusBarMessage(`RUKUS: ${marker.name} snapshot — ${ok} files from ${profile.name}${failed ? `, ${failed} failed (see Output)` : ''}`, 5000);
     } catch (e: unknown) {
       try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* best effort */ }
       void showRecoverableError(`Snapshot from ${profile.name} failed: ${e instanceof Error ? e.message : String(e)}`, s.output, () => vscode.commands.executeCommand('robotCode.data.snapshotFromRobot', node));
