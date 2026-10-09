@@ -89,6 +89,29 @@ export interface RwsPointer { module: string; routine: string; begin?: { line: n
 export interface RwsModuleInfo { name: string; type: 'ProgMod' | 'SysMod' | string }
 /** who holds the right to change the controller: RW 8 write access, RW 6 mastership per domain */
 export interface RwsWriteAccess { holder?: string; holderId?: string; free: boolean; externalControl?: boolean; domains?: Record<string, string>; summary: string }
+/** this PC as an RW 8 remote control station: `id` a braced GUID, `pin` digits */
+export interface ControlStation { name: string; id: string; pin: string }
+
+/** `/ctrl/identity`: `virtual` is undefined when the controller did not say */
+export interface RwsIdentity { name?: string; id?: string; type?: string; virtual?: boolean }
+
+/** The RobotWare major version from `/rw/system`'s `major` field, else from the version text ("8.2.1+1023", "6.16.01.00"). */
+export function robotWareMajor(major: string | undefined, version: string | undefined): number | undefined {
+  const n = Number(major ?? /^\s*(\d+)\./.exec(version ?? '')?.[1]);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/** A control station id as RobotWare 8 takes it: a GUID in braces, lowercase (C# `Guid.NewGuid().ToString("B")`). */
+export const isControlStationId = (id: string) => /^\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}$/.test(id);
+export function newControlStationId(): string {
+  const h = randomBytes(16);
+  h[6] = (h[6] & 0x0f) | 0x40; h[8] = (h[8] & 0x3f) | 0x80;   // version 4, RFC 4122 variant
+  const x = h.toString('hex');
+  return `{${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}}`;
+}
+
+/** where and how to open a subscription's event socket */
+export interface RwsEventSocket { url: string; protocol: string; headers: Record<string, string>; group: string }
 export interface RwsSignal { name: string; type: string; category?: string; value: string; state?: string; path: string }
 /** an event log message; type 1 = information, 2 = warning, 3 = error */
 export interface RwsEvent { code: number; type: number; time: string; title: string; description?: string; causes?: string; consequences?: string; actions?: string }
@@ -141,6 +164,16 @@ export class RwsClient {
   get hasSession(): boolean { return this.cookies.size > 0; }
   /** RWS 2.0 (OmniCore) rather than 1.0 (IRC5) */
   get rws2(): boolean { return this.target.family === 'omnicore'; }
+  /** the RobotWare major version, once {@link system} has been read */
+  robotWareMajor: number | undefined;
+  /**
+   * Write access by control station (RobotWare 8 and later: `/rw/mastership` answers 410 Gone there)
+   * rather than by mastership (RobotWare 6 over RWS 1.0, RobotWare 7 over RWS 2.0). An OmniCore whose
+   * version was not read yet counts as RW 8, the one this was checked on.
+   */
+  get usesControlStation(): boolean { return this.rws2 && (this.robotWareMajor ?? 8) >= 8; }
+  /** the control station id this session registered (RW 8): registration lasts one session */
+  private registeredStation: string | undefined;
 
   /** GET one resource and read it (XHTML on RWS 1.0, HAL+JSON on 2.0) as a page. */
   async page(path: string): Promise<RwsPage> {
@@ -160,7 +193,40 @@ export class RwsClient {
     this.cookies.clear();
     this.challenge = undefined;
     this.holdsMastership = false;
+    this.registeredStation = undefined;
     this.agent.destroy();
+  }
+
+  // ------------------------------------------------------------------ subscriptions
+
+  /**
+   * Subscribe to `resources` (priority 1, medium: as the controller allows for state). RWS answers
+   * 201 with the event socket's address in Location; the socket must carry this session's cookie
+   * (and, on RWS 2.0, the Basic login) and the dialect's sub-protocol. The address's host is the
+   * controller's own idea of itself, which is not this PC's way to it behind a forwarded port, so
+   * only its path is kept and the socket goes where this client's requests go.
+   */
+  async subscribe(resources: string[]): Promise<RwsEventSocket> {
+    const form = resources.map((r, i) => `resources=${i + 1}&${i + 1}=${encodeURIComponent(r)}&${i + 1}-p=1`).join('&');
+    const r = await this.enqueue('POST', '/subscription', undefined, form);
+    if (!r.location) throw new RwsError(r.status, '/subscription', `${this.target.host} took the subscription but said nowhere to listen`);
+    const where = new URL(r.location, this.base);
+    const secure = !!this.target.https;
+    const headers: Record<string, string> = {};
+    if (this.cookies.size) headers.Cookie = [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ');
+    if (this.rws2) headers.Authorization = `Basic ${Buffer.from(`${this.target.user}:${this.target.password}`).toString('base64')}`;
+    return {
+      url: `${secure ? 'wss' : 'ws'}://${this.target.host}:${this.target.port ?? (secure ? 443 : 80)}${where.pathname}`,
+      protocol: this.rws2 ? 'rws_subscription' : 'robapi2_subscription',
+      headers,
+      group: where.pathname.split('/').filter(Boolean).pop() ?? '',
+    };
+  }
+
+  /** End a subscription group (best effort: a controller that restarted has forgotten it anyway). */
+  async unsubscribe(group: string): Promise<void> {
+    if (!group || !this.cookies.size) return;
+    try { await this.enqueue('DELETE', `/subscription/${encodeURIComponent(group)}`); } catch { /* gone */ }
   }
 
   // ------------------------------------------------------------------ typed reads
@@ -169,7 +235,23 @@ export class RwsClient {
     const p = await this.page('/rw/system');
     // RWS 1.0 'sys-system-li' / 'sys-option-li', RWS 2.0 'sys-system' / 'sys-options'
     const s = (itemOf(p, 'sys-system-li') ?? itemOf(p, 'sys-system'))?.fields ?? {};
-    return { name: s.name, robotWare: s.rwversion, robotWareName: s.rwversionname, sysid: s.sysid, started: s.starttm, options: [...itemsOf(p, 'sys-option-li'), ...itemsOf(p, 'sys-options')].map(i => i.fields.option).filter(Boolean) };
+    const sys = { name: s.name, robotWare: s.rwversion, robotWareName: s.rwversionname, sysid: s.sysid, started: s.starttm, options: [...itemsOf(p, 'sys-option-li'), ...itemsOf(p, 'sys-options')].map(i => i.fields.option).filter(Boolean) };
+    this.robotWareMajor = robotWareMajor(s.major, sys.robotWareName ?? sys.robotWare);
+    return sys;
+  }
+
+  /** A configuration type's instances (`/rw/cfg/{domain}/{type}/instances`), e.g. SIO / IP_SETTING: a read. */
+  async cfg(domain: string, type: string): Promise<RwsPage> { return this.page(`/rw/cfg/${encodeURIComponent(domain)}/${encodeURIComponent(type)}/instances`); }
+
+  /**
+   * Who the controller says it is (`/ctrl/identity`): its name, its id, and whether it is a
+   * virtual controller (`ctrl-type` VIRTUAL_CONTROLLER) or a real one.
+   */
+  async identity(): Promise<RwsIdentity> {
+    const p = await this.page('/ctrl/identity');
+    const f = (itemOf(p, 'ctrl-identity-info') ?? p.items[0])?.fields ?? {};
+    const type = f['ctrl-type'];
+    return { name: f['ctrl-name'], id: f['ctrl-id'], type, virtual: type === undefined ? undefined : /virtual/i.test(type) };
   }
 
   /** controller state, operating mode and speed override: three small reads */
@@ -383,51 +465,83 @@ export class RwsClient {
     await this.withRapidMastership(() => this.enqueue('POST', this.rws2 ? `/rw/rapid/symbol/${p}/data` : `/rw/rapid/symbol/data/${p}?action=set`, { value }));
   }
 
+  /** a mastership action: RWS 1.0 `?action=request`, RWS 2.0 (RobotWare 7) `/request` */
+  private mastership(domain: string | undefined, action: 'request' | 'release'): string {
+    const at = `/rw/mastership${domain ? `/${domain}` : ''}`;
+    return this.rws2 ? `${at}/${action}` : `${at}?action=${action}`;
+  }
+
   /**
-   * RW 6: hold RAPID mastership around `fn` and give it back (also when `fn` fails) - unless the
+   * RW 6/7: hold RAPID mastership around `fn` and give it back (also when `fn` fails) - unless the
    * user holds mastership with {@link requestWriteAccess}, which a single edit must not give away.
-   * RW 8: just `fn`.
+   * RW 8: just `fn` (write access is the control station's, held or not).
    */
   private async withRapidMastership<T>(fn: () => Promise<T>): Promise<T> {
-    if (this.rws2 || this.holdsMastership) return fn();
-    await this.enqueue('POST', '/rw/mastership/rapid?action=request', {});
+    if (this.usesControlStation || this.holdsMastership) return fn();
+    await this.enqueue('POST', this.mastership('rapid', 'request'), {});
     try { return await fn(); } finally {
-      try { await this.enqueue('POST', '/rw/mastership/rapid?action=release', {}); } catch { /* held until the session ends; the controller frees it then */ }
+      try { await this.enqueue('POST', this.mastership('rapid', 'release'), {}); } catch { /* held until the session ends; the controller frees it then */ }
     }
   }
 
-  /** RW 6: mastership taken with {@link requestWriteAccess} and not yet released by this session */
+  /** RW 6/7: mastership taken with {@link requestWriteAccess} and not yet released by this session */
   holdsMastership = false;
 
   /**
    * WRITE: ask for the right to change the controller, and keep it until {@link releaseWriteAccess}
-   * (or the session ends). RW 8: write access for this session's control station
-   * (`/rw/controlstation/writeaccess/request`); a PC must first be registered as a remote control
-   * station - `station` does that, with the id and PIN the controller is configured to allow - and
-   * the pendant's Remote Access must be on. RW 6: mastership of every domain (RAPID, configuration,
-   * motion), which a pendant user cannot take while this session holds it.
+   * (or the session ends).
+   *
+   * RW 8, as checked by hand on a RobotWare 8.2.1 virtual controller: register this session as a
+   * remote control station (once per session - registration does not outlive it, so a reconnect
+   * registers again), then `POST /rw/controlstation/writeaccess/request` (204). Whether it is held
+   * is for {@link writeAccess} to say (`held-by-control-station-Id` is then `station.id`); the
+   * pendant's Remote Access must be on.
+   *
+   * RW 6 (RWS 1.0) and RW 7 (RWS 2.0): mastership of every domain (RAPID, configuration, motion),
+   * which a pendant user cannot take while this session holds it.
    */
-  async requestWriteAccess(station?: { name: string; id: string; pin: string }): Promise<void> {
-    if (!this.rws2) {
-      await this.enqueue('POST', '/rw/mastership?action=request', {});
+  async requestWriteAccess(station?: ControlStation): Promise<void> {
+    if (!this.usesControlStation) {
+      await this.enqueue('POST', this.mastership(undefined, 'request'), {});
       this.holdsMastership = true;
       return;
     }
-    if (station) await this.registerRemote(station);
+    if (station && this.registeredStation !== station.id) await this.registerRemote(station);
     await this.enqueue('POST', '/rw/controlstation/writeaccess/request', {});
   }
 
-  /** WRITE: register this session as a remote control station (RW 8), before asking for write access. */
-  async registerRemote(station: { name: string; id: string; pin: string }): Promise<void> {
+  /**
+   * WRITE (RW 8): register this session as a remote control station. Exactly the three fields that
+   * worked: `control-station-name`, `control-station-id` (lowercase `id`: `control-station-Id` is
+   * refused; a GUID in braces) and `pincode` (digits, no prefix).
+   */
+  async registerRemote(station: ControlStation): Promise<void> {
+    if (!isControlStationId(station.id)) throw new Error(`"${station.id}" is not a control station id: RobotWare 8 wants a GUID in braces, {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.`);
+    if (!/^\d+$/.test(station.pin)) throw new Error('The control station PIN is a number, digits only.');
     await this.enqueue('POST', '/rw/controlstation/register/remote', {
-      'control-station-name': station.name, 'control-station-id': station.id, pincode: station.pin, 'release-write-access-when-lost': 'true',
+      'control-station-name': station.name, 'control-station-id': station.id, pincode: station.pin,
     });
+    this.registeredStation = station.id;
   }
 
-  /** WRITE: give write access (RW 8) / every domain's mastership (RW 6) back. */
-  async releaseWriteAccess(): Promise<void> {
-    if (this.rws2) { await this.enqueue('POST', '/rw/controlstation/writeaccess/release', {}); return; }
-    try { await this.enqueue('POST', '/rw/mastership?action=release', {}); } finally { this.holdsMastership = false; }
+  /**
+   * WRITE: give write access (RW 8) / every domain's mastership (RW 6/7) back. True when something
+   * was released. RW 8: a write can end write access by itself, so the status is read first and
+   * nothing is sent when `stationId` no longer holds it; a release refused because it was no longer
+   * held is not an error either.
+   */
+  async releaseWriteAccess(stationId?: string): Promise<boolean> {
+    if (!this.usesControlStation) {
+      try { await this.enqueue('POST', this.mastership(undefined, 'release'), {}); } finally { this.holdsMastership = false; }
+      return true;
+    }
+    const heldByUs = async () => { const a = await this.writeAccess(); return !stationId || a.holderId?.toLowerCase() === stationId.toLowerCase(); };
+    if (stationId && !(await heldByUs())) return false;
+    try { await this.enqueue('POST', '/rw/controlstation/writeaccess/release', {}); return true; }
+    catch (e) {
+      if (stationId && !(await heldByUs().catch(() => true))) return false;
+      throw e;
+    }
   }
 
   /**
@@ -436,7 +550,7 @@ export class RwsClient {
    * motion - `nomaster`, `local` (the FlexPendant) or `remote` (an RWS/PC SDK client).
    */
   async writeAccess(): Promise<RwsWriteAccess> {
-    if (this.rws2) {
+    if (this.usesControlStation) {
       const f = itemOf(await this.page('/rw/controlstation/writeaccess/status'), 'controlstation-write-access-status')?.fields ?? {};
       const name = f['held-by-control-station-name'];
       const holder = name && name !== 'none' ? name : undefined;
@@ -569,7 +683,7 @@ export class RwsClient {
 
   private get(path: string): Promise<{ status: number; body: Buffer }> { return this.enqueue('GET', path); }
 
-  private enqueue(method: string, path: string, form?: Record<string, string>, rawForm?: string, file?: Buffer): Promise<{ status: number; body: Buffer }> {
+  private enqueue(method: string, path: string, form?: Record<string, string>, rawForm?: string, file?: Buffer): Promise<{ status: number; body: Buffer; location?: string }> {
     const body = file ?? rawForm ?? (form ? Object.entries(form).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&') : undefined);
     const run = () => this.send(method, path, body);
     const next = this.queue.then(run, run);
@@ -577,7 +691,7 @@ export class RwsClient {
     return next;
   }
 
-  private async send(method: string, path: string, body?: string | Buffer, retried = false): Promise<{ status: number; body: Buffer }> {
+  private async send(method: string, path: string, body?: string | Buffer, retried = false): Promise<{ status: number; body: Buffer; location?: string }> {
     const headers: Record<string, string> = { Accept: this.rws2 ? 'application/hal+json;v=2.0' : 'application/xhtml+xml, text/html, */*' };
     if (body !== undefined) {
       // a Buffer is a file's bytes (an upload), a string is a form
@@ -590,22 +704,28 @@ export class RwsClient {
     if (this.rws2) headers.Authorization = `Basic ${Buffer.from(`${this.target.user}:${this.target.password}`).toString('base64')}`;
     else if (this.challenge) headers.Authorization = digestAuthorization(this.challenge, this.target.user, this.target.password, method, path, ++this.nc, randomBytes(8).toString('hex'));
     const r = await this.raw(method, path, headers, body);
-    for (const c of r.setCookies) { const m = /^\s*([^=;\s]+)=([^;]*)/.exec(c); if (m) this.cookies.set(m[1], m[2]); }
+    for (const c of r.setCookies) {
+      const m = /^\s*([^=;\s]+)=([^;]*)/.exec(c);
+      if (!m) continue;
+      // a new session (a controller restart, a timed-out cookie) has no control station registered
+      if (this.cookies.has(m[1]) && this.cookies.get(m[1]) !== m[2]) this.registeredStation = undefined;
+      this.cookies.set(m[1], m[2]);
+    }
     if (r.status === 401 && this.rws2) throw new RwsError(401, path, `${this.target.host} refused the login for "${this.target.user}" - check the user name and password`);
     if (r.status === 401 && !retried) {
       const ch = parseDigestChallenge(r.authenticate ?? '');
       if (!ch) throw new RwsError(401, path, `${this.target.host} asked for a login this client does not speak (${r.authenticate ?? 'no WWW-Authenticate'})`);
       // a stale session cookie is what a controller restart leaves behind: start over
-      this.cookies.clear();
+      this.cookies.clear(); this.registeredStation = undefined;
       this.challenge = ch; this.nc = 0;
       return this.send(method, path, body, true);
     }
     if (r.status === 401) throw new RwsError(401, path, `${this.target.host} refused the login for "${this.target.user}" - check the user name and password`);
     if (r.status >= 400) throw new RwsError(r.status, path, `${this.target.host}: HTTP ${r.status} on ${path}${retcodeOf(r.body)}`);
-    return { status: r.status, body: r.body };
+    return { status: r.status, body: r.body, location: r.location };
   }
 
-  private raw(method: string, path: string, headers: Record<string, string>, body?: string | Buffer, again = false): Promise<{ status: number; body: Buffer; setCookies: string[]; authenticate?: string }> {
+  private raw(method: string, path: string, headers: Record<string, string>, body?: string | Buffer, again = false): Promise<{ status: number; body: Buffer; setCookies: string[]; authenticate?: string; location?: string }> {
     this.requests++;
     return new Promise((resolve, reject) => {
       // not http.request: see the note on VS Code's proxy patch at the top
@@ -620,7 +740,7 @@ export class RwsClient {
         res.on('end', () => {
           const sc = res.headers['set-cookie'];
           const wa = res.headers['www-authenticate'];
-          resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks), setCookies: Array.isArray(sc) ? sc : sc ? [sc] : [], authenticate: Array.isArray(wa) ? wa.find(w => /digest/i.test(w)) : wa });
+          resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks), setCookies: Array.isArray(sc) ? sc : sc ? [sc] : [], authenticate: Array.isArray(wa) ? wa.find(w => /digest/i.test(w)) : wa, location: res.headers.location });
         });
       });
       req.on('timeout', () => req.destroy(new Error(`${this.target.host} did not answer within ${(this.target.timeoutMs ?? 5000) / 1000} s`)));

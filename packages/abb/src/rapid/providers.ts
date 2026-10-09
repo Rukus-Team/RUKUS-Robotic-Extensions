@@ -24,6 +24,8 @@ import { registerRapidNavigation } from './navigation';
 import { formatRapid, detectRapidIndent, type RapidIndent } from './format';
 import { rapidRef, rapidRefEntries, rapidRefMarkdown, instructionSnippet, positionalArgs, callContext, PREDEFINED, type RapidRefEntry, type RapidRefArg } from './reference';
 import { config } from '@core/util';
+import { backupRootOf } from '../backupInfo';
+import { backupSignals, liveSignals, signalFits, type IoSignal } from '../signals';
 
 /**
  * The indent a document is formatted and typed with. In order: what was set for this file by
@@ -329,6 +331,16 @@ export function registerRapidProviders(ctx: vscode.ExtensionContext, _s: Service
         ...mods.flatMap(m => m.data.filter(d => m === t.own || d.scope !== 'LOCAL').map(d => ({ name: d.name, type: d.type, detail: d.detail }))),
       ];
       const c = callContext(textBefore(doc, pos));
+      // I/O signals: the backup's EIO.cfg, then whatever connected controllers have read
+      let signals: IoSignal[] | undefined;
+      const signalsHere = () => {
+        if (signals) return signals;
+        const root = doc.uri.scheme === 'file' ? backupRootOf(doc.uri.fsPath) : undefined;
+        const names = new Set<string>();
+        signals = [...(root ? backupSignals(root) : []), ...liveSignals()].filter(x => !names.has(U(x.name)) && names.add(U(x.name)));
+        return signals;
+      };
+      const addSignal = (x: IoSignal, sort: string) => add(x.name, vscode.CompletionItemKind.Event, `signal${x.type.toLowerCase()}${x.device ? ` on ${x.device}` : ''}${x.label ? ` - ${x.label}` : ''}`, sort);
 
       // after a backslash: the optional arguments of the call being written
       if (c && /\\\w*$/.test(lineBefore)) {
@@ -348,6 +360,7 @@ export function registerRapidProviders(ctx: vscode.ExtensionContext, _s: Service
         // an argument of a known type: that type's data first, then RobotWare's predefined ones, then functions that return it
         const ty = arg.type.toLowerCase();
         for (const d of data) if (d.type.toLowerCase() === ty) add(d.name, vscode.CompletionItemKind.Variable, d.detail, '0');
+        for (const x of signalsHere()) if (signalFits(x.type, ty)) addSignal(x, ty.startsWith('signal') ? '0' : '3');
         // in the order RobotWare lists them (v5 ... vmax, fine z0 ... z200), not alphabetical
         (PREDEFINED[ty] ?? []).forEach((p, i) => add(p, vscode.CompletionItemKind.Constant, `predefined ${arg.type}`, `1${String(i).padStart(3, '0')}`));
         for (const f of rapidRefEntries('function')) if (f.returns?.toLowerCase() === ty) add(f.name, vscode.CompletionItemKind.Function, `${f.returns} - ${f.summary}`, '2', it => { it.insertText = new vscode.SnippetString(`${f.name}(\${1})`); });
@@ -366,6 +379,8 @@ export function registerRapidProviders(ctx: vscode.ExtensionContext, _s: Service
         }
       }
       for (const d of data) add(d.name, vscode.CompletionItemKind.Variable, d.detail, '3');
+      // in a condition or an expression (IF, WHILE, TEST, :=) a signal reads as its value
+      if (!atStart) for (const x of signalsHere()) addSignal(x, '3');
       for (const m of mods) for (const r of m.routines) if (r.kind === 'FUNC' && (m === t.own || !r.local)) add(r.name, vscode.CompletionItemKind.Function, r.signature, '4');
       for (const f of rapidRefEntries('function')) add(f.name, vscode.CompletionItemKind.Function, `${f.returns ?? ''} - ${f.summary}`, '5', it => { it.documentation = new vscode.MarkdownString(rapidRefMarkdown(f)); });
       for (const ty of rapidRefEntries('type')) add(ty.name, vscode.CompletionItemKind.TypeParameter, ty.summary, '6');

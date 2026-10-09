@@ -21,7 +21,10 @@
 //   - backup as RW 6.16 does it: POST /ctrl/backup?action=backup with backup=/fileservice/$BACKUP/x
 //     (any other form is "Invalid File Service path"), 202, then GET ?action=backupstate reads
 //     "Backup in Progress" twice before "Backup Ready" and the folder appears (stats.backups);
-//   - /logout ends the session.
+//   - /logout ends the session;
+//   - subscriptions as a controller takes them: POST /subscription answers 201 with the event
+//     socket in Location, the socket (/poll/<n>, session cookie required) is accepted and kept
+//     open without events, DELETE /subscription/<n> ends one (stats.subscriptions, .unsubscriptions).
 // A crawl page's file name is its URL with / ? = & turned into _ ; lookups compare names with
 // runs of _ collapsed, which is how the crawler wrote them.
 import * as http from 'node:http';
@@ -37,7 +40,8 @@ export function startMockRws(crawlDir, port = 0, creds = { user: 'Default User',
   for (const f of fs.readdirSync(crawlDir)) if (f.endsWith('.html')) index.set(f.slice(0, -5).replace(/_+/g, '_').replace(/_$/, '').toLowerCase(), path.join(crawlDir, f));
   const nonces = new Set();
   const sessions = new Set();
-  const stats = { requests: 0, unauthorized: 0, actions: 0, calcs: 0, deletes: 0, backups: 0, notFound: 0, logins: 0, logouts: 0, sessionsOpen: () => sessions.size };
+  const stats = { requests: 0, unauthorized: 0, actions: 0, calcs: 0, deletes: 0, backups: 0, notFound: 0, logins: 0, logouts: 0, subscriptions: 0, unsubscriptions: 0, sessionsOpen: () => sessions.size };
+  const eventSockets = new Set();
   // the controller's disk: '$BACKUP/x/SYSPAR/MOC.cfg' -> bytes; folders are implied, plus the roots
   const disk = new Map([['$HOME/user.sys', Buffer.from('MODULE user(SYSMODULE)\nENDMODULE\n')]]);
   const ROOTS = ['$HOME', '$TEMP', '$BACKUP'];
@@ -71,7 +75,8 @@ export function startMockRws(crawlDir, port = 0, creds = { user: 'Default User',
     const calc = req.method === 'POST' && CALCS.includes(action) && /^\/rw\/motionsystem\/mechunits\/[^/]+$/.test(url.pathname);
     const fsp = url.pathname.startsWith('/fileservice/') ? url.pathname.slice('/fileservice/'.length).split('/').filter(Boolean).map(decodeURIComponent).join('/') : undefined;
     const backupPost = req.method === 'POST' && url.pathname === '/ctrl/backup' && action === 'backup';
-    const allowed = calc || backupPost || (req.method === 'GET' && (!action || (url.pathname === '/ctrl/backup' && action === 'backupstate')))
+    const subscription = (req.method === 'POST' && url.pathname === '/subscription') || (req.method === 'DELETE' && /^\/subscription\/[^/]+$/.test(url.pathname));
+    const allowed = calc || backupPost || subscription || (req.method === 'GET' && (!action || (url.pathname === '/ctrl/backup' && action === 'backupstate')))
       || (req.method === 'DELETE' && fsp !== undefined && !ROOTS.includes(fsp) && (disk.has(fsp) || isDir(fsp)));
     if (!allowed) { stats.actions++; res.writeHead(405); res.end(); return; }
     const a = authorized(req);
@@ -92,6 +97,11 @@ export function startMockRws(crawlDir, port = 0, creds = { user: 'Default User',
       if (sid) sessions.delete(sid);
       stats.logouts++;
       res.writeHead(204, headers); res.end(); return;
+    }
+    if (subscription) {
+      if (req.method === 'DELETE') { stats.unsubscriptions++; res.writeHead(200, headers); res.end(); return; }
+      stats.subscriptions++;
+      res.writeHead(201, { ...headers, Location: `ws://${req.headers.host}/poll/${stats.subscriptions}` }); res.end(); return;
     }
     if (calc) {
       stats.calcs++;
@@ -174,7 +184,19 @@ export function startMockRws(crawlDir, port = 0, creds = { user: 'Default User',
     res.writeHead(200, headers);
     res.end(fs.readFileSync(file));
   };
-  return new Promise(resolve => server.listen(port, '127.0.0.1', () => resolve({ server, port: server.address().port, stats, disk, close: () => new Promise(r => server.close(() => r())) })));
+  // the event socket: the handshake for a session, then held open (the mock sends no events)
+  server.on('upgrade', (req, socket) => {
+    const sid = /-http-session-=([^;]+)/.exec(req.headers.cookie ?? '')?.[1];
+    if (!/^\/poll\/\d+$/.test(req.url) || !sid || !sessions.has(sid)) { socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n'); return; }
+    const accept = createHash('sha1').update(req.headers['sec-websocket-key'] + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64');
+    socket.write(['HTTP/1.1 101 Switching Protocols', 'Upgrade: websocket', 'Connection: Upgrade', `Sec-WebSocket-Accept: ${accept}`, `Sec-WebSocket-Protocol: ${req.headers['sec-websocket-protocol'] ?? ''}`, '', ''].join('\r\n'));
+    eventSockets.add(socket);
+    socket.on('data', () => undefined);
+    socket.on('error', () => undefined);
+    socket.on('close', () => eventSockets.delete(socket));
+  });
+  const close = () => { for (const s of eventSockets) s.destroy(); return new Promise(r => server.close(() => r())); };
+  return new Promise(resolve => server.listen(port, '127.0.0.1', () => resolve({ server, port: server.address().port, stats, disk, close })));
 }
 
 /** the crawl folder next to the repo (the most complete run), or $RWS_CRAWL; undefined when absent */

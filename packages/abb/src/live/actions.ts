@@ -14,6 +14,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
 import { controlStationName, type AbbControllers, type AbbConnection } from './controllers';
 import type { RwsSignal } from '../rws/client';
+import { ctrlStateLabel, opModeLabel, execStateLabel, runModeLabel, taskTypeLabel } from './names';
 
 type NameOf = (node?: any, only?: (c: AbbConnection) => boolean) => Promise<string | undefined>;
 
@@ -38,7 +39,6 @@ export function uploadName(localPath: string | undefined, text: string): string 
   return mod ? `${mod}.mod` : base;
 }
 
-const STATION_ID = (name: string) => `robotCode.abb.stationId.${name}`;
 
 export function registerAbbActions(ctx: vscode.ExtensionContext, ctrls: AbbControllers, nameOf: NameOf): void {
   const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
@@ -48,14 +48,14 @@ export function registerAbbActions(ctx: vscode.ExtensionContext, ctrls: AbbContr
   const done = (msg: string) => vscode.window.setStatusBarMessage(`$(check) ${msg}`, 4000);
   const panelText = (c: AbbConnection) => {
     const p = c.snapshot.panel;
-    return p ? `Now: ${p.ctrlState === 'motoron' ? 'motors on' : p.ctrlState === 'motoroff' ? 'motors off' : p.ctrlState}, ${p.opMode}, speed ${p.speedRatio}%, RAPID ${c.snapshot.execution?.state ?? '?'}.` : '';
+    return p ? `Now: ${ctrlStateLabel(p.ctrlState) ?? '?'}, ${opModeLabel(p.opMode) ?? '?'}, speed ${p.speedRatio}%, RAPID ${execStateLabel(c.snapshot.execution?.state) ?? '?'}, run mode ${runModeLabel(c.snapshot.execution?.cycle) ?? '?'}.` : '';
   };
   /** a task of the controller: the only one, or the user's pick (motion tasks first) */
   const pickTask = async (c: AbbConnection, title: string): Promise<string | undefined> => {
     const tasks = [...(c.snapshot.tasks ?? [])].sort((a, b) => +b.motion - +a.motion || a.name.localeCompare(b.name));
     if (!tasks.length) { vscode.window.showInformationMessage(`${c.profile.name}: read the tasks first (Get).`); return undefined; }
     if (tasks.length === 1) return tasks[0].name;
-    return (await vscode.window.showQuickPick(tasks.map(t => ({ label: t.name, description: [t.motion ? 'motion task' : t.type, t.execState === 'star' ? 'running' : t.execState === 'stop' ? 'stopped' : t.execState].filter(Boolean).join(' · ') })), { title }))?.label;
+    return (await vscode.window.showQuickPick(tasks.map(t => ({ label: t.name, description: [t.motion ? 'motion task' : taskTypeLabel(t.type), execStateLabel(t.execState)].filter(Boolean).join(' · ') })), { title }))?.label;
   };
 
   reg('robotCode.abb.setSpeed', async (node?: any, percent?: number) => {
@@ -95,15 +95,15 @@ export function registerAbbActions(ctx: vscode.ExtensionContext, ctrls: AbbContr
     if (!mode) {
       const pp = c.snapshot.tasks?.filter(t => t.motion).map(t => { const p = c.snapshot.pointers?.get(t.name)?.program; return p ? `${t.name} at ${p.module} › ${p.routine}${p.begin ? ` line ${p.begin.line}` : ''}` : undefined; }).filter(Boolean).join('; ');
       const pick = await vscode.window.showQuickPick([
-        { label: 'Once', description: 'run the program one cycle, then stop', value: 'once' as const },
-        { label: 'Continuous', description: 'run main over and over until stopped', value: 'forever' as const },
+        { label: runModeLabel('once')!, description: 'run main once, then stop', value: 'once' as const },
+        { label: runModeLabel('forever')!, description: 'run main over and over until stopped', value: 'forever' as const },
       ], { title: `Start RAPID on ${name}` });
       if (!pick) return;
       mode = pick.value;
-      if (!(await confirm(`Start RAPID on ${name} (${pick.label.toLowerCase()})? THE ROBOT WILL MOVE.`,
-        `${panelText(c)}${pp ? ` Program pointer (last read): ${pp}.` : ''} RAPID starts from the program pointer, at the speed override. Make sure nobody is in the cell.`, `Start ${pick.label}`))) return;
+      if (!(await confirm(`Start RAPID on ${name} in ${pick.label}? THE ROBOT WILL MOVE.`,
+        `${panelText(c)}${pp ? ` Program pointer (last read): ${pp}.` : ''} RAPID starts from the program pointer, at the speed override. Make sure nobody is in the cell.`, `Start (${pick.label})`))) return;
     }
-    try { await ctrls.control(name, `RAPID start (${mode === 'once' ? 'once' : 'continuous'})`, cl => cl.startRapid(mode), ['state', 'tasks']); done(`${name}: RAPID started`); return true; } catch (e) { show(e); return false; }
+    try { await ctrls.control(name, `RAPID start (${runModeLabel(mode)})`, cl => cl.startRapid(mode), ['state', 'tasks']); done(`${name}: RAPID started`); return true; } catch (e) { show(e); return false; }
   });
 
   // Stop asks nothing: stopping is always allowed to be quick
@@ -225,45 +225,42 @@ export function registerAbbActions(ctx: vscode.ExtensionContext, ctrls: AbbContr
   });
 
   /**
-   * Request write access. IRC5: mastership of every domain, held until released. OmniCore: this PC
-   * as a remote control station, registered with the id and PIN the controller allows - asked the
-   * first time the controller says this session is no control station, then kept (the PIN in secret
-   * storage) and forgotten again when the controller turns them down.
+   * Request write access. IRC5 (RW 6) and RobotWare 7: mastership of every domain, held until
+   * released. RobotWare 8: this PC as a remote control station - registered in each session (it
+   * does not outlive one) under a GUID made once per controller and a numeric PIN (asked once, kept
+   * in secret storage, asked again when the controller turns it down) - then write access, then the
+   * status read back to see that this PC's id holds it. `pin` is for tests and scripts.
    */
-  reg('robotCode.abb.requestWriteAccess', async (node?: any, yes?: boolean) => {
+  reg('robotCode.abb.requestWriteAccess', async (node?: any, yes?: boolean, pin?: string) => {
     const name = await connected(node); if (!name) return;
     const c = ctrls.get(name)!;
-    const omni = c.profile.family === 'omnicore';
-    if (!yes && !(await confirm(`Request write access to ${name}?`, omni
+    const station = c.client?.usesControlStation === true;
+    const blocked = ctrls.writeBlocked(name);
+    if (blocked) { show(blocked); return false; }
+    if (!yes && !(await confirm(`Request write access to ${name}?`, station
       ? `This PC asks to be the control station that may change ${name} (as "${controlStationName()}"); the FlexPendant may have to grant it. While it holds write access the pendant cannot make changes until it is released.`
       : `This session takes mastership of RAPID, configuration and motion and keeps it until Release; meanwhile the FlexPendant cannot edit RAPID or the configuration.`, 'Request'))) return;
-    const station = async (fresh: boolean) => {
-      const id = !fresh && ctx.globalState.get<string>(STATION_ID(name)) || await vscode.window.showInputBox({ title: `${name}: control station id`, prompt: 'The remote control station id this controller is configured to allow', value: ctx.globalState.get<string>(STATION_ID(name)), ignoreFocusOut: true });
-      if (!id) return undefined;
-      const pin = !fresh && await ctrls.getStationPin(name) || await vscode.window.showInputBox({ title: `${name}: PIN for control station ${id}`, prompt: 'Kept in VS Code\'s secret storage', password: true, ignoreFocusOut: true });
-      if (!pin) return undefined;
-      return { name: controlStationName(), id: id.trim(), pin };
-    };
+    const askPin = () => vscode.window.showInputBox({
+      title: `${name}: control station PIN`, prompt: 'A number (digits only). Kept in VS Code\'s secret storage.', password: true, ignoreFocusOut: true,
+      validateInput: v => (/^\s*\d+\s*$/.test(v) ? undefined : 'Digits only, no prefix'),
+    }).then(v => v?.trim());
     try {
-      if (!omni) { await ctrls.control(name, 'request mastership (RAPID, configuration, motion)', cl => cl.requestWriteAccess()); done(`${name}: mastership held`); return true; }
-      try { await ctrls.control(name, 'request write access', cl => cl.requestWriteAccess()); }
-      catch (e: any) {
-        if (!/not part of a Control Station/i.test(e?.message ?? '')) throw e;
-        const known = !!ctx.globalState.get<string>(STATION_ID(name)) && !!(await ctrls.getStationPin(name));
-        let st = await station(false);
-        if (!st) return false;
-        try { await ctrls.control(name, `register as control station ${st.id} and request write access`, cl => cl.requestWriteAccess(st)); }
-        catch (e2: any) {
-          await ctrls.forgetStationPin(name);
-          if (!known) throw e2;
-          // the kept id/PIN no longer work: ask once more
-          st = await station(true);
-          if (!st) return false;
-          await ctrls.control(name, `register as control station ${st.id} and request write access`, cl => cl.requestWriteAccess(st));
-        }
-        await ctx.globalState.update(STATION_ID(name), st.id);
-        await ctrls.setStationPin(name, st.pin);
+      if (!station) { await ctrls.control(name, 'request mastership (RAPID, configuration, motion)', cl => cl.requestWriteAccess()); done(`${name}: mastership held`); return true; }
+      const id = await ctrls.stationId(name);
+      const kept = pin ?? await ctrls.getStationPin(name);
+      let p = kept ?? await askPin();
+      if (!p) return false;
+      const request = (pinNow: string) => ctrls.control(name, `register as control station ${id} and request write access`, cl => cl.requestWriteAccess({ name: controlStationName(), id, pin: pinNow }));
+      try { await request(p); }
+      catch (e) {
+        if (!kept || pin) throw e;
+        // the kept PIN no longer works: ask once more
+        await ctrls.forgetStationPin(name);
+        p = await askPin();
+        if (!p) return false;
+        await request(p);
       }
+      await ctrls.setStationPin(name, p);
       const holder = ctrls.get(name)?.snapshot.access?.holder;
       if (ctrls.holdsAccess(name)) done(`${name}: write access held`);
       else vscode.window.showInformationMessage(`${name}: write access requested${holder ? ` - it is held by ${holder}` : ''}. If the FlexPendant asks, grant it there, then press Get on the State card.`);
@@ -271,9 +268,15 @@ export function registerAbbActions(ctx: vscode.ExtensionContext, ctrls: AbbContr
     } catch (e) { show(e); return false; }
   });
 
+  /** RW 8: a write may already have ended write access - then there is nothing to release, and that is no error. */
   reg('robotCode.abb.releaseWriteAccess', async (node?: any, yes?: boolean) => {
     const name = await connected(node); if (!name) return;
     if (!yes && !(await confirm(`Release write access to ${name}?`, 'The FlexPendant (or another control station) can take it again; this PC cannot change the controller until it requests it again.', 'Release'))) return;
-    try { await ctrls.control(name, 'release write access', cl => cl.releaseWriteAccess()); done(`${name}: write access released`); return true; } catch (e) { show(e); return false; }
+    const c = ctrls.get(name)!;
+    try {
+      const released = await ctrls.control(name, 'release write access', cl => cl.releaseWriteAccess(cl.usesControlStation ? c.stationId : undefined));
+      done(released ? `${name}: write access released` : `${name}: write access was no longer held`);
+      return true;
+    } catch (e) { show(e); return false; }
   });
 }

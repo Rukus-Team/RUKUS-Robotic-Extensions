@@ -10,7 +10,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { parseRwsJson } from '@abb/rws/hal';
 import { itemOf, itemsOf } from '@abb/rws/xhtml';
-import { RwsClient, RwsError, retcodeOf } from '@abb/rws/client';
+import { RwsClient, RwsError, retcodeOf, newControlStationId, isControlStationId, robotWareMajor } from '@abb/rws/client';
 import { takeBackup } from '@abb/live/backup';
 
 type Check = (cond: unknown, msg: string) => void;
@@ -43,7 +43,8 @@ export async function run(check: Check): Promise<void> {
   const seen: { method: string; url: string; accept?: string; auth?: string; cookie?: string; type?: string; body: string }[] = [];
   const files = new Map<string, Buffer>();
   let backupState = 'Init State';
-  let registered = false;
+  let registered: { id: string; name: string } | undefined;
+  let holder = { id: 'a1b2', name: 'FlexPendant' };
   const server = http.createServer((req, res) => {
     let body = '';
     req.on('data', c => { body += c; });
@@ -93,10 +94,19 @@ export async function run(check: Check): Promise<void> {
         return json(`{ "_links" : { "self" : { "href" : "" }${next} }, "_embedded" : { "resources" : [ ${items.join(', ')} ] }}`);
       }
       if (req.method === 'GET' && u === '/rw/elog/0?lang=en&limit=50&start=1') return json('{ "_embedded" : { "resources" : [ { "_type" : "elog-message-li", "_title" : "/rw/elog/0/1", "msgtype" : "1", "code" : "10002", "tstamp" : "2026-09-25 T 22:15:06", "title" : "Program pointer has been reset", "desc" : "The program pointer of task T_ROB1 has been reset." }, { "_type" : "elog-message-li", "_title" : "/rw/elog/0/2", "msgtype" : "3", "code" : "20010", "tstamp" : "2026-09-26 T 08:00:00", "title" : "Emergency stop state", "actions" : "Reset the emergency stop." } ] }}');
-      if (req.method === 'GET' && u === '/rw/controlstation/writeaccess/status') return json('{ "state": [ { "_type": "controlstation-write-access-status", "_title": "write-access-status", "held-by-control-station-Id": "a1b2", "held-by-control-station-name": "FlexPendant", "control-station-write-access-held": "false", "control-station-external-control-enabled": "false" } ]}');
-      // a remote control station: registered with an allowed id and PIN, then it may ask for write access
-      if (req.method === 'POST' && u === '/rw/controlstation/register/remote') { if (/control-station-id=PC1&pincode=1234&/.test(body)) { registered = true; res.writeHead(204); return res.end(); } return json('{ "status" : { "code" : -1073435870, "msg" : "Control station id not allowed" } }', 403); }
-      if (req.method === 'POST' && (u === '/rw/controlstation/writeaccess/request' || u === '/rw/controlstation/writeaccess/release')) { if (registered) { res.writeHead(204); return res.end(); } return json('{ "status" : { "code" : -1073435871, "msg" : "Session is not part of a Control Station." } }', 403); }
+      if (req.method === 'GET' && u === '/rw/controlstation/writeaccess/status') return json(`{ "state": [ { "_type": "controlstation-write-access-status", "_title": "write-access-status", "held-by-control-station-Id": "${holder.id}", "held-by-control-station-name": "${holder.name}", "control-station-write-access-held": "false", "control-station-external-control-enabled": "false" } ]}`);
+      // a remote control station, as RW 8.2.1 took it by hand: exactly name, a braced GUID id (lowercase
+      // `id`), a numeric pincode; registration lasts the session; then request (204), status, release (204)
+      if (req.method === 'POST' && u === '/rw/controlstation/register/remote') {
+        const f = new URLSearchParams(body);
+        if ([...f.keys()].join(',') === 'control-station-name,control-station-id,pincode' && /^\{[0-9a-f-]{36}\}$/.test(f.get('control-station-id')!) && /^\d+$/.test(f.get('pincode')!)) { registered = { id: f.get('control-station-id')!, name: f.get('control-station-name')! }; res.writeHead(204); return res.end(); }
+        return json('{ "status" : { "code" : -1073435870, "msg" : "Control station id not allowed" } }', 403);
+      }
+      if (req.method === 'POST' && u === '/rw/controlstation/writeaccess/request') { if (registered) { holder = registered; res.writeHead(204); return res.end(); } return json('{ "status" : { "code" : -1073435871, "msg" : "Session is not part of a Control Station." } }', 403); }
+      if (req.method === 'POST' && u === '/rw/controlstation/writeaccess/release') { if (registered && holder.id === registered.id) { holder = { id: 'none', name: 'none' }; res.writeHead(204); return res.end(); } return json('{ "status" : { "code" : -1073435872, "msg" : "Write access not held" } }', 400); }
+      if (req.method === 'GET' && u === '/rw/mastership') return json('{}', 410);
+      // a write that ends write access by itself (as one can on RW 8)
+      if (req.method === 'POST' && u === '/rw/rapid/symbol/RAPID/T_ROB1/Main/nCount/data') { holder = { id: 'none', name: 'none' }; res.writeHead(204); return res.end(); }
       if (req.method === 'GET' && u === '/rw/rapid/symbol/RAPID/T_ROB1/Main/nCount/data') return json('{ "state" : [ { "_type" : "rap-data", "_title" : "RAPID/T_ROB1/Main/nCount", "value" : "7" } ]}');
       if (u === '/logout') { res.writeHead(204); return res.end(); }
       json('{ "status" : { "code" : -1073414145, "msg" : "no such resource" } }', 404);
@@ -128,15 +138,42 @@ export async function run(check: Check): Promise<void> {
     let notStation = '';
     try { await c.requestWriteAccess(); } catch (e) { notStation = e instanceof RwsError ? `${e.status} ${e.message}` : String(e); }
     check(/^403 .*not part of a Control Station/.test(notStation), `write access before registering: the controller's reason comes through: ${notStation}`);
-    let notAllowed = '';
-    try { await c.requestWriteAccess({ name: 'Robot Code PC', id: 'PC9', pin: '0000' }); } catch (e) { notAllowed = String((e as Error).message); }
-    check(/id not allowed/.test(notAllowed) && seen[seen.length - 1].url === '/rw/controlstation/register/remote', `an id the controller does not allow stops before the request: ${notAllowed}`);
-    await c.requestWriteAccess({ name: 'Robot Code PC', id: 'PC1', pin: '1234' });
+    check(c.robotWareMajor === 8 && c.usesControlStation, `RobotWare 8 is read from /rw/system and takes the control station path: ${c.robotWareMajor}`);
+    let notId = '';
+    const sent = seen.length;
+    try { await c.requestWriteAccess({ name: 'Robot Code PC', id: 'PC9', pin: '0000' }); } catch (e) { notId = String((e as Error).message); }
+    check(/GUID in braces/.test(notId) && seen.length === sent, `an id that is no braced GUID is stopped before anything is sent: ${notId}`);
+    let badPin = '';
+    try { await c.requestWriteAccess({ name: 'Robot Code PC', id: '{3f2504e0-4f89-41d3-9a0c-0305e82c3301}', pin: 'PIN1234' }); } catch (e) { badPin = String((e as Error).message); }
+    check(/digits only/.test(badPin) && seen.length === sent, `a PIN with a prefix is stopped too: ${badPin}`);
+    const me = { name: 'Robot Code PC', id: newControlStationId(), pin: '1234' };
+    check(isControlStationId(me.id) && me.id === me.id.toLowerCase(), `a new station id is a lowercase GUID in braces: ${me.id}`);
+    await c.requestWriteAccess(me);
     const reg = seen.filter(x => x.url === '/rw/controlstation/register/remote').pop()!;
-    check(reg.body === 'control-station-name=Robot%20Code%20PC&control-station-id=PC1&pincode=1234&release-write-access-when-lost=true' && reg.type === 'application/x-www-form-urlencoded;v=2.0', `register/remote form: ${reg.body} | ${reg.type}`);
+    check(reg.body === `control-station-name=Robot%20Code%20PC&control-station-id=${encodeURIComponent(me.id)}&pincode=1234` && reg.type === 'application/x-www-form-urlencoded;v=2.0' && reg.accept === 'application/hal+json;v=2.0',
+      `register/remote: exactly the three fields that worked by hand: ${reg.body} | ${reg.type} | ${reg.accept}`);
     check(seen[seen.length - 1].url === '/rw/controlstation/writeaccess/request' && seen[seen.length - 1].method === 'POST', 'then write access is requested');
-    await c.releaseWriteAccess();
-    check(seen[seen.length - 1].url === '/rw/controlstation/writeaccess/release', 'release posts to writeaccess/release');
+    check((await c.writeAccess()).holderId === me.id, 'the status names this station id as the holder');
+    const regs = seen.filter(x => x.url === '/rw/controlstation/register/remote').length;
+    await c.requestWriteAccess(me);
+    check(seen.filter(x => x.url === '/rw/controlstation/register/remote').length === regs, 'asking again in the same session does not register again');
+    check(await c.releaseWriteAccess(me.id) === true && seen[seen.length - 1].url === '/rw/controlstation/writeaccess/release', 'release: status read first, then posted to writeaccess/release');
+    await c.requestWriteAccess(me);
+    await c.setRapidData('T_ROB1', 'nCount', '8', 'Main');
+    const before = seen.length;
+    check(await c.releaseWriteAccess(me.id) === false && !seen.slice(before).some(x => x.method === 'POST'), 'a write that ended write access: release sees it in the status and sends nothing');
+    check(!seen.some(x => /\/rw\/mastership/.test(x.url)), 'RW 8 is never asked for mastership (410 Gone there)');
+    check(robotWareMajor('8', undefined) === 8 && robotWareMajor(undefined, '8.2.1+1023') === 8 && robotWareMajor(undefined, '7.13.0') === 7 && robotWareMajor(undefined, '6.16.01.00') === 6 && robotWareMajor(undefined, undefined) === undefined,
+      'RobotWare major: 8, 7 and 6 all read (the check takes RW 8, not only 7.x)');
+    // RobotWare 7 over RWS 2.0: mastership, at the 2.0 paths
+    const rw7 = new RwsClient({ host: '127.0.0.1', port, family: 'omnicore', https: false, user: 'Default User', password: 'robotics' });
+    rw7.robotWareMajor = 7;
+    check(!rw7.usesControlStation, 'RobotWare 7 takes mastership, not a control station');
+    const n7 = seen.length;
+    await rw7.requestWriteAccess(me).catch(() => undefined);
+    check(seen.slice(n7).map(x => `${x.method} ${x.url}`).join(' ') === 'POST /rw/mastership/request', `RW 7: ${seen.slice(n7).map(x => `${x.method} ${x.url}`).join(' ')}`);
+    await rw7.logout();
+    seen.splice(n7);   // a second session: kept out of the one-session checks below
     check(await c.symbol('T_ROB1', 'nCount', 'Main') === '7', 'a RAPID value is read at the RWS 2.0 path /rw/rapid/symbol/RAPID/{task}/{module}/{name}/data');
     const sigs = await c.signals();
     check(sigs.length === 2 && sigs[0].path === 'Local/DRV_1/DO1' && sigs[0].value === '1' && sigs[1].name === 'diPart' && sigs[1].type === 'DI', `signals over two pages (the next link's &amp; decoded), each with its path: ${JSON.stringify(sigs)}`);

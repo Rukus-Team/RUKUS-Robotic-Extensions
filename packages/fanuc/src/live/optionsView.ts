@@ -15,6 +15,9 @@ import { gated } from '@core/experimental';
 import { boundRobot, profileNamed } from '@core/robotBinding';
 import { WEBVIEW_BASE_CSS, LIST_LIMIT_JS, emptyState } from '@core/webviewStyle';
 import { ORDER_FILE, readControllerOptions, parseOrderFile, optionHighlights, type ControllerOption } from './controllerOptions';
+import { describeOption } from '@core/live/optionInfo';
+import { showOptionPanel } from '@core/live/optionPanel';
+import { FANUC_OPTION_DOCS, fanucCodeNote } from './optionDocs';
 
 interface Source { title: string; where: string; options: ControllerOption[] }
 
@@ -32,6 +35,14 @@ export function registerOptionsView(ctx: vscode.ExtensionContext, s: FanucServic
     robots.setOptions(c.profile.name, options, optionHighlights(options));
   }));
 
+  // the robot page's Options card: a highlight's (or any option's) whole explanation in a panel
+  reg('robotCode.live.optionInfo', (label: string) => {
+    if (typeof label !== 'string') return;
+    // the highlights name the option's subject ("Loads .LS programs" is ASCII Upload); a code or name also works
+    const key = /\.LS/i.test(label) ? 'R507 ASCII Upload' : label;
+    const code = /\b([A-Z]\d{3})\b/.exec(key)?.[1] ?? '';
+    showOptionPanel(describeOption('FANUC', FANUC_OPTION_DOCS, code, key.replace(/\b[A-Z]\d{3}\b/, '').trim(), fanucCodeNote));
+  });
   // every option: from a connected robot, or offline from a backup folder's orderfil.dat
   reg('robotCode.live.showOptions', async (node?: any) => {
     const src = await chooseSource(s, robots, nameOf(node));
@@ -102,7 +113,9 @@ function openPanel(ctx: vscode.ExtensionContext, robots: RobotManager, src: Sour
     panel = vscode.window.createWebviewPanel('robotCode.controllerOptions', `Options: ${src.title}`, vscode.ViewColumn.Active, { enableScripts: true });
     panels.set(src.title, panel);
     panel.onDidDispose(() => panels.delete(src.title), null, ctx.subscriptions);
-    panel.webview.onDidReceiveMessage(async (m: { copy?: string; refresh?: boolean }) => {
+    panel.webview.onDidReceiveMessage(async (m: { copy?: string; refresh?: boolean; info?: number }) => {
+      // a click on an option: its whole explanation in a panel beside
+      if (typeof m.info === 'number' && src.options[m.info]) { const o = src.options[m.info]; showOptionPanel(describeOption('FANUC', FANUC_OPTION_DOCS, o.code, o.name, fanucCodeNote)); }
       if (m.copy !== undefined) { await vscode.env.clipboard.writeText(m.copy); vscode.window.setStatusBarMessage(`$(copy) ${m.copy.split('\n').length} option(s) copied`, 3000); }
       if (m.refresh) {
         const c = robots.get(src.title);
@@ -118,7 +131,7 @@ function openPanel(ctx: vscode.ExtensionContext, robots: RobotManager, src: Sour
 function render(src: Source): string {
   const hl = optionHighlights(src.options);
   const live = src.where.startsWith('read from');
-  const rows = src.options.map(o => `<tr tabindex="-1" data-search="${escapeHtml((o.code + ' ' + o.name).toLowerCase())}"><td class="mono code">${escapeHtml(o.code)}</td><td>${escapeHtml(o.name)}</td></tr>`).join('');
+  const rows = src.options.map((o, i) => `<tr tabindex="-1" class="click" data-i="${i}" title="${escapeHtml(describeOption('FANUC', FANUC_OPTION_DOCS, o.code, o.name, fanucCodeNote).short)} Click for more." data-search="${escapeHtml((o.code + ' ' + o.name).toLowerCase())}"><td class="mono code">${escapeHtml(o.code)}</td><td>${escapeHtml(o.name)}</td></tr>`).join('');
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${WEBVIEW_BASE_CSS}
   body { padding: 12px 16px }
   h1 { font-size: 16px; margin: 0 0 2px } .where { color: var(--rc-muted); font-size: 11.5px; margin-bottom: 12px }
@@ -128,7 +141,7 @@ function render(src: Source): string {
   .bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; position: sticky; top: 0; background: var(--vscode-editor-background); padding: 6px 0; z-index: 2 }
   .bar input { flex: 1 1 220px } .count { color: var(--rc-muted); font-size: 11.5px }
   th { position: sticky; top: 0; background: var(--vscode-editor-background) } .rc-scroll { max-height: calc(100vh - 230px); min-height: 160px } td.code { width: 90px; color: var(--rc-purple) }
-  tr:hover td { background: var(--vscode-list-hoverBackground) } tr:focus td { background: var(--vscode-list-focusBackground, var(--vscode-list-hoverBackground)) }
+  tr.click { cursor: pointer } tr:hover td { background: var(--vscode-list-hoverBackground) } tr:focus td { background: var(--vscode-list-focusBackground, var(--vscode-list-hoverBackground)) }
 </style></head><body>
 <h1>${escapeHtml(src.title)} — ${src.options.length} option${src.options.length === 1 ? '' : 's'}</h1>
 <div class="where">${escapeHtml(src.where)}</div>
@@ -163,6 +176,9 @@ ${LIST_LIMIT_JS}
     else if (e.key === 'Home') go(0); else if (e.key === 'End') go(list.length - 1);
     else if (e.key === 'Escape') { e.preventDefault(); q?.focus(); }
   });
+  // hover: the short explanation (title); click or Enter: the whole one in a panel
+  for (const r of all) r.addEventListener('click', () => vscode.postMessage({ info: Number(r.dataset.i) }));
+  document.querySelector('tbody')?.addEventListener('keydown', e => { if (e.key === 'Enter') { const r = e.target.closest('tr'); if (r) vscode.postMessage({ info: Number(r.dataset.i) }); } });
   document.getElementById('copy')?.addEventListener('click', () => vscode.postMessage({ copy: visible().map(r => r.cells[0].textContent + '\\t' + r.cells[1].textContent).join('\\n') }));
   document.getElementById('refresh')?.addEventListener('click', () => vscode.postMessage({ refresh: true }));
   show();

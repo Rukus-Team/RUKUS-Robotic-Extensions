@@ -36,7 +36,7 @@ function formFromProfile(p: AbbProfile): Record<string, unknown> {
 }
 
 function hintFor(err: string, p: AbbProfile): string {
-  if (/ECONNREFUSED/.test(err)) return p.host.startsWith('127.') ? 'Nothing listens there. A RobotStudio virtual controller picks a new port each time it starts - find it with Get-NetTCPConnection -OwningProcess (Get-Process RobVC).Id -State Listen.' : 'The controller refused the port. RWS answers on 80 (HTTP) on the service port; check the port and HTTPS settings.';
+  if (/ECONNREFUSED/.test(err)) return p.host.startsWith('127.') ? 'Nothing listens there. A RobotStudio virtual controller picks a new port each time it starts - "ABB: Find Virtual Controllers" finds it (vrchost64 for OmniCore, RobVC for IRC5).' : 'The controller refused the port. RWS answers on 80 (HTTP) on the service port; check the port and HTTPS settings.';
   if (/timeout|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH/i.test(err)) return p.host === ABB_SERVICE_PORT_IP ? 'No answer on the service port. Is the PC cabled to the controller\'s service port (X2 on IRC5, MGMT on OmniCore) with DHCP or a fixed 192.168.125.x address?' : 'No answer. Check the IP and that the PC is on the robot network.';
   if (/\b401\b/.test(err)) return 'Login refused. The factory login is Default User / robotics; a controller with UAS set up needs a user it grants Remote Login.';
   if (/\b503\b/.test(err)) return 'The controller has no free RWS session. Sessions expire after a few minutes of no use, or restart the controller\'s web services.';

@@ -2,7 +2,7 @@
  * The "ABB Controllers" sidebar section and its commands, plus the program/motion pointer
  * marks in RAPID editors.
  *
- *   IRC5-CELL2           192.168.125.1 · connected · motors off · AUTO · 100% · stopped
+ *   IRC5-CELL2           192.168.125.1 · connected · Motors Off · Auto · 100% · RAPID Stopped (Continuous)
  *     Controller         6700-805115 · RobotWare 6.16.01.00
  *     T_ROB1             motion task · stopped
  *       Program pointer  STYLE_35L › MOV_R01_Pick_35L · line 77       click: open it
@@ -27,6 +27,10 @@ import type { Services } from '@core/services';
 import { icon } from '@core/views/typeStyle';
 import { viewDeclared } from '@core/util';
 import { registerConnectionKind } from '@core/live/connectionKinds';
+import { ctrlStateLabel, opModeLabel, execStateLabel, runModeLabel, taskTypeLabel } from './names';
+import { controllerLabel } from './identity';
+import { discoverVirtualControllers, matchEndpoint, MANUAL_STEPS, type VcEndpoint } from './vcDiscovery';
+import { eventMarkdown, parseEventCode } from './eventCatalog';
 import { AbbControllers, ago, type AbbConnection, type AbbProfile } from './controllers';
 import type { RwsPointer, RwsModuleInfo, RwsEvent, RwsSignal } from '../rws/client';
 import { defaultBackupName, validBackupName } from './backup';
@@ -110,15 +114,22 @@ class AbbTree implements vscode.TreeDataProvider<Node> {
     if (el.type === 'ctrl') {
       const c = el.c, s = c.snapshot;
       const it = new vscode.TreeItem(c.profile.name, c.state === 'connected' ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None);
-      const bits = [`${c.profile.host}${c.profile.port ? `:${c.profile.port}` : ''}`, c.profile.family === 'omnicore' ? 'OmniCore' : '', c.state];
-      if (c.state === 'connected' && s.panel) bits.push(s.panel.ctrlState === 'motoron' ? 'motors on' : s.panel.ctrlState === 'motoroff' ? 'motors off' : s.panel.ctrlState ?? '', s.panel.opMode ?? '', s.panel.speedRatio !== undefined ? `${s.panel.speedRatio}%` : '');
-      if (c.state === 'connected' && s.execution?.state) bits.push(s.execution.state);
+      const lost = c.state === 'connected' && c.reachable === false;
+      // the controller by its own name first: many share 192.168.125.1, so the address alone says little
+      const who = c.state === 'connected' ? this.ctrls.identityOf(c) : undefined;
+      const known = who ? controllerLabel(who) : this.ctrls.expected(c)?.name;
+      const bits = [known && known !== c.profile.name ? known : '', `${c.profile.host}${c.profile.port ? `:${c.profile.port}` : ''}`, c.profile.family === 'omnicore' ? 'OmniCore' : '', who?.virtual ? 'virtual' : '', lost ? 'not answering' : c.state];
+      if (c.state === 'connected' && s.panel) bits.push(ctrlStateLabel(s.panel.ctrlState) ?? '', opModeLabel(s.panel.opMode) ?? '', s.panel.speedRatio !== undefined ? `${s.panel.speedRatio}%` : '');
+      if (c.state === 'connected' && s.execution?.state) bits.push(`RAPID ${execStateLabel(s.execution.state)}${s.execution.cycle ? ` (${runModeLabel(s.execution.cycle)})` : ''}`);
       if (c.state === 'connected' && s.access) bits.push((s.access.free ? 'write access free' : `write access: ${this.ctrls.holdsAccess(c.profile.name) ? 'this PC' : s.access.holder}`) + (s.access.externalControl === false ? ' · remote access off' : ''));
       it.description = bits.filter(Boolean).join(' · ');
       it.tooltip = (c.error ? `${c.profile.name}: ${c.error}` : `${c.profile.name} - ${c.profile.user ?? 'Default User'}@${c.profile.host}${s.at.get('state') ? `\nstate read ${ago(s.at.get('state'))}` : ''}`)
+        + (who ? `\nController ${who.ctrlName ?? '?'}${who.ctrlId ? ` (id ${who.ctrlId})` : ''} · system ${who.systemName ?? '?'}${who.systemId ? ` (id ${who.systemId})` : ''} · ${who.virtual === true ? 'virtual controller' : who.virtual === false ? 'real controller' : 'virtual or real: not said'}`
+          : this.ctrls.expected(c)?.id ? `\nFor controller ${this.ctrls.expected(c)!.name ?? '?'} (system id ${this.ctrls.expected(c)!.id}); another one at this address is refused` : '')
         + (c.rukusCluster ? `\nFrom RUKUS cluster ${c.rukusCluster} - edited in RUKUS` : '')
         + (s.access ? `\nWrite access: ${s.access.summary}${s.access.domains ? ` (RAPID ${s.access.domains.rapid}, configuration ${s.access.domains.cfg}, motion ${s.access.domains.motion})` : ''}` : '');
-      it.iconPath = c.state === 'connected' ? icon('plug', 'charts.green') : c.state === 'error' ? icon('error', 'charts.red') : c.state === 'connecting' ? icon('loading~spin') : icon('debug-disconnect');
+      // red whenever the connection failed or stopped answering, as on the FANUC rows
+      it.iconPath = lost ? icon('error', 'charts.red') : c.state === 'connected' ? icon('plug', 'charts.green') : c.state === 'error' ? icon('error', 'charts.red') : c.state === 'connecting' ? icon('loading~spin') : icon('debug-disconnect');
       it.contextValue = `abb-ctrl-${c.state}`;
       it.command = { command: 'robotCode.abb.openPage', title: 'Open controller page', arguments: [c.profile.name] };
       return it;
@@ -136,9 +147,9 @@ class AbbTree implements vscode.TreeDataProvider<Node> {
       const has = el.c.snapshot.pointers?.get(el.task);
       const it = new vscode.TreeItem(el.task, has?.program || has?.motion ? vscode.TreeItemCollapsibleState.Expanded
         : el.c.snapshot.modules?.get(el.task)?.length ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
-      const type = t?.type === 'norm' ? 'normal' : t?.type === 'semi' ? 'semistatic' : t?.type === 'stat' ? 'static' : t?.type;
-      it.description = [t?.motion ? 'motion task' : type, t?.execState === 'star' ? 'running' : t?.execState === 'stop' ? 'stopped' : t?.execState, t?.active === false ? 'inactive' : undefined].filter(Boolean).join(' · ');
-      it.tooltip = `Task ${el.task}: type ${t?.type}, task state ${t?.taskState}, execution ${t?.execState}; read ${ago(el.c.snapshot.at.get('tasks'))}`;
+      const type = taskTypeLabel(t?.type);
+      it.description = [t?.motion ? 'motion task' : type, execStateLabel(t?.execState), t?.active === false ? 'inactive' : undefined].filter(Boolean).join(' · ');
+      it.tooltip = `Task ${el.task}: type ${type}, task state ${t?.taskState}, execution ${execStateLabel(t?.execState)}; read ${ago(el.c.snapshot.at.get('tasks'))}`;
       it.iconPath = icon(t?.motion ? 'robot' : 'server-process', t?.execState === 'star' ? 'charts.green' : undefined);
       return it;
     }
@@ -221,7 +232,7 @@ function findModule(s: Services, name: string): vscode.Uri | undefined {
 }
 
 export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services): AbbControllers {
-  const ctrls = new AbbControllers(ctx.secrets, s.output);
+  const ctrls = new AbbControllers(ctx.secrets, s.output, ctx.globalState);
   const tree = new AbbTree(ctrls);
   const view = viewDeclared(ctx, 'robotCode.abbControllers') ? vscode.window.createTreeView('robotCode.abbControllers', { treeDataProvider: tree }) : undefined;
   const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
@@ -242,6 +253,44 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   reg('robotCode.abb.editController', async (node?: any) => {
     const name = await nameOf(node); if (!name) return;
     await vscode.commands.executeCommand('robotCode.live.addRobot', { brand: 'abb', name });
+  });
+
+  /**
+   * An event code -> title, cause, consequence, remedy (eventCatalog.ts): from what controllers'
+   * event logs said, kept on this PC. `code` is for tests and scripts; it returns the Markdown.
+   */
+  reg('robotCode.abb.lookupEvent', async (code?: number | string) => {
+    const sel = vscode.window.activeTextEditor?.document.getText(vscode.window.activeTextEditor.selection);
+    let n = code !== undefined ? parseEventCode(String(code)) : undefined;
+    if (n === undefined) {
+      const typed = await vscode.window.showInputBox({ title: 'ABB event code', prompt: 'The 5- or 6-digit number from the event log or the FlexPendant, e.g. 50204', value: sel && parseEventCode(sel) !== undefined ? String(parseEventCode(sel)) : undefined, validateInput: v => (parseEventCode(v) === undefined ? 'A 5- or 6-digit event number' : undefined) });
+      if (typed === undefined) return;
+      n = parseEventCode(typed)!;
+    }
+    const md = eventMarkdown(ctrls.eventCatalog(), n);
+    if (code === undefined) {
+      const doc = await vscode.workspace.openTextDocument({ content: md, language: 'markdown' });
+      await vscode.commands.executeCommand('markdown.showPreview', doc.uri).then(undefined, () => vscode.window.showTextDocument(doc));
+    }
+    return md;
+  });
+
+  // a code in the event log page: its title, cause and remedy on hover
+  ctx.subscriptions.push(vscode.languages.registerHoverProvider({ scheme: INFO }, {
+    provideHover(doc, pos) {
+      const r = doc.getWordRangeAtPosition(pos, /\b\d{5,6}\b/);
+      if (!r) return undefined;
+      return new vscode.Hover(new vscode.MarkdownString(eventMarkdown(ctrls.eventCatalog(), Number(doc.getText(r)))), r);
+    },
+  }));
+
+  /** The profile takes whichever controller answers on its next Connect (one set in the profile itself stays). */
+  reg('robotCode.abb.forgetIdentity', async (node?: any) => {
+    const name = await nameOf(node); if (!name) return;
+    const c = ctrls.get(name);
+    if (c?.profile.controllerId || c?.profile.controllerName) { vscode.window.showInformationMessage(`${name} names its controller in settings (controllerName / controllerId): change it there.`); return; }
+    await ctrls.forgetIdentity(name);
+    vscode.window.showInformationMessage(`${name}: the next Connect takes whichever controller answers at ${c?.profile.host ?? 'its address'}, and remembers it.`);
   });
 
   reg('robotCode.abb.removeController', async (node?: any) => {
@@ -267,7 +316,73 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
       if (pw === undefined) return;
       await ctrls.setPassword(name, pw);
     }
-    try { await ctrls.connect(name); await ctrls.refresh(name); } catch (e) { show(e); }
+    try { await ctrls.connect(name); await ctrls.refresh(name); }
+    catch (e: any) {
+      // a virtual controller on this PC moved to a new port: offer to find it
+      const c = ctrls.get(name);
+      if (c && /^(127\.|localhost$)/.test(c.profile.host) && /ECONNREFUSED|did not answer/i.test(e?.message ?? '')) {
+        const pick = await vscode.window.showErrorMessage(`ABB: ${e?.message ?? e}`, { detail: 'A RobotStudio virtual controller listens on a new port each time it starts.' }, 'Find Virtual Controller');
+        if (pick) await vscode.commands.executeCommand('robotCode.abb.findVirtualControllers', name);
+      } else show(e);
+    }
+  });
+
+  /**
+   * Find the RobotStudio virtual controllers running on this PC (vcDiscovery.ts) and point a profile
+   * at the right one by controller name - its port changes at every start. With a profile: that
+   * profile's controller. Without: every one found, to update or add a profile.
+   */
+  reg('robotCode.abb.findVirtualControllers', async (node?: any) => {
+    const name = node === undefined ? undefined : await nameOf(node);
+    const c = name ? ctrls.get(name) : undefined;
+    const manual = async (why: string) => {
+      if (await vscode.window.showInformationMessage(why, 'Show the Manual Steps') === 'Show the Manual Steps') {
+        await vscode.window.showTextDocument(await vscode.workspace.openTextDocument({ content: MANUAL_STEPS, language: 'plaintext' }));
+      }
+    };
+    let found: VcEndpoint[];
+    try {
+      const password = name ? await ctrls.getPassword(name) : undefined;
+      found = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Looking for RobotStudio virtual controllers…' },
+        () => discoverVirtualControllers({ user: c?.profile.user, password }));
+    } catch (e: any) { await manual(`Could not look for virtual controllers: ${e?.message ?? e}.`); return; }
+    if (!found.length) { await manual('No RobotStudio virtual controller (vrchost64 / RobVC) with Robot Web Services is running on this PC.'); return; }
+    const save = async (target: string, ep: VcEndpoint) => {
+      const cfg = vscode.workspace.getConfiguration('robotCode');
+      const inspect = cfg.inspect<AbbProfile[]>('abb.controllers');
+      for (const [where, value] of [[vscode.ConfigurationTarget.Workspace, inspect?.workspaceValue], [vscode.ConfigurationTarget.Global, inspect?.globalValue]] as const) {
+        if (!value?.some(p => p.name === target)) continue;
+        await cfg.update('abb.controllers', value.map(p => (p.name === target ? { ...p, host: '127.0.0.1', port: ep.port, family: ep.family, https: ep.https } : p)), where);
+        return true;
+      }
+      return false;
+    };
+    const label = (ep: VcEndpoint) => ep.ctrlName ?? ep.systemName ?? `${ep.image} (PID ${ep.pid})`;
+    if (c) {
+      if (ctrls.clusterOf(c.profile.name)) { vscode.window.showInformationMessage(`${c.profile.name} comes from RUKUS: change its port there. Found: ${found.map(e => `${label(e)} on ${e.port}`).join(', ')}.`); return; }
+      const want = ctrls.expected(c) ?? { name: c.profile.name };
+      let ep = matchEndpoint(found, want);
+      if (!ep) {
+        const pick = await vscode.window.showQuickPick(found.map(e => ({ label: label(e), description: `port ${e.port} · ${e.family === 'omnicore' ? 'OmniCore' : 'IRC5'}${e.error ? ` · ${e.error}` : ''}`, e })),
+          { title: `None is named ${want.name ?? c.profile.name}: which one is ${c.profile.name}?` });
+        if (!pick) return;
+        ep = pick.e;
+      }
+      if (await save(c.profile.name, ep)) {
+        vscode.window.showInformationMessage(`${c.profile.name}: ${label(ep)} is on port ${ep.port} now.`, 'Connect').then(go => { if (go) void vscode.commands.executeCommand('robotCode.abb.connect', c.profile.name); });
+      }
+      return;
+    }
+    const pick = await vscode.window.showQuickPick(found.map(e => ({ label: label(e), description: `127.0.0.1:${e.port} · ${e.family === 'omnicore' ? 'OmniCore' : 'IRC5'}${e.systemName && e.systemName !== e.ctrlName ? ` · system ${e.systemName}` : ''}`, detail: e.error, e })),
+      { title: `${found.length} virtual controller${found.length === 1 ? '' : 's'} running on this PC` });
+    if (!pick) return;
+    const ep = pick.e;
+    const owner = ctrls.list().find(x => matchEndpoint([ep], ctrls.expected(x) ?? { name: x.profile.name }));
+    if (owner && await save(owner.profile.name, ep)) { vscode.window.showInformationMessage(`${owner.profile.name}: port ${ep.port}.`); return; }
+    const cfg = vscode.workspace.getConfiguration('robotCode');
+    const profile: AbbProfile = { name: label(ep), host: '127.0.0.1', port: ep.port, ...(ep.family === 'omnicore' ? { family: 'omnicore' as const } : {}), ...(ep.https ? { https: true } : {}), ...(ep.ctrlName ? { controllerName: ep.ctrlName } : {}), ...(ep.systemId ? { controllerId: ep.systemId } : {}) };
+    await cfg.update('abb.controllers', [...cfg.get<AbbProfile[]>('abb.controllers', []), profile], vscode.workspace.workspaceFolders ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
+    vscode.window.showInformationMessage(`Added ${profile.name} (127.0.0.1:${ep.port}).`);
   });
   reg('robotCode.abb.refresh', async (node?: any) => {
     const name = await nameOf(node, c => c.state === 'connected'); if (!name) return;
@@ -286,9 +401,12 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
       if (!m) return '';
       const ctrl = decodeURIComponent(m[1]);
       try {
-        return m[2] === 'eventlog.log'
-          ? formatEventLog(ctrl, await ctrls.calc(ctrl, 'event log', c => c.eventLog(0, 100)))
-          : formatSignals(ctrl, await ctrls.calc(ctrl, 'signals', c => c.signals()));
+        if (m[2] === 'eventlog.log') {
+          const events = await ctrls.calc(ctrl, 'event log', c => c.eventLog(0, 100));
+          await ctrls.rememberEvents(ctrl, events);   // the codes, for ABB: Look Up Event Code
+          return formatEventLog(ctrl, events);
+        }
+        return formatSignals(ctrl, await ctrls.calc(ctrl, 'signals', c => c.signals()));
       } catch (e: any) { return `Could not read from ${ctrl}: ${e?.message ?? e}\n`; }
     },
   }));
@@ -469,6 +587,7 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   // hidden: a RAPID value and who holds write access, for the smoke test of the actions
   reg('robotCode.abb._symbol', (name: string, task: string, data: string, module?: string) => ctrls.calc(name, `read ${task}/${data}`, c => c.symbol(task, data, module)));
   reg('robotCode.abb._holdsAccess', (name: string) => ctrls.holdsAccess(name));
+  reg('robotCode.abb._signals', (name: string) => ctrls.calc(name, 'signals', c => c.signals()));
   registerAbbActions(ctx, ctrls, nameOf);
   registerPointerMarks(ctx, ctrls);
   const updateContext = () => void vscode.commands.executeCommand('setContext', 'robotCode.abbConnected', ctrls.connected().length > 0);

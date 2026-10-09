@@ -219,13 +219,14 @@ exports.run = async function () {
     await vscode.commands.executeCommand('robotCode.abb.connect', name, 'robotics');
     const s1 = await waitFor(async () => { const s = await st(); return s.lines.some(l => /Program pointer/.test(l)) ? s : undefined; }, 10000) ?? await st();
     const txt = s1.lines.join('\n');
-    check('controllers: Connect logs in and reads state (motors, mode, speed, execution)', /MOCK — .*connected · motors off · AUTO · 100% · stopped/.test(txt), s1.lines[0]);
+    check('controllers: Connect logs in and reads state (motors, mode, speed, execution)', /MOCK — .*connected · Motors Off · Auto · 100% · RAPID Stopped/.test(txt), s1.lines[0]);
     check('controllers: the controller identity (name, RobotWare)', /Controller — 6700-805115 · RobotWare 6\.16\.01\.00/.test(txt), txt.slice(0, 400));
-    check('controllers: tasks, the motion task marked', /T_ROB1 — motion task/.test(txt) && /SC_CBC — semistatic/.test(txt), txt);
+    check('controllers: tasks, the motion task marked', /T_ROB1 — motion task/.test(txt) && /SC_CBC — Semistatic/.test(txt), txt);
     check('controllers: program and motion pointers with module, routine and line', /Program pointer — STYLE_35L › MOV_R01_Pick_35L · line 77/.test(txt) && /Motion pointer — MAIN_MODULE › HomeRobot · line 259/.test(txt), txt);
     check('controllers: position, joints and TCP', /Joints — 0\.00 · -34\.59 · 27\.72/.test(txt) && /TCP — X 949\.1\d · Y -0\.0\d · Z 1274\.27/.test(txt), s1.lines.filter(l => /Joints|TCP|Position/.test(l)).join(' | '));
     const n1 = s1.requests.find(r => r.name === name)?.requests ?? 0;
-    check('controllers: a Connect costs a handful of requests, not a stream', n1 > 0 && n1 <= 16, `${n1} requests`);
+    // 16 reads + the status subscription (one POST, one event socket)
+    check('controllers: a Connect costs a handful of requests, not a stream', n1 > 0 && n1 <= 18, `${n1} requests`);
     await sleep(1500);
     const n2 = (await st()).requests.find(r => r.name === name)?.requests ?? 0;
     check('controllers: nothing is read while idle', n2 === n1, `${n1} -> ${n2}`);
@@ -265,24 +266,36 @@ exports.run = async function () {
     const row = async () => (await st()).lines.find(l => l.startsWith(`${name} — `)) ?? '';
     const speedOf = r => +(/ (\d+)% /.exec(r)?.[1] ?? NaN);
     const before = await row();
-    const speed0 = speedOf(before), motors0 = / motors on /.test(before);
+    const speed0 = speedOf(before), motors0 = / Motors On /.test(before);
+    const L = s => `live ${name} (${family}): ${s}`;
     if (family === 'omnicore' && !(await vscode.commands.executeCommand('robotCode.abb._holdsAccess', name))) {
       const ok = await run('setSpeed', speed0 === 50 ? 75 : 50);
       check(`live ${name}: without write access a write is refused and nothing changes`, ok === false && speedOf(await row()) === speed0, await row());
-      return;
+      // RW 8, as checked by hand: register (braced GUID, numeric PIN), request, the status names this PC's id
+      check(L('request write access (control station)'), (await run('requestWriteAccess', true, process.env.ROBOT_CODE_ABB_LIVE_PIN ?? '1234')) === true && (await vscode.commands.executeCommand('robotCode.abb._holdsAccess', name)) === true, await row());
+      // one real write while holding it: a virtual digital output, toggled and put back
+      const sigs = await vscode.commands.executeCommand('robotCode.abb._signals', name) ?? [];
+      // an internal signal (IoPanel, DrvSys, SafeMove) is read-only: only a user's DO can be written
+      const out = sigs.find(s => s.type === 'DO' && s.category !== 'internal');
+      if (!out) console.log(`  SKIP  ${L('write a digital output')}: ${sigs.length} signals, every DO internal (read-only) - add a virtual DO to test a signal write`);
+      if (out) {
+        const flip = out.value === '1' ? '0' : '1';
+        check(L(`write ${out.name} = ${flip} with write access held`), (await run('setSignal', { path: out.path, value: flip })) === true, out.path);
+        if (!(await vscode.commands.executeCommand('robotCode.abb._holdsAccess', name))) await run('requestWriteAccess', true, process.env.ROBOT_CODE_ABB_LIVE_PIN ?? '1234');
+        check(L(`put ${out.name} back to ${out.value}`), (await run('setSignal', { path: out.path, value: out.value })) === true, out.path);
+      }
     }
-    const L = s => `live ${name} (${family}): ${s}`;
     try {
       check(L('speed override 25%'), (await run('setSpeed', 25)) === true && speedOf(await row()) === 25, await row());
-      check(L('motors off'), (await run('motorsOff', true)) === true && / motors off /.test(await row()), await row());
-      check(L('motors on'), (await run('motorsOn', true)) === true && / motors on /.test(await row()), await row());
+      check(L('motors off'), (await run('motorsOff', true)) === true && / Motors Off /.test(await row()), await row());
+      check(L('motors on'), (await run('motorsOn', true)) === true && / Motors On /.test(await row()), await row());
       check(L('PP to Main'), (await run('resetProgramPointer', true)) === true && (await st()).lines.some(l => /Program pointer — .* › main\b/i.test(l)), (await st()).lines.filter(l => /pointer/.test(l)).join(' | '));
       check(L('RAPID start once'), (await run('startRapid', 'once')) === true, await row());
       await new Promise(r => setTimeout(r, 1500));
-      check(L('RAPID stop'), (await run('stopRapid')) === true && / stopped/.test(await row()), await row());
-      check(L('RAPID start continuous'), (await run('startRapid', 'forever')) === true && / running/.test(await row()), await row());
+      check(L('RAPID stop'), (await run('stopRapid')) === true && / RAPID Stopped/.test(await row()), await row());
+      check(L('RAPID start continuous'), (await run('startRapid', 'forever')) === true && / RAPID Running/.test(await row()), await row());
       await new Promise(r => setTimeout(r, 1000));
-      check(L('RAPID stop again'), (await run('stopRapid')) === true && / stopped/.test(await row()), await row());
+      check(L('RAPID stop again'), (await run('stopRapid')) === true && / RAPID Stopped/.test(await row()), await row());
       const file = path.join(require('os').tmpdir(), 'RC_SMOKE_ACT.mod');
       fs.writeFileSync(file, ['MODULE RC_SMOKE_ACT', '  VAR num nSmoke := 1;', '  PROC RcSmokeProc()', '    nSmoke := nSmoke + 1;', '  ENDPROC', 'ENDMODULE', ''].join('\n'));
       try {
@@ -295,11 +308,15 @@ exports.run = async function () {
       check(L('request write access'), (await run('requestWriteAccess', true)) === true && (await vscode.commands.executeCommand('robotCode.abb._holdsAccess', name)) === true && /write access: this PC/.test(await row()), await row());
       check(L('release write access'), (await run('releaseWriteAccess', true)) === true && (await vscode.commands.executeCommand('robotCode.abb._holdsAccess', name)) === false && /write access free/.test(await row()), await row());
     } finally {
+      // OmniCore writes need write access, released above: take it again to put things back
+      const regain = family === 'omnicore' && !(await vscode.commands.executeCommand('robotCode.abb._holdsAccess', name));
+      if (regain) await run('requestWriteAccess', true, process.env.ROBOT_CODE_ABB_LIVE_PIN ?? '1234');
       await run('stopRapid');
       if (!Number.isNaN(speed0)) await run('setSpeed', speed0);
       if (!motors0) await run('motorsOff', true);
+      if (regain) await run('releaseWriteAccess', true);
       const after = await row();
-      check(L(`put back: speed ${speed0}%, motors ${motors0 ? 'on' : 'off'}, stopped`), speedOf(after) === speed0 && / motors on /.test(after) === motors0 && / stopped/.test(after), after);
+      check(L(`put back: speed ${speed0}%, motors ${motors0 ? 'on' : 'off'}, stopped`), speedOf(after) === speed0 && / Motors On /.test(after) === motors0 && / RAPID Stopped/.test(after), after);
     }
   }
 
@@ -341,7 +358,8 @@ exports.run = async function () {
       check(`live ${name} (${family}): Back Up and Download, controller copy removed`, r && r.files > 5 && r.removed && fs.readdirSync(bkRoot).length === 1, JSON.stringify(r));
     } catch (e) { check(`live ${name} (${family}): Back Up and Download`, false, String(e && e.message || e)); }
     finally { fs.rmSync(bkRoot, { recursive: true, force: true }); }
-    if (process.env.ROBOT_CODE_ABB_LIVE_ACTIONS === '1') await liveActions(name, family, st);
+    // an Action that throws fails here, and the next controller still runs
+    if (process.env.ROBOT_CODE_ABB_LIVE_ACTIONS === '1') await liveActions(name, family, st).catch(e => check(`live ${name} (${family}): the Actions ran to the end`, false, String(e?.stack ?? e).slice(0, 400)));
     await vscode.commands.executeCommand('robotCode.abb.disconnect', name);
     check(`live ${name} (${family}): Disconnect`, (await st()).lines.some(l => new RegExp(`^${name} — .*disconnected`).test(l)), (await st()).lines.find(l => l.startsWith(`${name} — `)));
   }

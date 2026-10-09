@@ -1,5 +1,41 @@
 # Changelog
 
+## 26.109.7 - 2026-10-08 - ABB: write access on OmniCore, live status, virtual controller discovery, feature profiles
+
+Beta list 6. Checked against RobotStudio virtual controllers: IRC5 RobotWare 6.16 (every Action) and OmniCore
+RobotWare 8.2.1 (write access, speed, program pointer, module load and unload, RAPID data).
+
+### Added
+- **Feature profiles.** `robotCode.featureProfile` (Auto, All, FANUC only, ABB only, Custom) and **Robot Code:
+  Choose Feature Profile…** turn FANUC, ABB, robot connections, the RUKUS buttons and the file icons on or off
+  together. A profile writes the ordinary settings, so the per-setting view always shows what is on.
+- **ABB: Find Virtual Controllers** finds the RobotStudio virtual controllers running on this PC, on whatever
+  ports RobotStudio gave them, and adds them.
+- **ABB: Look Up Event Code…** shows an event's title, cause, consequence and remedy, from the event logs read.
+- **ABB: Set Output Signal…** and **ABB: Write RAPID Data…**.
+- **Option explanations** in the robot windows, FANUC and ABB: hover an option for a short one, click it for the whole one.
+- **RAPID completion offers I/O signals** (from a backup's EIO.cfg and the connected controller) after IF and
+  for signal arguments.
+- **KAREL: Ctrl+click on a GOTO / GO TO label** jumps to its `label::` line.
+- The ABB controller page says whether the controller can be reached without the service port, and at which IP.
+
+### Changed
+- **OmniCore write access** works as checked by hand on RobotWare 8.2.1: the PC registers as a remote
+  control station, requests write access and gives it back. Writes to a real OmniCore stay off until
+  `robotCode.abb.allowRealOmniCoreWrites` is turned on; virtual controllers always accept them. RobotWare 7
+  takes mastership over RWS 2.0.
+- **ABB status follows the controller's events** (RWS subscriptions) instead of polling, and falls back to
+  polling when the controller refuses them or the socket drops.
+- **A failed connection turns the robot's status red**, for every brand.
+- **ABB names as on the FlexPendant:** Single Cycle / Continuous, Auto / Manual / Manual Full Speed, Motors On,
+  Normal / Semistatic / Static tasks.
+- **ABB controllers are told apart by their own name and system id**, not the address: a second controller at
+  192.168.125.1 is refused. **ABB: Forget Controller Identity** clears the one remembered.
+- The ABB controller page's State card is laid out like the FANUC robot page.
+- RAPID is coloured in every generated theme.
+- README: the Building section is gone for the public beta.
+- Notepad++ files regenerated for this version.
+
 ## 26.109.6 - 2026-10-07 - ABB support (RAPID, IRC5 and OmniCore controllers, analysis) and a linter for TP, KAREL and RAPID
 
 Issues #16 and #17 (RUKUS #28). ABB RAPID in the editor
