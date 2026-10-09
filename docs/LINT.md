@@ -6,7 +6,7 @@ It runs in three places, and they all report the same findings:
 | where | what |
 |---|---|
 | the editor | the Problems panel for every open program, as you type |
-| **Robot Code: Lint Folder…** | every program under a folder or backup (Explorer right-click → Robot Code, or the Command Palette); findings go to Problems, and a summary goes to Output → *Robot Code Lint* |
+| **RUKUS: Lint Folder…** | every program under a folder or backup (Explorer right-click → RUKUS, or the Command Palette); findings go to Problems, and a summary goes to Output → *Robot Code Lint* |
 | `robot-lint` | the same from a command line, for CI, RUKUS or a quick look at a backup |
 
 RAPID needs `robotCode.abb.enabled` in the editor. `robot-lint` always checks all three languages.
@@ -22,7 +22,7 @@ There are two kinds of rule:
 
 ## .robotlint.json
 
-The nearest `.robotlint.json` at or above a file applies to it. **Robot Code: Create Lint Config** writes a starter file, and `robot-lint --init` does the same from a command line. VS Code completes the rule names from the schema.
+The nearest `.robotlint.json` at or above a file applies to it. **RUKUS: Create Lint Config** writes a starter file, and `robot-lint --init` does the same from a command line. VS Code completes the rule names from the schema.
 
 ```json
 {

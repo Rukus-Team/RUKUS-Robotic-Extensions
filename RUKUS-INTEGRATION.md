@@ -1,4 +1,4 @@
-# Robot Code ⟷ RUKUS
+# RUKUS Robotic Extensions ⟷ RUKUS
 
 Two directions: RUKUS installs the extension (below), and the extension hands work
 back to RUKUS through a `rukus://` link (next section).
@@ -61,7 +61,7 @@ active. The pid did not change across the initial launch and both links.
 
 ---
 
-## Installing Robot Code from RUKUS
+## Installing RUKUS Robotic Extensions from RUKUS
 
 > **Built, 2026-09-13** — RUKUS issue #27, branch `Push/#27-Install-VS-Code-Extension`.
 > Settings ▸ Integrations ▸ VS Code, plus a Ctrl+K action. The `.vsix` lives at

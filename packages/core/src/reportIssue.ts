@@ -14,7 +14,7 @@ export function registerReportIssue(ctx: vscode.ExtensionContext): void {
   ctx.subscriptions.push(vscode.commands.registerCommand('robotCode.reportIssue', async () => {
     const pkg = ctx.extension.packageJSON as { version?: string; bugs?: { url?: string } };
     const bugs = pkg.bugs?.url;
-    if (!bugs) { void vscode.window.showErrorMessage('Robot Code: no issue address is configured.'); return; }
+    if (!bugs) { void vscode.window.showErrorMessage('RUKUS: no issue address is configured.'); return; }
     const url = reportIssueUrl(bugs, { extension: pkg.version ?? '?', vscode: vscode.version, os: `${os.type()} ${os.release()} (${os.arch()})` });
     await vscode.env.openExternal(vscode.Uri.parse(url, true));
   }));

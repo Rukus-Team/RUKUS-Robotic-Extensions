@@ -71,6 +71,7 @@ import { run as runRukusLayout } from './rukusLayout.test';
 import { run as runRukusStore } from './rukusStore.test';
 import { run as runBetaIssues } from './betaIssues.test';
 import { run as runBetaList6, runLive as runBetaList6Live, runDocs as runBetaList6Docs, runWriteGate as runBetaList6WriteGate, runIdentity as runBetaList6Identity, runVcDiscovery as runBetaList6Vc, runNetwork as runBetaList6Network, runOptionInfo as runBetaList6Options, runEventCatalog as runBetaList6Events, runFeatureProfiles as runBetaList6Features } from './betaList6.test';
+import { run as runBetaList7, runAsync as runBetaList7Async } from './betaList7.test';
 import { run as runRapid, runGrammar as runRapidGrammar } from './rapid.test';
 import { run as runAbbBrand } from './abbBrand.test';
 import { run as runRws } from './rws.test';
@@ -1740,6 +1741,8 @@ if (backupDir) {
   runBetaList6Network(check);
   runBetaList6Options(check);
   runBetaList6Events(check);
+  runBetaList7(check);
+  await runBetaList7Async(check);
   runBetaList6Features(check);
   runRapid(check);
   runRapidSymbols(check);

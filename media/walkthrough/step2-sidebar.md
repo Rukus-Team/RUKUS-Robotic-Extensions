@@ -1,6 +1,6 @@
 # Step 2: Explore the Sidebar
 
-The Robot Code panel in the Activity Bar has 6 sections:
+The RUKUS Robotic Extensions panel in the Activity Bar has 6 sections:
 
 - **Controllers** -- live robot connections
 - **Backup** -- loaded folder data

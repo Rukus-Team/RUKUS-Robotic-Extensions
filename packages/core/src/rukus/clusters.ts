@@ -263,7 +263,7 @@ export class RukusClusters implements vscode.Disposable {
    * when it starts or when its cluster list is refreshed, so the message says so.
    */
   async exportCell(): Promise<void> {
-    if (!this.available) { vscode.window.showInformationMessage('RUKUS was not found on this PC, so there is nowhere to send the cell yet. It is remembered: when RUKUS is installed, Robot Code offers to send it.'); if (this.s.containers.cells[0]) this.rememberPending(this.s.containers.cells[0].root); return; }
+    if (!this.available) { vscode.window.showInformationMessage('RUKUS was not found on this PC, so there is nowhere to send the cell yet. It is remembered: when RUKUS is installed, this extension offers to send it.'); if (this.s.containers.cells[0]) this.rememberPending(this.s.containers.cells[0].root); return; }
     const cell = this.s.containers.cells[0];
     if (!cell) { vscode.window.showInformationMessage('No cell container is open. Initialize Cell Container… makes one, or click a cluster in RUKUS Clusters.'); return; }
     if (!Object.keys(cell.controllers).length) { vscode.window.showInformationMessage(`${cell.name} has no controllers in its cell.json; add robots in the Controllers view first.`); return; }
@@ -461,7 +461,7 @@ export function registerRukusClusters(ctx: vscode.ExtensionContext, s: Services)
       } else if (route === 'sync') {
         await r.refresh(); await r.syncCurrent(true);
       } else {
-        vscode.window.showWarningMessage(`Robot Code does not know the link "${route || '/'}". It takes /cluster?name=<cluster> and /sync.`);
+        vscode.window.showWarningMessage(`RUKUS Robotic Extensions does not know the link "${route || '/'}". It takes /cluster?name=<cluster> and /sync.`);
       }
     },
   }));

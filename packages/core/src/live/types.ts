@@ -55,8 +55,9 @@ export interface ControllerInfo { fNumber?: string; version?: string; applicatio
  * One independently fetchable piece of controller state. Nothing is read until the
  * user asks for that piece by name, so opening the Robots view costs the robot nothing.
  */
-export type FetchKind = 'info' | 'position' | 'tasks' | 'numregs' | 'io' | 'strregs' | 'posregs';
+export type FetchKind = 'info' | 'position' | 'tasks' | 'numregs' | 'io' | 'strregs' | 'posregs' | 'ualarms';
 
+/** what Get everything reads; user alarms (SYSTEM.VA, megabytes) only on their own Get */
 export const FETCH_KINDS: FetchKind[] = ['info', 'position', 'tasks', 'numregs', 'io', 'strregs', 'posregs'];
 
 export interface LiveSnapshot {
@@ -67,6 +68,8 @@ export interface LiveSnapshot {
   numregs: Map<number, { value: number | string; comment: string }>;
   posregs: Map<number, { comment: string; summary: string; kind: string }>;
   strregs: Map<number, { value: string; comment: string }>;
+  /** user alarm messages ($UALRM_MSG) with their severity by name ($UALRM_SEV: WARN, STOP.L...) */
+  ualarms: Map<number, { message: string; severity?: string }>;
   io: Map<string, IoPoint>;
   tasks: TaskState[];
   position?: CurrentPosition;

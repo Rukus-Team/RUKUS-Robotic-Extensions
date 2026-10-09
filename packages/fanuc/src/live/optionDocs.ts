@@ -11,7 +11,7 @@ export const FANUC_OPTION_DOCS: readonly OptionDoc[] = [
     short: 'The controller can load programs sent as text (.LS).',
     full: [
       'Without it a controller only takes compiled teach pendant programs (.TP); a .LS file copied to it is not turned into a program.',
-      'Robot Code needs it (or ASCII Program Loader) to Push or Live Edit a .LS program. Without either, load the .TP that ROBOGUIDE or a controller with the option compiled.',
+      'The extension needs it (or ASCII Program Loader) to Push or Live Edit a .LS program. Without either, load the .TP that ROBOGUIDE or a controller with the option compiled.',
     ],
   },
   {
@@ -19,7 +19,7 @@ export const FANUC_OPTION_DOCS: readonly OptionDoc[] = [
     short: 'Loads .LS text programs from a device on the controller.',
     full: [
       'Converts a .LS text program into a teach pendant program on the controller, from a memory device or the controller\'s own file system.',
-      'Robot Code counts it like ASCII Upload: either one lets a .LS be pushed.',
+      'The extension counts it like ASCII Upload: either one lets a .LS be pushed.',
     ],
   },
   {
@@ -35,7 +35,7 @@ export const FANUC_OPTION_DOCS: readonly OptionDoc[] = [
     short: 'Lets PC software built on FANUC\'s PC SDK connect to the controller.',
     full: [
       'Tools built on FANUC\'s PC Developer\'s Kit read and write registers, I/O, positions and variables over Ethernet through it.',
-      'Robot Code itself reads the controller over its web server and FTP and does not need it.',
+      'The extension itself reads the controller over its web server and FTP and does not need it.',
     ],
   },
   {

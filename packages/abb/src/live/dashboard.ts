@@ -16,9 +16,17 @@ import type { AbbControllers, AbbConnection } from './controllers';
 import { ABB_ACTIONS } from './actions';
 import { describeOption } from '@core/live/optionInfo';
 import { showOptionPanel } from '@core/live/optionPanel';
-import { ABB_OPTION_DOCS, abbCodeNote, splitAbbOption } from './optionDocs';
+import { ABB_OPTION_DOCS, ABB_OPTION_KINDS, abbCodeNote, splitAbbOption, classifyAbbOption, groupAbbOptions, abbRobotType } from './optionDocs';
 
-const abbOptionInfo = (text: string) => { const o = splitAbbOption(text); return describeOption('ABB', ABB_OPTION_DOCS, o.code, o.name, abbCodeNote); };
+/** An entry's explanation; one that is not an option (the robot, a drive unit...) says what it is instead. */
+const abbOptionInfo = (text: string) => {
+  const o = splitAbbOption(text);
+  const info = describeOption('ABB', ABB_OPTION_DOCS, o.code, o.name, abbCodeNote);
+  const kind = classifyAbbOption(text);
+  if (info.known || kind === 'option' || kind === 'other') return info;
+  const k = ABB_OPTION_KINDS.find(x => x.kind === kind)!;
+  return { ...info, title: o.name, known: true, short: `${k.title}: ${k.hint}`, full: [k.hint, 'The controller lists it with its options because the system was built with it.'] };
+};
 import { ctrlStateLabel, opModeLabel, execStateLabel, execStateClass, runModeLabel, taskTypeLabel } from './names';
 
 const panels = new Map<string, vscode.WebviewPanel>();
@@ -85,6 +93,9 @@ function serialize(c: AbbConnection) {
     system: s.system ?? null,
     /** each option's one-line explanation, for its hover (optionDocs.ts) */
     optionShort: (s.system?.options ?? []).map(o => abbOptionInfo(o).short),
+    /** the list sorted into options bought, the robot, hardware, the system and the rest (optionDocs.ts) */
+    optionGroups: groupAbbOptions(s.system?.options ?? []),
+    robotType: abbRobotType(s.system?.options ?? []) ?? null,
     /** /ctrl/identity: the controller's own name, id, virtual or real */
     identity: s.identity ?? null,
     panel: s.panel ?? null,
@@ -108,6 +119,7 @@ ${ROBOT_PAGE_CSS}
   .pill.motoron, .pill.running, .pill.AUTO { background: var(--ok) } .pill.motoroff, .pill.stopped { background: var(--muted) } .pill.guardstop, .pill.emergencystop, .pill.emergencystopreset { background: var(--bad) } .pill.MANR, .pill.MANF { background: var(--warn); color: #222 }
   .pill.t3 { background: var(--bad) } .pill.t2 { background: var(--warn); color: #222 } .pill.t1 { background: var(--blue) }
   .pill.free { background: var(--ok) } .pill.held { background: var(--warn); color: #222 }
+  .optgroup { margin-top: 10px } .optgroup .og { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 4px } .optgroup .chips { max-height: 200px }
   .card.act { border-top-color: var(--warn) } .card.act h2 .ic { background: var(--warn) }
   .chip.opt { cursor: pointer } .chip.opt:hover { border-color: var(--vscode-focusBorder) }
   .card.net { border-top-color: var(--blue) } .card.net h2 .ic { background: var(--blue) }
@@ -165,7 +177,9 @@ ${ROBOT_PAGE_CSS}
     const io = st.signals.filter(x => (!ioType || x.type === ioType) && (!q || x.name.toLowerCase().includes(q) || x.path.toLowerCase().includes(q)));
     const ioShown = (q || ioType ? io : io.filter(x => x.value !== '0' && x.value !== '')).slice(0, 200);
     const oq = optQuery.toLowerCase();
-    const opts = (st.system?.options ?? []).map((o, i) => ({ o, i })).filter(x => !oq || x.o.toLowerCase().includes(oq));
+    const groups = (st.optionGroups ?? []).map(g => ({ ...g, items: g.items.filter(x => !oq || x.text.toLowerCase().includes(oq)) })).filter(g => g.items.length);
+    const nOptions = (st.optionGroups ?? []).find(g => g.kind === 'option')?.items.length ?? 0;
+    const chip = x => '<span class="chip opt" tabindex="0" role="button" data-opt="' + x.index + '" title="' + esc((st.optionShort[x.index] ?? '') + ' Click for more.') + '"><span class="c" style="max-width:none">' + esc(x.text) + '</span></span>';
     const mods = st.tasks.flatMap(t => t.modules.map(m => ({ ...m, task: t.name }))).sort((a, b) => (a.type === 'SysMod') - (b.type === 'SysMod') || a.task.localeCompare(b.task) || a.name.localeCompare(b.name));
     $('body').innerHTML = \`
       <div class="grid">
@@ -187,9 +201,9 @@ ${ROBOT_PAGE_CSS}
           <div class="row"><span class="k">Modules</span>\${act('loadModule', 'Load module…', 'Upload the open editor or a file to $HOME and load it into a task')}\${act('unloadModule', 'Unload module…', 'Unload a module from a task')}</div>
           <div class="row"><span class="k">Data</span>\${act('setSignal', 'Set output signal…', 'Set a digital (or group / analog) output')}\${act('setRapidData', 'Write RAPID data…', 'Write the value of a RAPID VAR or PERS')}</div>
           </div><div class="note">Each action asks before it changes the controller; Stop does not.\${st.family === 'OmniCore' && !st.mine ? ' An OmniCore takes changes only from the control station that holds write access: Request it on the State card first.' : ''}</div></div>
-        <div class="card opt"><h2><span class="ic"></span>Controller<span class="n">\${(st.system?.options ?? []).length ? st.system.options.length + ' options ' : ''}\${stamp('system')}</span></h2>\${!st.system ? '<div class="empty">Not read</div>' :
-          '<div class="kv"><span class="k">System</span><span class="mono">' + esc(st.system.name) + '</span><span class="k">RobotWare</span><span>' + esc(st.system.robotWare) + '</span><span class="k">System id</span><span class="mono">' + esc(st.system.sysid ?? '') + '</span><span class="k">Started</span><span>' + esc((st.system.started ?? '').replace(' T ', ' ')) + '</span></div>'
-          + '<div class="tools" style="margin-top:10px"><input type="search" id="oq" placeholder="Search options…" value="' + esc(optQuery) + '"></div><div class="chips">' + (opts.map(x => '<span class="chip opt" tabindex="0" role="button" data-opt="' + x.i + '" title="' + esc((st.optionShort[x.i] ?? '') + ' Click for more.') + '"><span class="c" style="max-width:none">' + esc(x.o) + '</span></span>').join('') || '<div class="empty">No options' + (oq ? ' matching' : '') + '</div>') + '</div>'}</div>
+        <div class="card opt"><h2><span class="ic"></span>Controller<span class="n">\${nOptions ? nOptions + ' option' + (nOptions === 1 ? '' : 's') + ' ' : ''}\${stamp('system')}</span></h2>\${!st.system ? '<div class="empty">Not read</div>' :
+          '<div class="kv">' + (st.robotType ? '<span class="k">Robot</span><span class="mono">' + esc(st.robotType) + '</span>' : '') + '<span class="k">System</span><span class="mono">' + esc(st.system.name) + '</span><span class="k">RobotWare</span><span>' + esc(st.system.robotWare) + '</span><span class="k">System id</span><span class="mono">' + esc(st.system.sysid ?? '') + '</span><span class="k">Started</span><span>' + esc((st.system.started ?? '').replace(' T ', ' ')) + '</span></div>'
+          + '<div class="tools" style="margin-top:10px"><input type="search" id="oq" placeholder="Search options and configuration…" value="' + esc(optQuery) + '"></div>' + (groups.map(g => '<div class="optgroup"><div class="og" title="' + esc(g.hint) + '">' + esc(g.title) + ' <span class="muted">' + g.items.length + '</span></div><div class="chips">' + g.items.map(chip).join('') + '</div></div>').join('') || '<div class="empty">Nothing' + (oq ? ' matching' : ' listed') + '</div>')}</div>
         <div class="card net"><h2><span class="ic"></span>Network<span class="n">\${stamp('network')} \${getBtn('getNetwork')}</span></h2>\${!st.network ? unread('getNetwork', 'Whether this controller can be reached without the service port has not been read.') :
           '<div class="big"><span class="pill ' + (st.network.reach.serviceOnly ? 'held' : 'free') + '">' + (st.network.reach.serviceOnly ? 'service port only' : 'off the service port') + '</span>' + (st.network.reach.ip ? '<small class="mono">' + esc(st.network.reach.ip) + '</small>' : '') + '</div>'
           + '<div style="margin-top:8px">' + esc(st.network.reach.verdict) + '</div>'

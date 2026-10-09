@@ -25,7 +25,7 @@ export function robotConnectionsEnabled(): boolean {
 export function requireRobotConnections(): boolean {
   if (robotConnectionsEnabled()) return true;
   void vscode.window.showInformationMessage(
-    'Talking to a robot is an experimental feature. Tick "Robot Code › Experimental: Robot Connections" in Settings to use it.',
+    'Talking to a robot is an experimental feature. Tick "RUKUS Robotic Extensions › Experimental: Robot Connections" in Settings to use it.',
     'Open Setting').then(pick => {
     if (pick) void vscode.commands.executeCommand('workbench.action.openSettings', `robotCode.${ROBOT_CONNECTIONS_SETTING}`);
   });

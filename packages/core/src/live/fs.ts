@@ -65,8 +65,8 @@ export class RobotFileSystem implements vscode.FileSystemProvider {
   /** drop cached content so the next open re-reads from the controller */
   invalidate(uri?: vscode.Uri) { if (uri) this.cache.delete(uri.toString()); else this.cache.clear(); }
 
-  createDirectory(): void { throw vscode.FileSystemError.NoPermissions('Robot Code is read-only in this version.'); }
+  createDirectory(): void { throw vscode.FileSystemError.NoPermissions('Controller files are read-only in this version.'); }
   writeFile(): void { throw vscode.FileSystemError.NoPermissions('Writing to the controller is not enabled in this version (see ROADMAP.md, write tier).'); }
-  delete(): void { throw vscode.FileSystemError.NoPermissions('Robot Code is read-only in this version.'); }
-  rename(): void { throw vscode.FileSystemError.NoPermissions('Robot Code is read-only in this version.'); }
+  delete(): void { throw vscode.FileSystemError.NoPermissions('Controller files are read-only in this version.'); }
+  rename(): void { throw vscode.FileSystemError.NoPermissions('Controller files are read-only in this version.'); }
 }

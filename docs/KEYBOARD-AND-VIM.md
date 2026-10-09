@@ -4,11 +4,11 @@
 picker reads the installed manifest, so it is always right; this page is the same list on paper.
 
 Every shortcut is a default. Change any of them in **File > Preferences > Keyboard Shortcuts**
-(search `Robot Code`), or from the last entry of the picker.
+(search `RUKUS`), or from the last entry of the picker.
 
 ## The shortcuts
 
-Anywhere in a robot file or with the Robot Code sidebar focused:
+Anywhere in a robot file or with the RUKUS sidebar focused:
 
 | Key | Does |
 | --- | --- |

@@ -29,7 +29,7 @@ export function registerFeatureProfiles(ctx: vscode.ExtensionContext): void {
     return FEATURES.some(f => f.reload && before[f.setting] !== after[f.setting]);
   };
   const offerReload = async (needed: boolean) => {
-    if (needed && await vscode.window.showInformationMessage('Robot Code: the brands change after a window reload.', 'Reload Window') === 'Reload Window') {
+    if (needed && await vscode.window.showInformationMessage('RUKUS: the brands change after a window reload.', 'Reload Window') === 'Reload Window') {
       await vscode.commands.executeCommand('workbench.action.reloadWindow');
     }
   };
@@ -39,7 +39,7 @@ export function registerFeatureProfiles(ctx: vscode.ExtensionContext): void {
     const now = profileOf(current());
     let pick = id;
     if (!pick) {
-      const chosen = await vscode.window.showQuickPick(PROFILES.map(p => ({ label: p.label, description: p.id === now ? 'current' : undefined, detail: p.detail, id: p.id })), { title: 'Robot Code: feature profile' });
+      const chosen = await vscode.window.showQuickPick(PROFILES.map(p => ({ label: p.label, description: p.id === now ? 'current' : undefined, detail: p.detail, id: p.id })), { title: 'RUKUS: feature profile' });
       if (!chosen) return;
       pick = chosen.id;
     }

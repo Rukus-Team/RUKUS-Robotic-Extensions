@@ -31,8 +31,8 @@ export function describeOption(brand: string, docs: readonly OptionDoc[], code: 
   const note = codeNote?.(code);
   return {
     brand, code, name, title: name || code, known: false,
-    short: `${name || code}${code && name ? ` (${code})` : ''}: no explanation in Robot Code yet.`,
-    full: [...(note ? [note] : []), `Robot Code has no explanation for this option yet. The ${brand} option list or the controller's documentation describes it.`],
+    short: `${name || code}${code && name ? ` (${code})` : ''}: no explanation here yet.`,
+    full: [...(note ? [note] : []), `There is no explanation for this option here yet. The ${brand} option list or the controller's documentation describes it.`],
   };
 }
 

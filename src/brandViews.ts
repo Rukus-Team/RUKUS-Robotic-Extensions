@@ -73,7 +73,7 @@ export function registerBrandViews(ctx: vscode.ExtensionContext, s: Services, lo
         { label: 'FANUC', description: 'TP and KAREL programs, robot backups', value: 'fanuc' as const },
         { label: 'ABB', description: 'RAPID modules, IRC5 / OmniCore backups', value: 'abb' as const },
         { label: 'Both', description: 'a mixed-brand cell', value: 'both' as const },
-      ], { title: 'Robot Code: which robots do you work with in this folder?', placeHolder: 'The side bar shows that brand\'s views. Change it later with robotCode.views.brands.', ignoreFocusOut: true });
+      ], { title: 'RUKUS: which robots do you work with in this folder?', placeHolder: 'The side bar shows that brand\'s views. Change it later with robotCode.views.brands.', ignoreFocusOut: true });
       await ctx.workspaceState.update(ASKED, true);
       needsAsk = false;
       if (!pick) return;

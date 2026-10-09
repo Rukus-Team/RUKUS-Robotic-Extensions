@@ -1,7 +1,7 @@
-# Robot Code for Notepad++
+# RUKUS Robotic Extensions for Notepad++
 
 FANUC TP (`.ls`), KAREL (`.kl`) and ABB RAPID (`.mod`, `.sys`, `.prg`, `.modx`, `.sysx`) support for
-Notepad++, generated from the Robot Code VS Code extension so the two agree. VS Code remains the full tool; this is the base set for people who
+Notepad++, generated from the RUKUS Robotic Extensions VS Code extension so the two agree. VS Code remains the full tool; this is the base set for people who
 live in Notepad++.
 
 | What | Where it shows |
@@ -10,7 +10,7 @@ live in Notepad++.
 | Folding | TP: `THEN`…`ENDIF`, `FOR`…`ENDFOR`. KAREL: `BEGIN`…`END`, `IF`, `FOR`, `WHILE`, `REPEAT`, `SELECT`, `CONDITION`, `STRUCTURE`, `USING`. RAPID: `MODULE`, `PROC`, `FUNC`, `TRAP`, `RECORD`, `FOR`, `WHILE`, `TEST` (not `IF`: a one-line `IF` has no `ENDIF`) |
 | Word completion | Ctrl+Space. KAREL built-ins and RAPID functions show their parameters and a one-line description as you type `(` |
 | Function List | View > Function List: TP labels (`LBL[10:HOME]`), KAREL routines, RAPID `PROC` / `FUNC` / `TRAP` |
-| Renumber, labels, format, strip, check | Run menu > **Robot Code: …** (Ctrl+Alt+Shift+R / L / F / S / K), TP only - needs [Node.js](https://nodejs.org) 18 or later |
+| Renumber, labels, format, strip, check | Run menu > **RUKUS: …** (Ctrl+Alt+Shift+R / L / F / S / K), TP only - needs [Node.js](https://nodejs.org) 18 or later |
 
 ## Install
 
@@ -19,10 +19,10 @@ live in Notepad++.
    - The languages and Function List parsers go into `%APPDATA%\Notepad++`, plus three lines in `functionList\overrideMap.xml`.
    - The completion files have to go beside `notepad++.exe` (Notepad++ reads them nowhere else), so for an
      installed Notepad++ Windows asks once for admin rights to copy them into `Program Files\Notepad++\autoCompletion`.
-   - `robotcode.js` goes into `%APPDATA%\Notepad++\robotcode`, and five **Robot Code: …** entries are added to the Run menu.
+   - `robotcode.js` goes into `%APPDATA%\Notepad++\robotcode`, and five **RUKUS: …** entries are added to the Run menu.
    - Portable Notepad++: `install.ps1 -Target <the folder with notepad++.exe>` (no admin needed).
 3. Start Notepad++. **Notepad++ 8.9 and later** protect the Run menu: it shows a *Security Warning* that
-   `shortcuts.xml` was modified and opens the file. Check the five `Robot Code: …` commands (each runs
+   `shortcuts.xml` was modified and opens the file. Check the five `RUKUS: …` commands (each runs
    `node` on `robotcode.js` with the open file), then choose **Run > Validate shortcuts.xml**. Until you
    do, the Run menu commands do nothing; colouring, folding, completion and Function List work either way.
 4. Open a `.ls`, `.kl` or `.mod` file.
@@ -63,4 +63,4 @@ robot-code-vscode. Do not edit the XML by hand; change the generator or the exte
 ## AI assistance
 
 AI tools were used to assist in building these files. Every change is reviewed and tested by the
-maintainers of Robot Code, who are responsible for it.
+maintainers of RUKUS Robotic Extensions, who are responsible for it.

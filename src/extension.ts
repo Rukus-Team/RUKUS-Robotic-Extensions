@@ -67,7 +67,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   }
   // the side bar shows the brands this workspace holds (asks when it holds none)
   registerBrandViews(ctx, s, { fanuc, abb });
-  s.output.appendLine(`[Robot Code] brands: FANUC ${fanuc ? 'on' : 'off'} (${brands.fanuc.why}), ABB ${abb ? 'on' : 'off'} (${brands.abb.why})`);
+  s.output.appendLine(`[RUKUS] brands: FANUC ${fanuc ? 'on' : 'off'} (${brands.fanuc.why}), ABB ${abb ? 'on' : 'off'} (${brands.abb.why})`);
 
   // FANUC modules - left out of an ABB-only workspace
   if (fanuc) {
@@ -116,7 +116,7 @@ export function activate(ctx: vscode.ExtensionContext) {
       if (s.live && Object.keys(defs).length) s.live.mergeCellProfiles(defs);
       await Promise.all([s.data.refresh(), s.index.refresh()]);
       const warn = s.containers.warnings.length ? ` (${s.containers.warnings.length} container warning(s))` : '';
-      vscode.window.setStatusBarMessage(`Robot Code: ${s.index.programCount} programs in ${s.index.groups().size} folder(s); controller data for ${s.data.datasets.length} robot folder(s)${warn}`, 5000);
+      vscode.window.setStatusBarMessage(`RUKUS: ${s.index.programCount} programs in ${s.index.groups().size} folder(s); controller data for ${s.data.datasets.length} robot folder(s)${warn}`, 5000);
     }),
     vscode.commands.registerCommand('robotCode.data.openRegisterTable', () => openRegisterTable(ctx, s)),
     // a folder argument comes from a suggestion row in the empty Registers view (issue #3, 1c)
@@ -169,7 +169,7 @@ export function activate(ctx: vscode.ExtensionContext) {
 
   // A backup-level note for constructs the parser only guessed at, so it is seen once even
   // when nobody opens the file that has them.
-  s.index.onRefreshed = report => { for (const line of report) s.output.appendLine(`[Robot Code] warning: ${line}`); };
+  s.index.onRefreshed = report => { for (const line of report) s.output.appendLine(`[RUKUS] warning: ${line}`); };
 
   // Initial scan in the background; nothing blocks activation.
   // Containers must refresh first so markers are known before the index runs.
@@ -181,11 +181,11 @@ export function activate(ctx: vscode.ExtensionContext) {
     return Promise.all([fanuc ? s.data.refresh() : Promise.resolve(), s.index.refresh()]);
   }).then(() => {
     if (s.containers.warnings.length) {
-      for (const w of s.containers.warnings) s.output.appendLine(`[Robot Code] container: ${w}`);
+      for (const w of s.containers.warnings) s.output.appendLine(`[RUKUS] container: ${w}`);
     }
-    s.output.appendLine(`[Robot Code] indexed ${s.index.programCount} programs in ${s.index.groups().size} folder(s); controller data: ${s.data.datasets.map(d => `${d.label} (${d.sources.length} files)`).join(', ') || 'none'}`);
+    s.output.appendLine(`[RUKUS] indexed ${s.index.programCount} programs in ${s.index.groups().size} folder(s); controller data: ${s.data.datasets.map(d => `${d.label} (${d.sources.length} files)`).join(', ') || 'none'}`);
   }).catch(err => {
-    s.output.appendLine(`[Robot Code] initialization error: ${err instanceof Error ? err.message : String(err)}`);
+    s.output.appendLine(`[RUKUS] initialization error: ${err instanceof Error ? err.message : String(err)}`);
   });
 }
 

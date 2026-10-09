@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { parseTp, type TpProgram, type TpDataRef, type Span, findLabel, findPosition, positionMarkdown, describePosition, IO_KINDS } from './parser';
 import { lookupTpDoc, lookupTpDocsAt, DATA_KIND_DOCS, TP_INSTRUCTION_COMPLETIONS, TP_OPERAND_COMPLETIONS, operandContext } from './docs';
+import { ualmSeverityName } from '../data/vaParser';
 import { FANUC_PROGRAMS, CATALOG_MACROS, CATALOG_DOCS } from './syntaxCatalog';
 import { renumber } from './renumber';
 import { formatPositions } from './teach';
@@ -181,6 +182,10 @@ export function dataHover(s: FanucServices, prog: TpProgram, ref: TpDataRef, uri
   } else if (ref.kind === 'SR') {
     const sr = ds?.strregs.get(ref.index);
     if (sr?.value) lines.push('', `Value in backup: \`${sr.value}\``);
+  } else if (ref.kind === 'UALM') {
+    const a = ds?.ualarms.get(ref.index);
+    if (a && !live) lines.push('', `Message in backup: **${a.message}**${a.severity !== undefined ? ` · ${ualmSeverityName(a.severity)}` : ''}`);
+    else if (!a && !live && ds?.ualarms.size) lines.push('', '_No message set for this user alarm in the backup._');
   }
   const uses = prog.dataRefs.filter(d => d.kind === ref.kind && d.index === ref.index).length;
   lines.push('', `_${uses} use${uses === 1 ? '' : 's'} in this program._`);

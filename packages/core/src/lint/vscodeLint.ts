@@ -51,7 +51,7 @@ const SOURCE: Record<string, string> = { 'fanuc-tp': 'FANUC TP', 'fanuc-karel': 
 
 export function registerLint(ctx: vscode.ExtensionContext): void {
   const folderColl = vscode.languages.createDiagnosticCollection('robot-lint');
-  const out = vscode.window.createOutputChannel('Robot Code Lint');
+  const out = vscode.window.createOutputChannel('RUKUS Lint');
   const watcher = vscode.workspace.createFileSystemWatcher(`**/${LINT_CONFIG_FILE}`);
   const reset = () => { cache.clear(); changed.fire(); };
   ctx.subscriptions.push(folderColl, out, watcher, changed,

@@ -87,7 +87,7 @@ export function lintConfigSchema(): object {
   }
   return {
     $schema: 'http://json-schema.org/draft-07/schema#',
-    title: 'Robot Code lint configuration',
+    title: 'RUKUS lint configuration',
     type: 'object',
     properties: {
       $schema: { type: 'string' },

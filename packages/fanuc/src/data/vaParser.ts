@@ -53,6 +53,47 @@ export function parseStrReg(text: string): StrRegEntry[] {
   return out;
 }
 
+export interface UserAlarmEntry { index: number; message: string; severity?: number }
+
+/** $UALRM_SEV values the pendant offers, by name. */
+export const UALM_SEVERITY: Readonly<Record<number, string>> = { 0: 'WARN', 6: 'STOP.L', 38: 'STOP.G', 11: 'ABORT.L', 43: 'ABORT.G' };
+export const ualmSeverityName = (n?: number) => (n === undefined ? undefined : UALM_SEVERITY[n] ?? `severity ${n}`);
+
+/**
+ * User alarms (what `UALM[n]` raises) from system.va - SYSTEM.VA on a controller:
+ *
+ *   [*SYSTEM*]$UALRM_MSG  Storage: CMOS  Access: RW  : ARRAY[172] OF STRING[29]
+ *     [1] = 'Program sel err'
+ *     [7] = Uninitialized
+ *   [*SYSTEM*]$UALRM_SEV  Storage: CMOS  Access: RW  : ARRAY[172] OF BYTE
+ *     [1] = 11
+ *
+ * Only alarms with a message are kept. The two arrays are found by name, so the rest of the
+ * 6 MB file is skipped rather than split into lines.
+ */
+export function parseUserAlarms(text: string): UserAlarmEntry[] {
+  const block = (name: string): Map<number, string> => {
+    const out = new Map<number, string>();
+    const at = text.search(new RegExp(`\\]\\$${name.replace('$', '\\$')}\\s+Storage`));
+    if (at < 0) return out;
+    const end = text.indexOf('[*', at + 10);
+    for (const line of text.slice(text.indexOf('\n', at) + 1, end < 0 ? undefined : end).split(/\r?\n/)) {
+      const m = RE_ARRAY_ITEM.exec(line);
+      if (m) out.set(parseInt(m[1], 10), m[2].trim());
+    }
+    return out;
+  };
+  const msgs = block('UALRM_MSG'), sevs = block('UALRM_SEV');
+  const out: UserAlarmEntry[] = [];
+  for (const [index, raw] of msgs) {
+    const q = /^'(.*)'$/.exec(raw);
+    if (!q || !q[1].trim()) continue;
+    const sev = Number(sevs.get(index));
+    out.push({ index, message: q[1], ...(Number.isFinite(sev) && sevs.has(index) ? { severity: sev } : {}) });
+  }
+  return out;
+}
+
 /**
  * posreg.va:
  *     [1,1] =   'Home 1'   Group: 1
@@ -224,4 +265,4 @@ function trimNum(s: string): string {
 export { robotNameFromFolder, ROBOT_FOLDER_PATTERNS, folderDate } from '@core/backupFolders';
 
 /** Which .va file names we know how to read, lower-cased. */
-export const KNOWN_VA_FILES = ['numreg.va', 'posreg.va', 'strreg.va', 'diocfgsv.va', 'sysmacro.va', 'sysframe.va', 'symotn.va', 'sysmotn.va'] as const;
+export const KNOWN_VA_FILES = ['numreg.va', 'posreg.va', 'strreg.va', 'diocfgsv.va', 'sysmacro.va', 'sysframe.va', 'symotn.va', 'sysmotn.va', 'system.va'] as const;

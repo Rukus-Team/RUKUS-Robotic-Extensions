@@ -13,6 +13,8 @@ import { RobotFileSystem, FANUC_SCHEME, robotUri } from './fs';
 import { globToRegExp } from './ftp';
 import { RobotsTree, ageTicked } from './views';
 import { openRobotForm } from './robotForm';
+import { searchFanucControllers } from './fanucSearch';
+import { chooseScanScope, scopeSummary, withScanProgress } from './scanPrompt';
 import { connectionHint } from './connectionHints';
 import { openDashboard } from './dashboard';
 import { openInRukus } from '../rukus/launch';
@@ -96,7 +98,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
   const pickRobot = async (name?: string, onlyConnected = false): Promise<string | undefined> => {
     if (typeof name === 'string' && robots.get(name)) return name;
     const list = (onlyConnected ? robots.connected() : robots.list());
-    if (!list.length) { vscode.window.showInformationMessage(onlyConnected ? 'No robot is connected.' : 'No robots configured. Use "Robot Code: Add Robot…".'); return undefined; }
+    if (!list.length) { vscode.window.showInformationMessage(onlyConnected ? 'No robot is connected.' : 'No robots configured. Use "RUKUS: Add Robot…" or "RUKUS: FANUC: Search for Controllers…".'); return undefined; }
     if (list.length === 1) return list[0].profile.name;
     const pick = await vscode.window.showQuickPick(list.map(c => ({ label: c.profile.name, description: `${c.profile.host} · ${c.state}` })), { placeHolder: 'Robot' });
     return pick?.label;
@@ -154,6 +156,39 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
   // a brand opens the form on its own tab: { brand: 'abb' }, optionally { name } to edit one
   reg('robotCode.live.addRobot', (arg?: any) => openRobotForm(ctx, s, robots, typeof arg?.name === 'string' ? arg.name : undefined, typeof arg?.brand === 'string' ? arg.brand : undefined));
   reg('robotCode.live.manageRobots', (node?: any) => openRobotForm(ctx, s, robots, nameOf(node)));
+
+  /**
+   * Search for FANUC controllers (fanucSearch.ts): ROBOGUIDE robots on this PC, wired networks,
+   * WiFi when the user says yes. Pick one to add it (HTTP, MD:, auto-refresh off, like a new form).
+   */
+  reg('robotCode.live.searchRobots', async () => {
+    const scope = await chooseScanScope('FANUC'); if (!scope) return;
+    const found = await withScanProgress('Searching for FANUC controllers…', (token, progress) =>
+      searchFanucControllers({ adapters: scope.adapters, wifi: scope.wifi, signal: token, progress }));
+    if (!found.length) {
+      vscode.window.showInformationMessage(`No FANUC controller web server answered on ${scopeSummary(scope)}.`,
+        { detail: 'Searched port 80 for the controller\'s ROBOT Homepage. ROBOGUIDE has to be running with its robots started.' });
+      return;
+    }
+    const owner = (host: string) => robots.list().find(c => c.profile.host === host);
+    const pick = await vscode.window.showQuickPick(found.map(f => ({
+      label: f.hostname ?? f.host,
+      description: `${f.host}${f.robotNo ? ` · ${f.robotNo}` : ''} · ${f.source === 'local' ? 'this PC' : f.source === 'wifi' ? 'WiFi' : 'wired'}`,
+      detail: owner(f.host) ? `already added as ${owner(f.host)!.profile.name}` : undefined,
+      f,
+    })), { title: `${found.length} FANUC controller${found.length === 1 ? '' : 's'} found - pick one to add it` });
+    if (!pick) return;
+    const f = pick.f;
+    const have = owner(f.host);
+    if (have) { void vscode.commands.executeCommand('robotCode.live.connect', have.profile.name); return; }
+    const taken = new Set(robots.list().map(c => c.profile.name));
+    const base = f.hostname && f.hostname.toUpperCase() !== 'ROBOT' ? f.hostname : `${f.hostname ?? 'Robot'} ${f.host}`;
+    let name = base;
+    for (let i = 2; taken.has(name); i++) name = `${base} (${i})`;
+    await robots.addProfile({ name, host: f.host, httpPort: f.port, ftpPort: 21, ftpUser: '', device: 'MD:', useFtp: false, pollIntervalMs: 5000, autoConnect: false, autoRefresh: false });
+    robots.log(name, `profile added by search (${f.host}${f.robotNo ? `, ${f.robotNo}` : ''})`);
+    vscode.window.showInformationMessage(`Added ${name} (${f.host}).`, 'Connect').then(go => { if (go) void vscode.commands.executeCommand('robotCode.live.connect', name); });
+  });
 
   reg('robotCode.live.removeRobot', async (node?: any) => {
     const name = await pickRobot(nameOf(node));
@@ -227,6 +262,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
   reg('robotCode.live.getTasks', (node?: any) => get(node, ['tasks'], 'program state'));
   reg('robotCode.live.getRegisters', (node?: any) => get(node, REGISTER_KINDS, 'registers'));
   reg('robotCode.live.getIo', (node?: any) => get(node, ['io'], 'I/O state'));
+  reg('robotCode.live.getUserAlarms', (node?: any) => get(node, ['ualarms'], 'user alarms'));
   reg('robotCode.live.getAll', (node?: any) => get(node, FETCH_KINDS, 'everything'));
 
   /**
@@ -253,7 +289,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
   /** inline refresh icon on a section header; the tree node carries which section it is */
   reg('robotCode.live.getSection', async (node?: any) => {
     if (node?.kind === 'files') { await vscode.commands.executeCommand('robotCode.live.getFiles', node); return; }
-    const kinds: Partial<Record<string, FetchKind[]>> = { controller: ['info'], position: ['position'], tasks: ['tasks'], registers: REGISTER_KINDS, io: ['io'] };
+    const kinds: Partial<Record<string, FetchKind[]>> = { controller: ['info'], position: ['position'], tasks: ['tasks'], registers: REGISTER_KINDS, ualarms: ['ualarms'], io: ['io'] };
     const wanted = kinds[node?.kind];
     if (!wanted) return;
     await get(node, wanted, node.kind);

@@ -10,16 +10,44 @@
 import * as vscode from 'vscode';
 import { buildFlow, flowToMermaid, edgeCaption, type FlowGraph, type FlowNode } from './flow';
 import type { FanucServices } from '../services';
+import { buildKarelFlow, karelFlowScopes, scopeAt } from '../karel/flow';
 import { escapeHtml } from '@core/util';
 import { WEBVIEW_BASE_CSS } from '@core/webviewStyle';
 
 const panels = new Map<string, vscode.WebviewPanel>();
 
 export async function showProgramFlow(ctx: vscode.ExtensionContext, s: FanucServices, uri: vscode.Uri) {
-  const key = uri.toString();
-  let panel = panels.get(key);
   const doc = await vscode.workspace.openTextDocument(uri);
   const name = s.tp.get(doc).header.name ?? 'Program';
+  openFlow(uri.toString(), name, doc, d => buildFlow(s.tp.get(d)));
+}
+
+/**
+ * The flowchart of the KAREL routine the cursor is in (`line`), or of the main body; with
+ * several to choose from and no line, the user picks. Same drawing and Mermaid export as TP.
+ */
+export async function showKarelFlow(ctx: vscode.ExtensionContext, s: FanucServices, uri: vscode.Uri, line?: number) {
+  const doc = await vscode.workspace.openTextDocument(uri);
+  const prog = s.karel.get(doc);
+  const scopes = karelFlowScopes(prog);
+  if (!scopes.length) { vscode.window.showInformationMessage('No routine or main body with BEGIN ... END in this file to draw.'); return; }
+  let scope = line !== undefined ? scopeAt(scopes, line) : undefined;
+  if (!scope) {
+    scope = scopes.length === 1 ? scopes[0] : (await vscode.window.showQuickPick(scopes.map(x => ({ label: x.name, description: x.routine ? 'routine' : 'main program', x })), { title: 'Flowchart of which routine?' }))?.x;
+    if (!scope) return;
+  }
+  const want = scope;
+  const title = want.routine ? `${prog.name ?? 'KAREL'} › ${want.name}` : want.name;
+  openFlow(`${uri.toString()}#${want.name.toUpperCase()}`, title, doc, d => {
+    const p = s.karel.get(d);
+    const now = karelFlowScopes(p).find(x => x.name.toUpperCase() === want.name.toUpperCase() && x.routine === want.routine);
+    return now ? buildKarelFlow(p, now) : { nodes: [], edges: [], unresolved: [] };
+  });
+}
+
+/** One flowchart panel per key, redrawn as its document changes; click reveals, Copy as Mermaid copies. */
+function openFlow(key: string, name: string, doc: vscode.TextDocument, build: (d: vscode.TextDocument) => FlowGraph) {
+  let panel = panels.get(key);
   if (!panel) {
     panel = vscode.window.createWebviewPanel('robotCode.flow', `Flow: ${name}`, vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
     panels.set(key, panel);
@@ -32,15 +60,14 @@ export async function showProgramFlow(ctx: vscode.ExtensionContext, s: FanucServ
         ed.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
       }
       if (m.mermaid) {
-        const g = buildFlow(s.tp.get(doc));
-        await vscode.env.clipboard.writeText(flowToMermaid(g, name));
+        await vscode.env.clipboard.writeText(flowToMermaid(build(doc), name));
         vscode.window.setStatusBarMessage('Mermaid flowchart copied to clipboard', 3000);
       }
     });
-    const sub = vscode.workspace.onDidChangeTextDocument(e => { if (e.document.uri.toString() === key && panels.get(key) === panel) panel!.webview.html = render(buildFlow(s.tp.get(e.document)), name); });
+    const sub = vscode.workspace.onDidChangeTextDocument(e => { if (e.document.uri.toString() === doc.uri.toString() && panels.get(key) === panel) panel!.webview.html = render(build(e.document), name); });
     panel.onDidDispose(() => sub.dispose());
   }
-  panel.webview.html = render(buildFlow(s.tp.get(doc)), name);
+  panel.webview.html = render(build(doc), name);
   panel.reveal(vscode.ViewColumn.Beside, true);
 }
 

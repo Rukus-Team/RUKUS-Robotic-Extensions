@@ -49,6 +49,6 @@ export async function applyFileIconSetting(ctx: vscode.ExtensionContext, reason:
     }
   } catch (e) {
     // settings.json open in another editor with a syntax error, or read-only: say so once, quietly
-    console.warn(`Robot Code: could not change workbench.iconTheme: ${(e as Error).message}`);
+    console.warn(`RUKUS: could not change workbench.iconTheme: ${(e as Error).message}`);
   }
 }

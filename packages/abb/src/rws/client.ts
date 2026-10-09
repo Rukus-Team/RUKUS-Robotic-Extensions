@@ -87,6 +87,26 @@ export interface RwsPanel { ctrlState?: string; opMode?: string; speedRatio?: nu
 export interface RwsTask { name: string; type?: string; taskState?: string; execState?: string; active?: boolean; motion: boolean }
 export interface RwsPointer { module: string; routine: string; begin?: { line: number; col: number }; end?: { line: number; col: number } }
 export interface RwsModuleInfo { name: string; type: 'ProgMod' | 'SysMod' | string }
+/** One RAPID data declaration from the symbol search. `path` is task/module/name (module absent for task-global). */
+export interface RwsDataSymbol { name: string; type: string; storage: 'VAR' | 'PERS' | 'CONST'; task: string; module?: string; path: string; dims?: string; local: boolean }
+/** The data declarations in one page of a symbol search (RWS 1.0 XHTML or 2.0 HAL+JSON); modules, routines and types are skipped. */
+export function dataSymbolsOf(page: RwsPage, task: string): RwsDataSymbol[] {
+  const out: RwsDataSymbol[] = [];
+  for (const i of page.items) {
+    const f = i.fields;
+    const symtyp = (f.symtyp ?? '').toLowerCase();
+    if (!/^(per|var|con)$/.test(symtyp)) continue;
+    const url = (f.symburl ?? i.title ?? '').replace(/^RAPID\//, '');
+    const parts = url.split('/');
+    out.push({
+      name: f.name ?? parts[parts.length - 1], type: f.dattyp ?? f.typurl?.split('/').pop() ?? '', storage: symtyp === 'per' ? 'PERS' : symtyp === 'con' ? 'CONST' : 'VAR',
+      task: parts[0] ?? task, module: parts.length > 2 ? parts[1] : undefined, path: url,
+      dims: f.ndim && f.ndim !== '0' ? f.dim?.trim() || f.ndim : undefined, local: /^true$/i.test(f.local ?? ''),
+    });
+  }
+  return out;
+}
+
 /** who holds the right to change the controller: RW 8 write access, RW 6 mastership per domain */
 export interface RwsWriteAccess { holder?: string; holderId?: string; free: boolean; externalControl?: boolean; domains?: Record<string, string>; summary: string }
 /** this PC as an RW 8 remote control station: `id` a braced GUID, `pin` digits */
@@ -320,6 +340,31 @@ export class RwsClient {
   async symbol(task: string, name: string, module?: string): Promise<string | undefined> {
     const path = ['RAPID', task, module, name].filter(Boolean).map(s => encodeURIComponent(s!)).join('/');
     return itemOf(await this.page(this.rws2 ? `/rw/rapid/symbol/${path}/data` : `/rw/rapid/symbol/data/${path}`), 'rap-data')?.fields.value;
+  }
+
+  /**
+   * The data declared in a task (VAR, PERS, CONST of every type), from the controller's symbol
+   * search: RWS 1.0 POST /rw/rapid/symbols?action=search-symbols, RWS 2.0 POST
+   * /rw/rapid/symbols/search, same form. A search reads: no mastership, no write access.
+   */
+  async searchData(task: string): Promise<RwsDataSymbol[]> {
+    const form = `view=block&vartyp=any&symtyp=any&recursive=TRUE&skipshared=FALSE&onlyused=FALSE&blockurl=${encodeURIComponent(`RAPID/${task}`)}`;
+    const out: RwsDataSymbol[] = [];
+    let at: string | undefined = this.rws2 ? '/rw/rapid/symbols/search' : '/rw/rapid/symbols?action=search-symbols';
+    for (let guard = 0; at && guard < 100; guard++) {
+      const r = await this.enqueue('POST', at, undefined, form);
+      const p = this.parse(r.body);
+      out.push(...dataSymbolsOf(p, task));
+      const next: string | undefined = p.links.next?.replace(/&amp;/g, '&');
+      at = next ? (u => u.pathname + u.search)(new URL(next, 'http://x/rw/rapid/')) : undefined;
+    }
+    return out;
+  }
+
+  /** A data value by its symbol path (`T_ROB1/Module1/reg1`, from {@link searchData}), as the controller formats it. */
+  async dataValue(path: string): Promise<string | undefined> {
+    const p = ['RAPID', ...path.split('/')].map(s => encodeURIComponent(s)).join('/');
+    return itemOf(await this.page(this.rws2 ? `/rw/rapid/symbol/${p}/data` : `/rw/rapid/symbol/data/${p}`), 'rap-data')?.fields.value;
   }
 
   /**

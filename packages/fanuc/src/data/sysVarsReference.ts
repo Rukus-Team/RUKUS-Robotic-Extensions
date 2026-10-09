@@ -58,10 +58,10 @@ export class SysVarsReference implements vscode.Disposable {
         const before = idx.size;
         const data = JSON.parse(await fs.promises.readFile(full, 'utf8')) as Array<{ path: string; description: string | null; dataType: string | null; access: string | null; storage: string | null; source: string | null }>;
         idx.add(data); sources.push(`${full} (${data.length} entries, ${idx.size - before} new)`);
-      } catch (e: any) { this.output.appendLine(`[Robot Code] could not read ${full}: ${e?.message ?? e}`); }
+      } catch (e: any) { this.output.appendLine(`[RUKUS] could not read ${full}: ${e?.message ?? e}`); }
     }
     this.sources = sources;
-    this.output.appendLine(`[Robot Code] system variable reference: ${sources.join('; ') || 'none found'}`);
+    this.output.appendLine(`[RUKUS] system variable reference: ${sources.join('; ') || 'none found'}`);
     return idx;
   }
 
