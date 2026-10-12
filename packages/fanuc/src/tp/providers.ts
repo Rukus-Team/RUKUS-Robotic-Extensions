@@ -9,7 +9,7 @@ import { renumber } from './renumber';
 import { formatPositions } from './teach';
 import { renumberOptions } from './renumberSettings';
 import { FanucServices } from '../services';
-import { spanToRange, spanContains, config, md, programNameFromUri } from '@core/util';
+import { spanToRange, spanContains, config, md, escapeMd, programNameFromUri } from '@core/util';
 import { resolveProgram } from '@core/resolve';
 import { frameHover } from './frameHover';
 import { alarmAt, alarmHover } from '../alarms/alarmHover';
@@ -184,7 +184,7 @@ export function dataHover(s: FanucServices, prog: TpProgram, ref: TpDataRef, uri
     if (sr?.value) lines.push('', `Value in backup: \`${sr.value}\``);
   } else if (ref.kind === 'UALM') {
     const a = ds?.ualarms.get(ref.index);
-    if (a && !live) lines.push('', `Message in backup: **${a.message}**${a.severity !== undefined ? ` · ${ualmSeverityName(a.severity)}` : ''}`);
+    if (a && !live) lines.push('', `Message in backup: **${escapeMd(a.message)}**${a.severity !== undefined ? ` · ${ualmSeverityName(a.severity)}` : ''}`);
     else if (!a && !live && ds?.ualarms.size) lines.push('', '_No message set for this user alarm in the backup._');
   }
   const uses = prog.dataRefs.filter(d => d.kind === ref.kind && d.index === ref.index).length;
@@ -212,7 +212,7 @@ class TpHover implements vscode.HoverProvider {
         case 'label': {
           const def = findLabel(prog, t.num);
           const jumps = prog.jumps.filter(j => j.num === t.num);
-          const lines = [`**LBL[${t.num}${def?.comment ? `:${def.comment}` : ''}]**`];
+          const lines = [`**LBL[${t.num}${def?.comment ? `:${escapeMd(def.comment)}` : ''}]**`];
           lines.push('', def ? `Defined on TP line ${prog.lines.find(l => l.line === def.line)?.num ?? '?'} (editor line ${def.line + 1}).` : '⚠ No LBL[' + t.num + '] in this program.');
           lines.push('', `${jumps.length} jump${jumps.length === 1 ? '' : 's'} to this label.`);
           return new vscode.Hover(md(...lines), spanToRange(t.span));
@@ -227,7 +227,7 @@ class TpHover implements vscode.HoverProvider {
         case 'macro': {
           const m = this.s.data.macro(t.name, doc.uri);
           const lines = [`**${t.name}** — Macro instruction`];
-          if (m) { lines.push('', `Runs program **${m.progName}** (macro table entry ${m.index}).`); const info = this.s.index.get(m.progName, doc.uri); if (info?.comment) lines.push('', `_${info.comment}_`); }
+          if (m) { lines.push('', `Runs program **${m.progName}** (macro table entry ${m.index}).`); const info = this.s.index.get(m.progName, doc.uri); if (info?.comment) lines.push('', `_${escapeMd(info.comment)}_`); }
           else lines.push('', 'The name is looked up in the controller macro table (MENU > SETUP > Macro). Add `sysmacro.va` from a backup to resolve it here.');
           return new vscode.Hover(md(...lines), spanToRange(t.span));
         }
@@ -290,7 +290,7 @@ class TpHover implements vscode.HoverProvider {
       return md(...lines);
     }
     if (info) {
-      if (info.comment) lines.push('', `_${info.comment}_`);
+      if (info.comment) lines.push('', `_${escapeMd(info.comment)}_`);
       lines.push('', info.kind === 'binary'
         ? `Compiled program — only the ${path.extname(info.uri.fsPath).toUpperCase()} binary is in this backup, so there is no source to read here. It resolves because the controller has it.`
         : info.kind === 'karel' ? 'KAREL program' : `${info.lineCount} lines · ${info.labels} labels · ${info.positions} positions`);

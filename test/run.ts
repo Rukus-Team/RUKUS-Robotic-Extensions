@@ -19,7 +19,7 @@ import { parseKarel, findUnused, stripCommentAndStrings } from '@fanuc/karel/par
 import { parseNumReg, parsePosReg, parseStrReg, parseIoComments, parseMacroTable, parsePayloads, describePayload, robotNameFromFolder } from '@fanuc/data/vaParser';
 import { lookupTpDoc, lookupTpDocsAt, TP_INSTRUCTION_COMPLETIONS, TP_OPERAND_COMPLETIONS } from '@fanuc/tp/docs';
 import { FANUC_PROGRAMS, CATALOG_MACROS } from '@fanuc/tp/syntaxCatalog';
-import { parseCurPos, parsePrgState, parseIoState, parseAlarms, parseControllerInfo } from '@core/live/parsers';
+import { parseCurPos, parsePrgState, parseIoState, parseAlarms, parseControllerInfo, activeAlarms, newestFirst, alarmPriority, alarmPriorityLabel } from '@core/live/parsers';
 import { planTeach, planRewriteBlock, applyTeachEdits, sourceFromCurrentPosition, buildPositionBlock, posSectionBounds, nextFreePositionIndex, planOffset, parseAxisOffsets, positionDistance, planFrameShift, planMirror, planRelabelFrames } from '@fanuc/tp/teach';
 import { planRemap, planExtract, planInline, planCombine, applyLineChanges } from '@fanuc/tp/refactor';
 import { lintKarel, countArgs, LINT_CODES, identifierLengthIssues, karelNameLimits, karelCoreVersionOf } from '@fanuc/karel/lint';
@@ -59,6 +59,8 @@ import {
 } from '@core/robotContainers';
 import { run as runIssue5 } from './issue5.test';
 import { run as runVersionId } from './versionId.test';
+import { run as runRobotSafety } from './robotSafety.test';
+import { run as runReliability } from './reliability.test';
 import { run as runContainersHardening } from './containersHardening.test';
 import { run as runSnapshotSync } from './snapshotSync.test';
 import { run as runSyncCore } from './syncCore.test';
@@ -105,7 +107,7 @@ function walk(dir: string, out: string[] = []): string[] {
 registerBrand(fanucBrand);
 
 const files = roots.flatMap(r => walk(r));
-(async () => {
+void (async () => {
 const ls = files.filter(f => /\.ls$/i.test(f));
 const kl = files.filter(f => /\.kl$/i.test(f));
 const va = files.filter(f => /\.va$/i.test(f));
@@ -506,6 +508,30 @@ if (backupDir && isRefBackup(backupDir)) {
   const a = alarms.find(x => x.seq === 798);
   check(a?.code === 'INTP-213' && a.severity === 'WARN' && /TeachMem/.test(a.message), `alarm 798: ${JSON.stringify(a)}`);
   check(alarms.some(x => x.isReset), 'alarm reset rows detected');
+  // current errors: newest first by the rows' own times, stop at the latest RESET (both file orders)
+  const row = (n: number, t: string, msg: string, sev = 'WARN') => `${n}" ${t} " ${msg.padEnd(50)}" " ${sev.padEnd(30)}00000000"    "`;
+  const newestFirstFile = [
+    row(1, '10-OCT-26 11:05:00', 'SRVO-001 Operator panel E-stop', 'SERVO'),
+    row(2, '10-OCT-26 11:04:00', 'INTP-105 Run request failed', 'PAUSE'),
+    row(3, '10-OCT-26 11:02:40', 'R E S E T', ''),
+    row(4, '10-OCT-26 10:32:40', 'R E S E T', ''),
+    row(59, '09-OCT-26 18:50:20', 'KCLI-091 Keeping existing RD:'),
+    row(61, '09-OCT-26 18:50:20', 'OPTN-018 No Language additions on this media'),
+  ].join('\n');
+  const activeNew = activeAlarms(parseAlarms(newestFirstFile));
+  check(activeNew.map(x => x.code).join(',') === 'SRVO-001,INTP-105', `active alarms, newest-first file: ${activeNew.map(x => x.code)}`);
+  const oldestFirstFile = newestFirstFile.split('\n').reverse().join('\n');
+  const activeOld = activeAlarms(parseAlarms(oldestFirstFile));
+  check(activeOld.map(x => x.code).join(',') === 'SRVO-001,INTP-105', `active alarms, oldest-first file: ${activeOld.map(x => x.code)}`);
+  check(activeAlarms(parseAlarms(row(1, '10-OCT-26 11:02:40', 'R E S E T', '') + '\n' + newestFirstFile.split('\n').slice(4).join('\n'))).length === 0, 'no active alarms after a RESET');
+  const ascending = [790, 791, 792, 793, 794, 795, 796, 797, 798].map(n => row(n, `23-AUG-26 13:${10 + n - 790}:00`, `INTP-${n - 590} Alarm ${n}`)).join('\n');
+  const activeAsc = activeAlarms(parseAlarms(ascending));
+  check(activeAsc.length === 8 && activeAsc[0].seq === 798 && activeAsc[7].seq === 791, `active alarms, ascending 790..798: ${activeAsc.map(x => x.seq)}`);
+  const sameTime = [row(5, '10-OCT-26 09:00:00', 'SRVO-002 Teach pendant E-stop', 'SERVO'), row(6, '10-OCT-26 09:00:00', 'R E S E T', '')].join('\n');
+  check(activeAlarms(parseAlarms(sameTime)).length === 1, 'equal times: lower row number is newer');
+  check(newestFirst(alarms)[0].time === alarms[0].time, 'backup ERRALL.LS is newest first');
+  check(['STOP', 'SERVO', 'ABORT', 'SYSTEM', 'PAUSE', 'WARN', 'NONE', ''].map(alarmPriority).join(',') === 'High,High,High,High,Medium,Low,Info,Info', 'alarm severity to priority');
+  check(alarmPriorityLabel('SERVO') === '■ High' && alarmPriorityLabel('') === '○ Info', 'priority shown as symbol and word');
   const info = parseControllerInfo(rd('errall.ls') + rd('curpos.dg'));
   check(info.robotName === 'S002R01' && info.fNumber === 'F368808' && /V9\.40/.test(info.version ?? ''), `controller info: ${JSON.stringify(info)}`);
   // synthetic running task
@@ -1547,10 +1573,11 @@ if (backupDir) {
   check(/LBL\[1\].*MAIN LOOP/.test(labelFirst.nodes[0].title), `a banner before an opening label stays on that node: ${labelFirst.nodes[0].title}`);
 
   // header templates
-  const ford = DEFAULT_HEADER_TEMPLATES.find(t => t.name.startsWith('Ford'))!;
-  check(headerPrompts(ford).join(',') === 'DESCRIPTION,GROUPS', `Ford header asks for: ${headerPrompts(ford).join(',')}`);
+  // a user template (no longer a default): banner, description, an empty comment line, a NOTE, banner
+  const ford = { name: 'Banner', lines: ['*'.repeat(32), '${DESCRIPTION}', '', ' NOTE: This program has', ' ${GROUPS} motion', '*'.repeat(32)] };
+  check(!DEFAULT_HEADER_TEMPLATES.some(t => /ford|gvoss/i.test(t.name)), 'no customer-specific Ford template ships as a default');
+  check(headerPrompts(ford).join(',') === 'DESCRIPTION,GROUPS', `banner header asks for: ${headerPrompts(ford).join(',')}`);
   const h = expandHeader(ford, { PROGRAM: 'MAIN_PICK', DESCRIPTION: 'Moves Robot to Pounce Position' });
-  // the GVOSS shape: banner, description, an empty comment line, the NOTE, banner
   check(h.lines[0] === '*'.repeat(32) && h.lines[1] === 'Moves Robot to Pounce Position' && h.lines[2] === '' && h.lines[3] === ' NOTE: This program has' && h.missing.join(',') === 'GROUPS' && h.lines[4] === ' ${GROUPS} motion', `header expand: ${JSON.stringify(h)}`);
   check(h.tooLong.length === 0 && expandHeader(ford, { DESCRIPTION: 'x'.repeat(40) }).tooLong.includes(1), 'over-width lines are reported');
   check(ruleLine(ford) === '*'.repeat(32) && ruleLine(DEFAULT_HEADER_TEMPLATES.find(t => t.name === 'Generic')!) === '-'.repeat(32), 'rule line follows the template');
@@ -1724,6 +1751,8 @@ if (backupDir) {
   runProgramTemplates(check);
   runIssue5(check);
   runVersionId(check);
+  await runRobotSafety(check);
+  await runReliability(check);
   await runContainersHardening(check);
   await runSnapshotSync(check);
   await runSyncCore(check);

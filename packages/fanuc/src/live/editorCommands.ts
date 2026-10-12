@@ -11,6 +11,7 @@
  * or HTTP; this file is the part that asks, confirms and logs.
  */
 import * as vscode from 'vscode';
+import { targetKindOfHost, targetKindLabel } from '@core/live/targetKind';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { createHash } from 'node:crypto';
@@ -35,9 +36,10 @@ import { isFileDirty } from '@core/gitAware';
 import { fetchControllerErrors } from '@core/syncCommands';
 import { historyStamp, ROBOT_DIR, SNAPSHOT_HISTORY_DIR, type VerbatimDiff, type RobotMarker } from '@core/robotContainers';
 import { ORDER_FILE, ASCII_UPLOAD, ASCII_PROGRAM_LOADER, readControllerOptions, canLoadAscii } from './controllerOptions';
+import { commandRegistrar } from '@core/commandBoundary';
 
 export function registerEditorCommands(ctx: vscode.ExtensionContext, s: FanucServices, robots: RobotManager) {
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
+  const reg = commandRegistrar(ctx, s.output);
 
   // Teach from PR[n] reads the backup's posreg.va, not the robot, so it stays on without the
   // experimental switch; everything else here talks to a controller.
@@ -484,8 +486,15 @@ async function localProgram(s: FanucServices, robots: RobotManager, uri?: vscode
  * Afterwards the program is read back once and compared, so the message says whether
  * what is on the robot is what was sent.
  */
+/** Uploads are off until the user turns them on; say so, with the way to the setting. */
+function uploadsOff(what: string): void {
+  const open = 'Open Setting';
+  void vscode.window.showInformationMessage(`Uploading to robots is off, so ${what}. Turn on robotCode.live.upload to allow it.`, open)
+    .then(b => { if (b === open) void vscode.commands.executeCommand('workbench.action.openSettings', 'robotCode.live.upload'); });
+}
+
 async function uploadProgram(s: FanucServices, robots: RobotManager, uri?: vscode.Uri) {
-  if (!config<boolean>('live.upload', true)) { vscode.window.showInformationMessage('Uploading to robots is switched off (robotCode.live.upload).'); return; }
+  if (!config<boolean>('live.upload', false)) { uploadsOff('nothing was sent'); return; }
   const lp = await localProgram(s, robots, uri);
   if (!lp) return;
   await sendProgram(s, robots, lp.doc, lp.name, { confirm: true });
@@ -521,6 +530,15 @@ async function sendProgram(s: FanucServices, robots: RobotManager, doc: vscode.T
     audit('Refused', 0, { error: 'robot is write-locked in RUKUS' });
     robots.log(name, `UPLOAD ${file} REFUSED: ${name} is write-locked in RUKUS`);
     vscode.window.showWarningMessage(`${name} is write-locked in RUKUS, so nothing is uploaded to it. Unlock it in RUKUS (Cluster > Edit robot) first.`);
+    return false;
+  }
+  // Is the controller at this address still the profile's? Two can share an address; the F number decides.
+  try { await robots.verifyIdentity(name); }
+  catch (e: any) {
+    const why = e?.message ?? String(e);
+    audit('Refused', 0, { error: why });
+    robots.log(name, `UPLOAD ${file} REFUSED: ${why}`);
+    vscode.window.showErrorMessage(`Nothing was uploaded. ${why}`);
     return false;
   }
   // Read the task states now (one small file), so the guard does not depend on someone having
@@ -582,13 +600,18 @@ async function sendProgram(s: FanucServices, robots: RobotManager, doc: vscode.T
       ? await isFileDirty(path.dirname(target.fsPath), target.fsPath)
       : false;
     const gitNote = dirty ? '\n\nThis program has uncommitted changes in your git repository.' : '';
-    const buttons = dirty ? ['Upload', 'Open Source Control'] : ['Upload'];
+    // the button names the outcome and the target; the title says virtual or live
+    const kind = targetKindLabel(targetKindOfHost(c.profile.host));
+    const send = isNew ? `Upload ${progName} to ${name}` : `Replace ${progName} on ${name}`;
+    const buttons = dirty ? [send, 'Open Source Control'] : [send];
     const ok = await vscode.window.showWarningMessage(
-      `Upload ${progName} to ${name}?`,
-      { modal: true, detail: `${file} goes to ${c.profile.device} on ${name} (${c.profile.host}) over FTP ${isNew ? `as a NEW program - ${name} has no ${progName} yet` : 'and REPLACES the program of that name on the controller'}. The controller compiles it as it lands and refuses it if the program is selected on the pendant or write-protected.${diags.length ? `\n\nThis file has ${diags.length} error${diags.length === 1 ? '' : 's'} in Problems.` : ''}${gitNote}\n\nNothing else on the robot changes.` },
+      `${isNew ? 'Upload' : 'Replace'} ${progName} on ${kind.toLowerCase()} controller ${name}?`,
+      { modal: true, detail: `${kind} controller ${name}${kind === 'Virtual' ? ' (on this PC)' : ''}.
+
+${file} goes to ${c.profile.device} on ${name} (${c.profile.host}) over FTP ${isNew ? `as a NEW program - ${name} has no ${progName} yet` : 'and REPLACES the program of that name on the controller'}. The controller compiles it as it lands and refuses it if the program is selected on the pendant or write-protected.${diags.length ? `\n\nThis file has ${diags.length} error${diags.length === 1 ? '' : 's'} in Problems.` : ''}${gitNote}\n\nNothing else on the robot changes.` },
       ...buttons);
     if (ok === 'Open Source Control') { await vscode.commands.executeCommand('workbench.view.scm'); return false; }
-    if (ok !== 'Upload') return false;
+    if (ok !== send) return false;
   }
   const text = doc.getText();
   const data = Buffer.from(text.replace(/\r?\n/g, '\r\n'), 'latin1');   // the controller's own line ending
@@ -736,25 +759,36 @@ async function reportPushFailure(s: FanucServices, conn: { profile: { name: stri
  * changing a line of a running program over FTP, and this does not pretend otherwise. The
  * pairing is asked for once, when it is switched on; each save then goes with the same
  * guards as Upload Program minus the modal, and a failed send says so and keeps live edit
- * on. A status bar item shows the pairing and switches it off on click; disconnecting the
- * robot switches it off too.
+ * on. Only a save the user makes (Ctrl+S, Save) is sent: an auto-save after a pause in typing
+ * stays local. A status bar item shows every pairing whichever editor is in front, and switches
+ * it off on click; disconnecting the robot switches it off too, and says so.
  */
 class LiveEdit implements vscode.Disposable {
   private readonly pairs = new Map<string, string>();   // document uri -> robot name
   private readonly status: vscode.StatusBarItem;
   private readonly subs: vscode.Disposable[] = [];
   private busy = new Set<string>();
+  /** documents whose save in progress was made by the user (not auto-save) */
+  private readonly manual = new Set<string>();
+  /** pairings already told that auto-saves stay local */
+  private readonly toldAutoSave = new Set<string>();
 
   constructor(private readonly s: FanucServices, private readonly robots: RobotManager) {
     this.status = vscode.window.createStatusBarItem('robotCode.liveEdit', vscode.StatusBarAlignment.Left, 49);
     this.status.command = 'robotCode.live.liveEdit';
     this.subs.push(
       this.status,
+      vscode.workspace.onWillSaveTextDocument(e => { if (e.reason === vscode.TextDocumentSaveReason.Manual) this.manual.add(e.document.uri.toString()); }),
       vscode.workspace.onDidSaveTextDocument(d => void this.onSave(d)),
       vscode.window.onDidChangeActiveTextEditor(() => this.render()),
       vscode.workspace.onDidCloseTextDocument(d => { if (this.pairs.delete(d.uri.toString())) this.render(); }),
       robots.onDidChange(() => {
-        for (const [uri, robot] of [...this.pairs]) if (robots.get(robot)?.state !== 'connected') { this.pairs.delete(uri); robots.log(robot, `live edit off for ${uri.split('/').pop()}: robot disconnected`); }
+        for (const [uri, robot] of [...this.pairs]) if (robots.get(robot)?.state !== 'connected') {
+          this.pairs.delete(uri);
+          const file = decodeURIComponent(uri.split('/').pop() ?? uri);
+          robots.log(robot, `live edit off for ${file}: robot disconnected`);
+          void vscode.window.showWarningMessage(`Live edit stopped: ${robot} disconnected. Saves of ${file} now stay on this PC.`);
+        }
         this.render();
       }),
     );
@@ -770,7 +804,7 @@ class LiveEdit implements vscode.Disposable {
     const key = target.toString();
     const on = this.pairs.get(key);
     if (on) { this.pairs.delete(key); this.robots.log(on, `live edit off for ${path.basename(target.fsPath)}`); this.render(); vscode.window.setStatusBarMessage(`$(circle-slash) Live edit off - ${path.basename(target.fsPath)} stays local`, 5000); return; }
-    if (!config<boolean>('live.upload', true)) { vscode.window.showInformationMessage('Uploading to robots is switched off (robotCode.live.upload), so live edit cannot be.'); return; }
+    if (!config<boolean>('live.upload', false)) { uploadsOff('live edit cannot be turned on'); return; }
     const name = await pickConnected(this.s, this.robots, target);
     if (!name) return;
     const c = this.robots.get(name)!;
@@ -788,12 +822,14 @@ class LiveEdit implements vscode.Disposable {
         await Promise.all([this.s.data.refresh(), this.s.index.refresh()]);
       }
     }
+    const kind = targetKindLabel(targetKindOfHost(c.profile.host)).toLowerCase();
     const ok = await vscode.window.showWarningMessage(
-      `Live edit ${progName} on ${name}?`,
-      { modal: true, detail: `Every save of ${path.basename(target.fsPath)} is sent to ${name} (${c.profile.host}, ${c.profile.device}) and REPLACES ${progName} on the controller - with no further question until you switch it off.\n\nThe controller refuses a program that is selected or running on the pendant, so a save while it runs is reported and not applied; abort the program first.\n\nThe status bar shows the pairing; click it to stop.` },
+      `Live edit ${progName} on ${kind} controller ${name}?`,
+      { modal: true, detail: `Every save you make (Ctrl+S) of ${path.basename(target.fsPath)} is sent to ${name} (${c.profile.host}, ${c.profile.device}) and REPLACES ${progName} on the controller - with no further question until you switch it off.\n\nThe controller refuses a program that is selected or running on the pendant, so a save while it runs is reported and not applied; abort the program first.\n\nThe status bar shows the pairing; click it to stop.` },
       'Start live edit');
     if (!ok) return;
     this.pairs.set(key, name);
+    this.toldAutoSave.delete(key);
     this.robots.log(name, `live edit ON for ${path.basename(target.fsPath)} (${progName})`);
     this.render();
     if (doc.isDirty || !(await this.matchesRobot(doc, name, progName))) await sendProgram(this.s, this.robots, doc, name, { confirm: false, quiet: true });
@@ -805,21 +841,31 @@ class LiveEdit implements vscode.Disposable {
   }
 
   private async onSave(doc: vscode.TextDocument): Promise<void> {
-    const name = this.pairs.get(doc.uri.toString());
+    const key = doc.uri.toString();
+    const byUser = this.manual.delete(key);
+    const name = this.pairs.get(key);
     if (!name) return;
+    if (!byUser) {
+      // an auto-save is not a decision to change the robot
+      if (!this.toldAutoSave.has(key)) { this.toldAutoSave.add(key); vscode.window.setStatusBarMessage(`$(info) Auto-save kept ${path.basename(doc.uri.fsPath)} local - press Ctrl+S to send it to ${name}`, 8000); }
+      return;
+    }
     if (this.busy.has(doc.uri.toString())) return;
     this.busy.add(doc.uri.toString());
     try { await sendProgram(this.s, this.robots, doc, name, { confirm: false, quiet: true }); }
     finally { this.busy.delete(doc.uri.toString()); }
   }
 
+  /** Shown while any program is paired, whichever editor is in front: a write mode must not hide. */
   private render() {
     const doc = vscode.window.activeTextEditor?.document;
     const name = doc ? this.pairs.get(doc.uri.toString()) : undefined;
     void vscode.commands.executeCommand('setContext', 'robotCode.liveEditOn', !!name);
-    if (!name) { this.status.hide(); return; }
-    this.status.text = `$(broadcast) LIVE → ${name}`;
-    this.status.tooltip = `Live edit: every save of ${path.basename(doc!.uri.fsPath)} is sent to ${name}. Click to stop.`;
+    if (!this.pairs.size) { this.status.hide(); return; }
+    const files = [...this.pairs].map(([uri, robot]) => `${decodeURIComponent(uri.split('/').pop() ?? uri)} → ${robot}`);
+    const robotsOn = [...new Set(this.pairs.values())];
+    this.status.text = `$(broadcast) LIVE → ${robotsOn.join(', ')}${this.pairs.size > 1 ? ` (${this.pairs.size} files)` : ''}`;
+    this.status.tooltip = `Live edit: every save you make of these is sent to the robot:\n${files.join('\n')}\n\n${name ?'Click to stop live edit for this file.' : 'Open a paired file and click to stop.'}`;
     this.status.color = new vscode.ThemeColor('statusBarItem.warningForeground');
     this.status.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
     this.status.show();

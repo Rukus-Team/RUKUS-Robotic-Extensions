@@ -11,6 +11,7 @@ import * as path from 'node:path';
 import { config, windowFolders, isHiddenBackup, onDidChangeBackupLists } from './util';
 import { programRank, type PartitionKind } from './robotContainers';
 import { brandForFile, brandById, brands, programFileGlob, programFileRe, isBinaryProgramFile, isProgramLanguage, type ProgramFacts } from './brand';
+import { errorDetail } from './errors';
 
 export interface ProgramInfo extends ProgramFacts {
   uri: vscode.Uri;
@@ -67,6 +68,8 @@ export class WorkspaceIndex implements vscode.Disposable {
    * Services from the container markers.
    */
   snapshotRoots: () => string[] = () => [];
+  /** Where a failure in the background re-index is written. Set by Services to the output channel. */
+  log: (message: string) => void = () => {};
 
   /**
    * Folders indexed because a file in them was OPENED, not because they are in the
@@ -272,11 +275,14 @@ export class WorkspaceIndex implements vscode.Disposable {
     }
     this.pendingUris.set(uri.toString(), uri);
     if (this.pendingTimer) clearTimeout(this.pendingTimer);
-    this.pendingTimer = setTimeout(async () => {
+    // A timer callback's rejection reaches no one: catch it here, log it, and still fire the
+    // change so the files that did index show up.
+    this.pendingTimer = setTimeout(() => void (async () => {
       const uris = [...this.pendingUris.values()]; this.pendingUris.clear();
-      for (const u of uris) await this.indexUri(u, u.scheme === 'file' && this.partitionResolver(u) === 'reference');
-      this.changed();
-    }, 400);
+      try { for (const u of uris) await this.indexUri(u, u.scheme === 'file' && this.partitionResolver(u) === 'reference'); }
+      catch (e) { this.log(`[index] re-index failed: ${errorDetail(e)}`); }
+      finally { this.changed(); }
+    })(), 400);
   }
 
   private remove(uri: vscode.Uri) {

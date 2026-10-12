@@ -15,8 +15,8 @@ import { IO_KINDS } from './parser';
 import { config } from '@core/util';
 
 export function registerLiveDecorations(ctx: vscode.ExtensionContext, s: FanucServices) {
-  const mk = (color: string, bold = false) => vscode.window.createTextEditorDecorationType({
-    after: { color: new vscode.ThemeColor(color), margin: '0', fontWeight: bold ? 'bold' : 'normal' },
+  const mk = (color: string, bold = false, italic = false) => vscode.window.createTextEditorDecorationType({
+    after: { color: new vscode.ThemeColor(color), margin: '0', fontWeight: bold ? 'bold' : 'normal', fontStyle: italic ? 'italic' : 'normal' },
   });
   const types = {
     on: mk('robotCode.hintStateOn', true),
@@ -24,8 +24,8 @@ export function registerLiveDecorations(ctx: vscode.ExtensionContext, s: FanucSe
     num: mk('robotCode.hintValue'),
     str: mk('robotCode.hintString'),
     sim: mk('robotCode.hintSim', true),
-    /** read a while ago: the same muted text, dimmer, so it reads as history not as a feed */
-    stale: mk('robotCode.hintStale'),
+    /** read a while ago: muted and italic, so it reads as history not as a feed (the colour alone stays readable, 4.5:1) */
+    stale: mk('robotCode.hintStale', false, true),
   };
   ctx.subscriptions.push(...Object.values(types));
 

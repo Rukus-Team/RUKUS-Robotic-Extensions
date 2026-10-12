@@ -22,3 +22,5 @@ data/tp-syntax-verified.json
 data/karel-reference.json
 .github/**
 public/**
+eslint.config.mjs
+.nvmrc

@@ -16,19 +16,19 @@ import type { RobotManager, RobotConnection } from './robotManager';
 import { fmtCart } from './parsers';
 import { openRobotForm } from './robotForm';
 import { findUses } from '../views/findUses';
-import { config } from '../util';
-import { WEBVIEW_BASE_CSS, LIST_LIMIT_JS } from '../webviewStyle';
+import { config, escapeHtml } from '../util';
+import { WEBVIEW_BASE_CSS, LIST_LIMIT_JS, ACTIVATE_JS, withCsp } from '../webviewStyle';
 
 const panels = new Map<string, vscode.WebviewPanel>();
 
 export function openDashboard(ctx: vscode.ExtensionContext, s: Services, robots: RobotManager, name: string) {
   let panel = panels.get(name);
   if (!panel) {
-    panel = vscode.window.createWebviewPanel('robotCode.dashboard', `${name}`, vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true });
+    panel = vscode.window.createWebviewPanel('robotCode.dashboard', `${name}`, vscode.ViewColumn.Active, { enableScripts: true, localResourceRoots: [], retainContextWhenHidden: true });
     panels.set(name, panel);
     panel.onDidDispose(() => panels.delete(name));
     ctx.subscriptions.push(panel);
-    panel.webview.html = html(name);
+    panel.webview.html = withCsp(html(name), panel.webview.cspSource);
 
     const push = () => { const c = robots.get(name); if (panel && c) void panel.webview.postMessage({ type: 'state', state: serialize(c) }); };
 
@@ -112,7 +112,7 @@ export const ROBOT_PAGE_CSS = `  :root { --ok: var(--vscode-testing-iconPassed, 
   .spacer { flex: 1 } .btns { display: flex; gap: 6px; flex-wrap: wrap }
   button { border-radius: 4px }
   button.get { padding: 2px 9px; font-size: 11px; border-radius: 10px }
-  button.on { background: var(--ok); color: #04260d }
+  button.on { background: color-mix(in srgb, var(--ok) 22%, transparent); color: var(--vscode-editor-foreground, var(--vscode-foreground)); box-shadow: inset 0 0 0 1px var(--ok) }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; margin-top: 14px }
   .card { background: var(--card); border: 1px solid var(--line); border-top: 3px solid var(--muted); border-radius: 8px; padding: 12px 14px; min-width: 0 } .card.run { border-top-color: var(--ok) } .card.pos { border-top-color: var(--blue) } .card.tsk { border-top-color: var(--purple) } .card.io { border-top-color: var(--green) } .card.reg { border-top-color: var(--orange) } .card.err { border-top-color: var(--bad) } .card.ruk { border-top-color: var(--warn) }
   .card h2 .ic { width: 8px; height: 8px; border-radius: 2px; display: inline-block; background: var(--muted) } .card.run h2 .ic { background: var(--ok) } .card.pos h2 .ic { background: var(--blue) } .card.tsk h2 .ic { background: var(--purple) } .card.io h2 .ic { background: var(--green) } .card.reg h2 .ic { background: var(--orange) } .card.ruk h2 .ic { background: var(--warn) }
@@ -124,7 +124,8 @@ export const ROBOT_PAGE_CSS = `  :root { --ok: var(--vscode-testing-iconPassed, 
   .age { font-weight: 400; color: var(--muted); font-size: 11px } .age.stale { color: var(--warn) }
   .unread { color: var(--muted); padding: 18px 0; text-align: center } .unread button { margin-top: 8px }
   .big { font-size: 22px; font-weight: 600; font-family: var(--vscode-editor-font-family, monospace) } .big small { font-size: 12px; color: var(--muted); font-family: var(--vscode-font-family); font-weight: 400; margin-left: 8px }
-  .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; background: var(--muted); color: #fff } .pill.RUNNING { background: var(--ok) } .pill.PAUSED, .pill.PAUSING { background: var(--warn) } .pill.ABORTED, .pill.ABORTING { background: var(--muted) }
+  /* a state pill: the theme's text on a tint of the state's colour, outlined in the colour itself, so the word stays readable (4.5:1) in every theme */
+  .pill { --pill: var(--muted); display: inline-block; padding: 0 7px; border-radius: 10px; font-size: 11px; font-weight: 600; background: color-mix(in srgb, var(--pill) 22%, transparent); border: 1px solid var(--pill); color: var(--vscode-editor-foreground, var(--vscode-foreground)) } .pill.RUNNING { --pill: var(--ok) } .pill.PAUSED, .pill.PAUSING { --pill: var(--warn) } .pill.ABORTED, .pill.ABORTING { --pill: var(--muted) }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px } th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px 6px; border-bottom: 1px solid var(--line) } td { padding: 4px 6px; border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent); vertical-align: top } tr:last-child td { border-bottom: 0 } tr.click { cursor: pointer } tr.click:hover td { background: var(--vscode-list-hoverBackground) }
   .mono { font-family: var(--vscode-editor-font-family, monospace) } .num { text-align: right; font-family: var(--vscode-editor-font-family, monospace); color: var(--orange) } .muted { color: var(--muted) } .prog { color: var(--warn); font-family: var(--vscode-editor-font-family, monospace) }
   .axes { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px } .ax { background: var(--vscode-editor-background); border-radius: 6px; padding: 6px 8px; text-align: center; min-width: 0; border-left: 3px solid var(--muted) } .ax .l { font-size: 10px; color: var(--muted); font-weight: 600; letter-spacing: .04em } .ax .v { font-family: var(--vscode-editor-font-family, monospace); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis } .ax.xyz { border-left-color: var(--blue) } .ax.xyz .v { color: var(--blue) } .ax.wpr { border-left-color: var(--purple) } .ax.wpr .v { color: var(--purple) } .ax.j { border-left-color: var(--orange) } .ax.j .v { color: var(--orange) } .ax.e { border-left-color: var(--green) } .ax.e .v { color: var(--green) }
@@ -142,7 +143,7 @@ function html(name: string): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${WEBVIEW_BASE_CSS}
 ${ROBOT_PAGE_CSS}</style></head><body>
 <div class="head">
-  <h1><span class="dot" id="dot"></span><span id="name">${name}</span></h1>
+  <h1><span class="dot" id="dot"></span><span id="name">${escapeHtml(name)}</span></h1>
   <div class="sub" id="sub">…</div>
   <div class="spacer"></div>
   <div class="btns">
@@ -162,6 +163,7 @@ ${ROBOT_PAGE_CSS}</style></head><body>
   const vscode = acquireVsCodeApi();
   const folded = new Set((vscode.getState() || {}).folded || []);
 ${LIST_LIMIT_JS}
+${ACTIVATE_JS}
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   let st = null, ioQuery = '', ioKind = '', regQuery = '';
@@ -203,6 +205,8 @@ ${LIST_LIMIT_JS}
     const regList = st.regs.filter(r => !rq || ('r[' + r.i + ']').includes(rq) || r.c.toLowerCase().includes(rq));
     const regs = rcSlice('reg', regList, 50);
     const tasks = rcSlice('tsk', st.tasks, 50);
+    // a redraw replaces the cards: focus goes back to the row, chip or button that had it
+    const focusKey = rcFocusKey();
     $('body').innerHTML = \`
       <div class="grid">
         <div class="card run"><h2><span class="ic"></span>Running<span class="n">\${stamp('tasks')} \${getBtn('getTasks')}</span></h2>\${!st.fetched.tasks ? unread('getTasks', 'Program state has not been read.') : running.length ? running.map(t => '<div class="big"><span class="pill ' + t.status + '">' + t.status + '</span> <span class="prog" style="margin-left:8px">' + esc(t.current.program) + '</span><small>line ' + t.current.line + ' · task ' + t.taskNo + '</small></div><div class="muted" style="margin-top:6px">' + t.stack.map(f => esc(f.program) + ':' + f.line).join(' → ') + '</div><button style="margin-top:10px" data-reveal>Show line in editor</button>').join('') : '<div class="big muted">Idle</div><div class="muted">No TP program was running when this was read.</div>'}</div>
@@ -222,11 +226,12 @@ ${LIST_LIMIT_JS}
     for (const b of document.querySelectorAll('[data-get]')) b.onclick = () => vscode.postMessage({ type: b.dataset.get });
     for (const b of document.querySelectorAll('[data-ruk]')) b.onclick = () => vscode.postMessage({ type: b.dataset.ruk });
     for (const b of document.querySelectorAll('[data-opts]')) b.onclick = () => vscode.postMessage({ type: 'showOptions' });
-    for (const b of document.querySelectorAll('[data-optinfo]')) { b.onclick = () => vscode.postMessage({ type: 'optionInfo', label: b.dataset.optinfo }); b.onkeydown = e => { if (e.key === 'Enter') b.onclick(); }; }
+    for (const b of document.querySelectorAll('[data-optinfo]')) rcActivate(b, () => vscode.postMessage({ type: 'optionInfo', label: b.dataset.optinfo }));
     for (const b of document.querySelectorAll('[data-table]')) b.onclick = () => vscode.postMessage({ type: 'registers' });
-    for (const r of document.querySelectorAll('tr[data-prog]')) r.onclick = () => r.dataset.prog && vscode.postMessage({ type: 'taskLine', program: r.dataset.prog, line: +r.dataset.line, kind: r.dataset.kind });
-    for (const c of document.querySelectorAll('.chip')) c.onclick = () => vscode.postMessage({ type: 'findUses', kind: c.dataset.k, index: +c.dataset.i });
-    for (const r of document.querySelectorAll('tr[data-reg]')) r.onclick = () => vscode.postMessage({ type: 'findUses', kind: 'R', index: +r.dataset.reg });
+    // keyboard: Tab reaches each task, I/O point and register; Enter or Space does what a click does
+    for (const r of document.querySelectorAll('tr[data-prog]')) if (r.dataset.prog) rcActivate(r, () => vscode.postMessage({ type: 'taskLine', program: r.dataset.prog, line: +r.dataset.line, kind: r.dataset.kind }));
+    for (const c of document.querySelectorAll('.chip')) rcActivate(c, () => vscode.postMessage({ type: 'findUses', kind: c.dataset.k, index: +c.dataset.i }));
+    for (const r of document.querySelectorAll('tr[data-reg]')) rcActivate(r, () => vscode.postMessage({ type: 'findUses', kind: 'R', index: +r.dataset.reg }));
     rcWireLimits(render);
     // A card folds away and opens again from its title (issue #3, 3c); the choice survives a redraw
     // and the panel being hidden. Buttons in the title still do their own thing.
@@ -242,6 +247,7 @@ ${LIST_LIMIT_JS}
       h.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === h) { e.preventDefault(); toggle(); } };
       apply();
     }
+    rcRestoreFocus(focusKey);
   }
   window.addEventListener('message', e => { if (e.data.type === 'state') { st = e.data.state; render(); } });
   vscode.postMessage({ type: 'ready' });

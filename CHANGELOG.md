@@ -1,5 +1,72 @@
 # Changelog
 
+## 26.109.9 - 2026-10-12 - Robot safety, reliability and accessibility
+
+Robot safety: every write to a controller is confirmed, a real controller is read-only until you allow
+writes, and a virtual controller never looks like a plant robot. Also: failures that used to pass silently
+now say why, the robot pages work from the keyboard, and hints and pills are readable in every theme.
+Checked against ROBOGUIDE (127.0.0.2) and a mock RobotStudio controller.
+
+### Changed
+- **ABB: a real controller is read-only until `robotCode.abb.allowWrites` is on** (a setting of this PC only).
+  RobotStudio virtual controllers work as before. Stop RAPID is never held back. A real OmniCore still needs
+  `robotCode.abb.allowRealOmniCoreWrites` as well.
+- **ABB: Motors On and Start RAPID on a real controller are confirmed by typing its name.**
+- **FANUC: Push to Robot is off until `robotCode.live.upload` is on.** It used to come on with robot connections.
+- **Connected robots read Virtual or Live** in the status bar (`Virtual R01`, `Live R01`), in a neutral colour;
+  colour is kept for faults. A virtual controller is one at a loopback address (ROBOGUIDE, RobotStudio on this PC).
+- **The upload dialog names what happens and where:** "Replace PROG on R01" or "Upload PROG to R01", and whether
+  the controller is virtual or live.
+- **Live edit sends only the saves you make** (Ctrl+S). An auto-save after a pause in typing stays on this PC.
+  The LIVE status item stays visible whichever editor is in front, and a disconnect that ends live edit says so.
+
+### Removed
+- **The Ford (GVOSS) header template no longer ships as a default.** GM, Stellantis and Generic remain; a template
+  already in your settings stays there.
+
+### Fixed
+- **Controller errors show what is current.** The error list reads the alarm times instead of the file
+  order (some controllers write newest first), lists the alarms since the latest RESET, at most 8, and
+  shows each one's priority (high, medium, low or info).
+- **Auto-refresh keeps going after a failed read.** One refresh that failed used to stop the robot's auto-refresh
+  without a word, so the page kept showing old values as current. The failure is now logged and the next refresh
+  runs on time. The background re-index of programs and `.va` files logs its failures the same way.
+- **ABB: a controller that answers slowly no longer holds a request forever.** Each request now has an overall
+  time limit as well as the 5 s silence limit, and an answer larger than 64 MB is dropped.
+- **ABB: Back Up and Download can be cancelled.** The download stops where it is; the controller keeps its copy
+  in `$BACKUP` and the files already downloaded stay on this PC.
+- **A command that fails says why and logs it.** Instead of VS Code's "command resulted in an error", you get
+  the reason and a **Show Logs** button; the full details are in the RUKUS Robotic Extensions output.
+- **Robot pages and Robot Connections work from the keyboard.** Tab reaches the tasks, I/O points, registers and
+  options on the FANUC page, the modules and options on the ABB page, and the controllers and suggested names in
+  Robot Connections; Enter or Space opens them as a click does. Focus stays put when the page refreshes.
+- **In-line hints are readable in Dark+ and Light+.** Comment, I/O off, value, string, simulated, stale and frame
+  hints now reach 4.5:1 contrast on the default editor background; a stale value is shown in italics rather than
+  dimmer. Struck-through commented-out continuation lines follow the theme instead of a fixed grey.
+- **State pills on the robot pages are readable in every theme.** RUNNING, motors, mode and write-access pills show
+  the theme's text on a tint of the state colour with a coloured outline, instead of white or dark text on a
+  solid colour; the Auto refresh button's on state does the same.
+
+### Security
+- **ABB write commands always ask.** Arguments that skipped the confirmation now work only under the extension's
+  own test runner, so another extension, a `command:` link or a keybinding cannot start RAPID or turn on motors
+  without the dialog.
+- **Every page with scripts runs under a Content-Security-Policy.** The robot pages, Robot Connections, Registers &
+  I/O, Options, call graphs, flowcharts, backup diff and cross-reference load nothing from outside and run only
+  their own script. A robot name with HTML in it is shown as text on the robot page.
+- **Hover links run only the hover's own read-only commands**, and comments, alarm messages and names from
+  programs and controllers are shown as plain text in hovers.
+- **An untrusted folder cannot choose controllers:** its controller settings and `cell.json` are ignored until the
+  folder is trusted, and robot connections, uploads, controller lists, ktrans, RUKUS data and reference file
+  paths are restricted settings.
+- **Saved passwords and PINs are tied to the controller's address.** A profile of the same name at another
+  address gets none and asks again. Several profiles at one address (every ABB service port is 192.168.125.1)
+  keep their own.
+- **FANUC robots are told apart by F number, not address.** The first read from a robot remembers its F number;
+  every read after and every upload checks it, and a different controller at the same address ends the session
+  and is refused, naming both F numbers. **FANUC: Forget Controller Identity** (on the robot's context menu)
+  resets it when a profile really is another controller now. ABB already did this by system id.
+
 ## 26.109.8 - 2026-10-09 - RUKUS Robotic Extensions: controller search, RAPID data, user alarms, KAREL flowcharts
 
 Beta list 7. Checked against ROBOGUIDE (two robots on 127.0.0.2 / .3) and RobotStudio virtual controllers

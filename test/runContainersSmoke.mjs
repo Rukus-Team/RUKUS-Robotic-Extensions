@@ -48,9 +48,11 @@ const code = await runTests({
   extensionTestsEnv: { ROBOT_CODE_TEST_OUT: out },
 }).catch(e => { console.error('runTests failed:', e?.message ?? e); return 1; });
 
+let failed = -1;   // no results file counts as a failure
 if (fs.existsSync(out)) {
   const r = JSON.parse(fs.readFileSync(out, 'utf8'));
   for (const x of r) console.log((x.ok ? 'PASS' : 'FAIL').padEnd(5), x.name, x.ok ? '' : '\n        => ' + x.detail);
-  console.log(`${r.filter(x => !x.ok).length} failed of ${r.length}`);
+  failed = r.filter(x => !x.ok).length;
+  console.log(`${failed} failed of ${r.length}`);
 } else console.log('no results file written');
-process.exit(code);
+process.exit(code || (failed === 0 ? 0 : 1));

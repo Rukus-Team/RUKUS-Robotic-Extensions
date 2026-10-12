@@ -85,6 +85,16 @@ node scripts/version-id.mjs --decode 26.9.13026.1
   someone on a dev build, and October's work to someone on September's release.
 - **Both products, one shape.** RUKUS `26.91.13026` and extension `26.91.21010` read the same way.
 
+### Marketplace pre-releases
+
+The VS Code docs suggest odd minor numbers for pre-releases and even ones for releases. That is
+only a convention: the Marketplace needs nothing more than a pre-release and a release never
+sharing a number. Here the type digit does that job instead: **a release is always type 9
+(`26.109.2`), a pre-release is always a working-build id (type 1-4, `26.101.5026`)**, so the two
+can never collide, and someone on the pre-release channel is offered whichever is higher (the
+month's release above its working builds, next month's working build above that release).
+`scripts/ship.ps1` refuses a release number with `-PreRelease` and a working-build id without it.
+
 What did not fit, and why: `26.9.0102614` (type, issue and day run together) is not semver and
 102614 is past 65535. `year.type.issue+day` sorts by type before date, so a maintenance build
 would always outrank a feature build. A release written as `.0` sorts *below* every working

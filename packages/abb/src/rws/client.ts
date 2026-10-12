@@ -49,7 +49,27 @@ export interface RwsTarget {
   /** 'Default User' on a controller that was never changed */
   user: string;
   password: string;
+  /** socket inactivity limit for one request, ms (default 5000) */
   timeoutMs?: number;
+  /**
+   * Whole-request limit, ms: a controller that keeps trickling bytes still fails in bounded time.
+   * Default {@link rwsDeadlineMs} of the inactivity limit and the upload size.
+   */
+  deadlineMs?: number;
+  /** the largest answer accepted, bytes (default {@link RWS_MAX_RESPONSE_BYTES}) */
+  maxResponseBytes?: number;
+}
+
+/** Answers larger than this are refused: no controller resource or file comes near it, garbage might. */
+export const RWS_MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
+
+/**
+ * The absolute deadline for one request: a generous floor above the inactivity limit (a file
+ * download on a busy controller can take a while), plus time per KiB uploaded, capped so a
+ * controller that has gone away never holds the queue forever.
+ */
+export function rwsDeadlineMs(idleMs: number, uploadBytes = 0): number {
+  return Math.min(10 * 60_000, Math.max(60_000, idleMs * 12) + Math.ceil(uploadBytes / 1024) * 50);
 }
 
 export class RwsError extends Error {
@@ -196,15 +216,15 @@ export class RwsClient {
   private registeredStation: string | undefined;
 
   /** GET one resource and read it (XHTML on RWS 1.0, HAL+JSON on 2.0) as a page. */
-  async page(path: string): Promise<RwsPage> {
-    const r = await this.get(path);
+  async page(path: string, signal?: AbortSignal): Promise<RwsPage> {
+    const r = await this.get(path, signal);
     return this.parse(r.body);
   }
 
   private parse(body: Buffer): RwsPage { return this.rws2 ? parseRwsJson(body.toString('utf8')) : parseRwsPage(body.toString('utf8')); }
 
   /** GET one resource as raw bytes (fileservice). */
-  async bytes(path: string): Promise<Buffer> { return (await this.get(path)).body; }
+  async bytes(path: string, signal?: AbortSignal): Promise<Buffer> { return (await this.get(path, signal)).body; }
 
   /** Give the session back to the controller. Never throws. */
   async logout(): Promise<void> {
@@ -401,11 +421,11 @@ export class RwsClient {
    * One folder on the controller: `$HOME`, `$BACKUP/x/SYSPAR`. Follows the listing's `next` link
    * when the controller pages it.
    */
-  async listDir(dir: string): Promise<{ dirs: string[]; files: { name: string; size: number }[] }> {
+  async listDir(dir: string, signal?: AbortSignal): Promise<{ dirs: string[]; files: { name: string; size: number }[] }> {
     const out = { dirs: [] as string[], files: [] as { name: string; size: number }[] };
     let at: string | undefined = `/fileservice/${fsPath(dir)}`;
     for (let guard = 0; at && guard < 1000; guard++) {
-      const p = await this.page(at);
+      const p = await this.page(at, signal);
       for (const i of p.items) {
         if (i.cls === 'fs-dir') out.dirs.push(i.title);
         else if (i.cls === 'fs-file') out.files.push({ name: i.title, size: Number(i.fields['fs-size'] ?? 0) });
@@ -417,7 +437,7 @@ export class RwsClient {
   }
 
   /** a file's bytes */
-  async file(pathOnController: string): Promise<Buffer> { return this.bytes(`/fileservice/${fsPath(pathOnController)}`); }
+  async file(pathOnController: string, signal?: AbortSignal): Promise<Buffer> { return this.bytes(`/fileservice/${fsPath(pathOnController)}`, signal); }
 
   async exists(pathOnController: string): Promise<boolean> {
     try { await this.get(`/fileservice/${fsPath(pathOnController)}`); return true; } catch (e) {
@@ -482,8 +502,8 @@ export class RwsClient {
   }
 
   /** WRITE: put a file on the controller (`$HOME/x.mod`), replacing one of that name. */
-  async uploadFile(pathOnController: string, data: Buffer): Promise<void> {
-    await this.enqueue('PUT', `/fileservice/${fsPath(pathOnController)}`, undefined, undefined, data);
+  async uploadFile(pathOnController: string, data: Buffer, signal?: AbortSignal): Promise<void> {
+    await this.enqueue('PUT', `/fileservice/${fsPath(pathOnController)}`, undefined, undefined, data, signal);
   }
 
   /** WRITE: load a module file that is on the controller (`$HOME/x.mod`) into a task. */
@@ -726,17 +746,18 @@ export class RwsClient {
 
   // ------------------------------------------------------------------ transport
 
-  private get(path: string): Promise<{ status: number; body: Buffer }> { return this.enqueue('GET', path); }
+  private get(path: string, signal?: AbortSignal): Promise<{ status: number; body: Buffer }> { return this.enqueue('GET', path, undefined, undefined, undefined, signal); }
 
-  private enqueue(method: string, path: string, form?: Record<string, string>, rawForm?: string, file?: Buffer): Promise<{ status: number; body: Buffer; location?: string }> {
+  private enqueue(method: string, path: string, form?: Record<string, string>, rawForm?: string, file?: Buffer, signal?: AbortSignal): Promise<{ status: number; body: Buffer; location?: string }> {
     const body = file ?? rawForm ?? (form ? Object.entries(form).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&') : undefined);
-    const run = () => this.send(method, path, body);
+    // a request cancelled while it waited its turn is never sent
+    const run = () => (signal?.aborted ? Promise.reject(new Error('cancelled')) : this.send(method, path, body, false, signal));
     const next = this.queue.then(run, run);
     this.queue = next.catch(() => undefined);
     return next;
   }
 
-  private async send(method: string, path: string, body?: string | Buffer, retried = false): Promise<{ status: number; body: Buffer; location?: string }> {
+  private async send(method: string, path: string, body?: string | Buffer, retried = false, signal?: AbortSignal): Promise<{ status: number; body: Buffer; location?: string }> {
     const headers: Record<string, string> = { Accept: this.rws2 ? 'application/hal+json;v=2.0' : 'application/xhtml+xml, text/html, */*' };
     if (body !== undefined) {
       // a Buffer is a file's bytes (an upload), a string is a form
@@ -748,7 +769,7 @@ export class RwsClient {
     // RWS 2.0: Basic on every request (HTTPS); the session cookie keeps it to one session
     if (this.rws2) headers.Authorization = `Basic ${Buffer.from(`${this.target.user}:${this.target.password}`).toString('base64')}`;
     else if (this.challenge) headers.Authorization = digestAuthorization(this.challenge, this.target.user, this.target.password, method, path, ++this.nc, randomBytes(8).toString('hex'));
-    const r = await this.raw(method, path, headers, body);
+    const r = await this.raw(method, path, headers, body, false, signal);
     for (const c of r.setCookies) {
       const m = /^\s*([^=;\s]+)=([^;]*)/.exec(c);
       if (!m) continue;
@@ -763,38 +784,57 @@ export class RwsClient {
       // a stale session cookie is what a controller restart leaves behind: start over
       this.cookies.clear(); this.registeredStation = undefined;
       this.challenge = ch; this.nc = 0;
-      return this.send(method, path, body, true);
+      return this.send(method, path, body, true, signal);
     }
     if (r.status === 401) throw new RwsError(401, path, `${this.target.host} refused the login for "${this.target.user}" - check the user name and password`);
     if (r.status >= 400) throw new RwsError(r.status, path, `${this.target.host}: HTTP ${r.status} on ${path}${retcodeOf(r.body)}`);
     return { status: r.status, body: r.body, location: r.location };
   }
 
-  private raw(method: string, path: string, headers: Record<string, string>, body?: string | Buffer, again = false): Promise<{ status: number; body: Buffer; setCookies: string[]; authenticate?: string; location?: string }> {
+  private raw(method: string, path: string, headers: Record<string, string>, body?: string | Buffer, again = false, signal?: AbortSignal): Promise<{ status: number; body: Buffer; setCookies: string[]; authenticate?: string; location?: string }> {
     this.requests++;
+    const idleMs = this.target.timeoutMs ?? 5000;
+    const deadlineMs = this.target.deadlineMs ?? rwsDeadlineMs(idleMs, body === undefined ? 0 : Buffer.byteLength(body));
+    const maxBytes = this.target.maxResponseBytes ?? RWS_MAX_RESPONSE_BYTES;
     return new Promise((resolve, reject) => {
+      if (signal?.aborted) { reject(new Error('cancelled')); return; }
+      let settled = false;
+      let timer: NodeJS.Timeout | undefined;
+      const settle = (fn: () => void) => { if (settled) return; settled = true; if (timer) clearTimeout(timer); signal?.removeEventListener('abort', onAbort); fn(); };
+      // every way a request is cut short: close our side and fail with a message that says why
+      const fail = (e: Error) => { req.destroy(); settle(() => reject(e)); };
       // not http.request: see the note on VS Code's proxy patch at the top
       const req = new http.ClientRequest({
         protocol: this.target.https ? 'https:' : 'http:', host: this.target.host, port: this.target.port ?? (this.target.https ? 443 : 80), method, path, headers, agent: this.agent,
         // a controller's certificate is self-signed on every IRC5/OmniCore out of the box
         ...(this.target.https ? { rejectUnauthorized: false } : {}),
-        timeout: this.target.timeoutMs ?? 5000,
+        timeout: idleMs,
       }, res => {
+        const tooBig = () => fail(new Error(`${this.target.host} sent more than ${Math.round(maxBytes / 1024 / 1024)} MB for ${path}; the answer was dropped`));
+        if (Number(res.headers['content-length']) > maxBytes) { tooBig(); return; }
         const chunks: Buffer[] = [];
-        res.on('data', c => chunks.push(c));
+        let size = 0;
+        res.on('data', (c: Buffer) => { size += c.length; if (size > maxBytes) tooBig(); else chunks.push(c); });
+        res.on('error', e => settle(() => reject(e)));
         res.on('end', () => {
           const sc = res.headers['set-cookie'];
           const wa = res.headers['www-authenticate'];
-          resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks), setCookies: Array.isArray(sc) ? sc : sc ? [sc] : [], authenticate: Array.isArray(wa) ? wa.find(w => /digest/i.test(w)) : wa, location: res.headers.location });
+          settle(() => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks), setCookies: Array.isArray(sc) ? sc : sc ? [sc] : [], authenticate: Array.isArray(wa) ? wa.find(w => /digest/i.test(w)) : wa, location: res.headers.location }));
         });
       });
-      req.on('timeout', () => req.destroy(new Error(`${this.target.host} did not answer within ${(this.target.timeoutMs ?? 5000) / 1000} s`)));
+      // A cancel closes the connection at once. On RW 6 that also drops mastership (see below).
+      const onAbort = () => fail(new Error('cancelled'));
+      signal?.addEventListener('abort', onAbort, { once: true });
+      // The inactivity timeout alone never fires for a controller that trickles bytes: the
+      // deadline bounds the whole request, as the FANUC client does (core/live/http.ts).
+      timer = setTimeout(() => fail(new Error(`${this.target.host} did not finish ${method} ${path} within ${Math.round(deadlineMs / 1000)} s`)), deadlineMs);
+      req.on('timeout', () => fail(new Error(`${this.target.host} did not answer within ${idleMs / 1000} s`)));
       // RW 6 mastership lives as long as the connection: when it closes, nothing is held any more
       req.on('socket', sock => { if (!(sock as any).__rwsWatched) { (sock as any).__rwsWatched = true; sock.once('close', () => { this.holdsMastership = false; }); } });
       req.on('error', (e: NodeJS.ErrnoException) => {
         // a kept-alive socket the controller closed while idle: send once more on a new one
-        if (!again && req.reusedSocket && e.code === 'ECONNRESET') resolve(this.raw(method, path, headers, body, true));
-        else reject(e);
+        if (!again && req.reusedSocket && e.code === 'ECONNRESET') settle(() => resolve(this.raw(method, path, headers, body, true, signal)));
+        else settle(() => reject(e));
       });
       req.end(body);
     });

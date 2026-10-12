@@ -2,8 +2,11 @@
  * The look every Robot Code webview shares (issue #3: 3a shared CSS, 3d empty state): theme
  * colours, body, buttons, inputs, tables, links, a visible keyboard focus, and the empty state.
  * A view puts its own layout after this, so anything here can still be overridden locally.
- * Inline (not a file under media/) so it needs no webview resource roots or CSP changes.
+ * Inline (not a file under media/) so it needs no webview resource roots: the CSP (withCsp below)
+ * allows inline styles.
  */
+import { randomBytes } from 'node:crypto';
+
 export const WEBVIEW_BASE_CSS = `
   :root { --rc-muted: var(--vscode-descriptionForeground); --rc-line: var(--vscode-panel-border, #444); --rc-row-line: var(--vscode-editorWidget-border, #333);
     --rc-ok: var(--vscode-testing-iconPassed, #3fb950); --rc-bad: var(--vscode-testing-iconFailed, #f14c4c); --rc-warn: var(--vscode-charts-yellow, #f6c343);
@@ -24,6 +27,7 @@ export const WEBVIEW_BASE_CSS = `
   .muted { color: var(--rc-muted) }
   :focus-visible { outline: 1px solid var(--vscode-focusBorder); outline-offset: 1px }
   tr:focus-visible { outline-offset: -1px }
+  .rc-activate:focus-visible { outline: 2px solid var(--vscode-focusBorder); outline-offset: -2px }
   .rc-empty { text-align: center; padding: 48px 20px; color: var(--rc-muted) }
   .rc-empty b { display: block; font-size: 15px; font-weight: 600; color: var(--vscode-foreground); margin-bottom: 6px }
   .rc-empty p { margin: 4px auto; max-width: 480px; line-height: 1.5 }
@@ -63,6 +67,65 @@ export const LIST_LIMIT_JS = `
     };
   }
 `;
+
+/**
+ * Keyboard access for things that are clicked but are not buttons (an I/O chip, a task or module
+ * row, a controller in a list). Client-side script; paste into a page's <script>.
+ *   rcActivate(el, run)   Tab reaches it, Enter or Space runs it, as a <button> would; a chip
+ *                         or list entry becomes role="button", a table row keeps its row role
+ *   rcFocusKey()          before a redraw: what has focus, as a selector (its id or data-*)
+ *   rcRestoreFocus(key)   after the redraw: focus the element that took its place
+ */
+export const ACTIVATE_JS = `
+  function rcActivate(el, run) {
+    el.tabIndex = 0;
+    el.classList.add('rc-activate');
+    if (!el.getAttribute('role') && el.tagName !== 'TR') el.setAttribute('role', 'button');
+    el.onclick = run;
+    el.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === el) { e.preventDefault(); run(e); } };
+  }
+  function rcFocusKey() {
+    const el = document.activeElement;
+    if (!el || el === document.body) return null;
+    if (el.id) return '#' + CSS.escape(el.id);
+    const data = [...el.attributes].filter(a => a.name.startsWith('data-'));
+    return data.length ? el.tagName.toLowerCase() + data.map(a => '[' + a.name + '="' + CSS.escape(a.value) + '"]').join('') : null;
+  }
+  function rcRestoreFocus(key) {
+    if (!key) return;
+    let el = null;
+    try { el = document.querySelector(key); } catch { /* a key the page no longer parses: leave focus where it is */ }
+    if (el && el !== document.activeElement) el.focus({ preventScroll: true });
+  }
+`;
+
+/** A fresh nonce for one page's scripts: 128 random bits, base64 (what CSP's `nonce-` takes). */
+export function webviewNonce(): string { return randomBytes(16).toString('base64'); }
+
+/**
+ * The Content-Security-Policy every Robot Code webview runs under: nothing loads unless listed.
+ * Scripts run only with the page's nonce (so no inline `onclick=` attributes, and nothing a
+ * controller or program name smuggles into the HTML runs), styles may be inline (every view
+ * keeps its CSS in the page), images and fonts only from the extension or as data: URIs.
+ */
+export function webviewCsp(cspSource: string, nonce: string): string {
+  return `default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${cspSource} data:; font-src ${cspSource}`;
+}
+
+/**
+ * A finished page with the CSP put in: the policy as the first thing in `<head>` and the nonce on
+ * every `<script>`. Each view builds its HTML as before and hands it through this on the way to
+ * `webview.html`, with `webview.cspSource`. A new nonce each time the page is set.
+ */
+export function withCsp(html: string, cspSource: string, nonce = webviewNonce()): string {
+  const meta = `<meta http-equiv="Content-Security-Policy" content="${esc(webviewCsp(cspSource, nonce))}">`;
+  const withScripts = html.replace(/<script(?=[\s>])/gi, `<script nonce="${nonce}"`);
+  const head = /<head[^>]*>/i.exec(withScripts);
+  if (head) return withScripts.slice(0, head.index + head[0].length) + meta + withScripts.slice(head.index + head[0].length);
+  // no <head>: the meta goes right after the doctype, or first
+  const doctype = /^\s*<!DOCTYPE[^>]*>/i.exec(withScripts);
+  return doctype ? doctype[0] + meta + withScripts.slice(doctype[0].length) : meta + withScripts;
+}
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 

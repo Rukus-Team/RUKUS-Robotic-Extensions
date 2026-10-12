@@ -43,6 +43,7 @@ import { abbConnectionKind } from './connectionKind';
 import { openAbbPage } from './dashboard';
 import { registerAbbActions } from './actions';
 import { targetLiteralAt, formatRobtarget, formatJointtarget, declaredName, rapidNum } from './targets';
+import { commandRegistrar } from '@core/commandBoundary';
 
 const SCHEME = 'abb-rws';
 /** abb-rws:/<controller>/<task>/<module>.mod|.sys */
@@ -289,7 +290,7 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   const ctrls = new AbbControllers(ctx.secrets, s.output, ctx.globalState);
   const tree = new AbbTree(ctrls);
   const view = viewDeclared(ctx, 'robotCode.abbControllers') ? vscode.window.createTreeView('robotCode.abbControllers', { treeDataProvider: tree }) : undefined;
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
+  const reg = commandRegistrar(ctx, s.output);
   const nameOf = async (node?: any, only?: (c: AbbConnection) => boolean): Promise<string | undefined> => {
     if (typeof node === 'string') return node;
     if (node?.c?.profile?.name) return node.c.profile.name;
@@ -364,7 +365,7 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   /** Connect: log in, read identity, then the view's contents. `password` is for tests and scripts; it is stored like one typed in. */
   reg('robotCode.abb.connect', async (node?: any, password?: string) => {
     const name = await nameOf(node, c => c.state !== 'connected'); if (!name) return;
-    if (typeof password === 'string') await ctrls.setPassword(name, password);
+    if (typeof password === 'string' && ctx.extensionMode === vscode.ExtensionMode.Test) await ctrls.setPassword(name, password);
     if (!(await ctrls.hasPassword(name))) {
       const pw = await vscode.window.showInputBox({ title: `Password for ${name}`, prompt: 'Kept in VS Code\'s secret storage. The factory default is robotics.', password: true });
       if (pw === undefined) return;
@@ -628,9 +629,11 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   /**
    * Back Up and Download: the FlexPendant's Backup (into $BACKUP/<name> on the controller), then
    * every file of it to a folder on this PC. The one write this section makes, so it is confirmed
-   * every time. `opts` is for tests and scripts: given, nothing is asked.
+   * every time. `opts` is for the extension's own tests: given, nothing is asked. Outside a test
+   * run it is dropped, so no other caller skips the confirmation.
    */
   reg('robotCode.abb.backup', async (node?: any, opts?: { name?: string; folder?: string; remove?: boolean }) => {
+    if (ctx.extensionMode !== vscode.ExtensionMode.Test) opts = undefined;
     const name = await nameOf(node, c => c.state === 'connected'); if (!name) return;
     const c = ctrls.get(name)!;
     const LAST = 'robotCode.abb.backupFolder';
@@ -659,11 +662,15 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
       await ctx.globalState.update(LAST, folder);
     }
     if (!backupName || !folder) return;
+    // Cancel stops the download where it is: the controller keeps its copy in $BACKUP, and the
+    // files already downloaded stay on this PC.
+    const cancel = new AbortController();
     try {
-      const r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Backing up ${name}`, cancellable: false }, async p => {
+      const r = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Backing up ${name}`, cancellable: true }, async (p, token) => {
+        token.onCancellationRequested(() => cancel.abort());
         let lastDone = 0;
         return ctrls.backup(name, backupName!, folder!, {
-          remove,
+          remove, signal: cancel.signal,
           progress: (msg, done, total) => {
             const inc = total && done !== undefined ? ((done - lastDone) / total) * 100 : undefined;
             if (done !== undefined) lastDone = done;
@@ -680,7 +687,11 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
       if (next === reveal) void vscode.commands.executeCommand('revealFileInOS', where);
       if (next === add) vscode.workspace.updateWorkspaceFolders(vscode.workspace.workspaceFolders?.length ?? 0, 0, { uri: where });
       return r;
-    } catch (e) { show(e); return undefined; }
+    } catch (e) {
+      if (cancel.signal.aborted) void vscode.window.showInformationMessage(`Backup of ${name} cancelled. The controller keeps $BACKUP/${backupName}; any files already downloaded are in ${path.join(folder, backupName)}.`);
+      else show(e);
+      return undefined;
+    }
   });
 
   // hidden: what the section shows, for the smoke test
@@ -703,7 +714,7 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   reg('robotCode.abb._symbol', (name: string, task: string, data: string, module?: string) => ctrls.calc(name, `read ${task}/${data}`, c => c.symbol(task, data, module)));
   reg('robotCode.abb._holdsAccess', (name: string) => ctrls.holdsAccess(name));
   reg('robotCode.abb._signals', (name: string) => ctrls.calc(name, 'signals', c => c.signals()));
-  registerAbbActions(ctx, ctrls, nameOf);
+  registerAbbActions(ctx, ctrls, nameOf, s.output);
   registerPointerMarks(ctx, ctrls);
   const updateContext = () => void vscode.commands.executeCommand('setContext', 'robotCode.abbConnected', ctrls.connected().length > 0);
   ctx.subscriptions.push(ctrls.onDidChange(updateContext));

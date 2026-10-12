@@ -55,6 +55,7 @@ const code = await runTests({
   extensionTestsEnv: { ROBOT_CODE_TEST_OUT: out, ...(mock ? { ROBOT_CODE_ABB_MOCK: 'MOCK' } : {}), ...(live.length ? { ROBOT_CODE_ABB_LIVE_NAMES: live.map(l => `${l.name}:${l.family ?? 'irc5'}`).join(',') } : {}), ...(live.length && process.env.ROBOT_CODE_ABB_LIVE_ACTIONS === '1' ? { ROBOT_CODE_ABB_LIVE_ACTIONS: '1' } : {}) },
 }).catch(e => { console.error('runTests failed:', e?.message ?? e); return 1; });
 
+let failed = -1;   // no results file counts as a failure
 if (fs.existsSync(out)) {
   const r = JSON.parse(fs.readFileSync(out, 'utf8'));
   if (mock) {
@@ -64,6 +65,7 @@ if (fs.existsSync(out)) {
     await mock.close();
   }
   for (const x of r) console.log((x.ok ? 'PASS' : 'FAIL').padEnd(5), x.name, x.ok ? (x.detail ? `  (${x.detail})` : '') : '\n        => ' + x.detail);
-  console.log(`${r.filter(x => !x.ok).length} failed of ${r.length}`);
+  failed = r.filter(x => !x.ok).length;
+  console.log(`${failed} failed of ${r.length}`);
 } else console.log('no results file written');
-process.exit(code);
+process.exit(code || (failed === 0 ? 0 : 1));

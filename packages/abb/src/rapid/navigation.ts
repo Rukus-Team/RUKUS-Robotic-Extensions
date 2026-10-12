@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { spanToRange, escapeHtml } from '@core/util';
-import { WEBVIEW_BASE_CSS } from '@core/webviewStyle';
+import { WEBVIEW_BASE_CSS, withCsp } from '@core/webviewStyle';
 import { parseRapid, routineAt, type RapidModule } from './parser';
 import { RAPID_RESERVED } from './lexer';
 import { rapidSymbolAt, rapidOccurrences, resolveName, rapidCallsFrom, RAPID_NAME, type RapidSymbol } from './symbols';
@@ -262,7 +262,7 @@ function showRapidCallGraph(ts: TaskSet, module: number, routine: string): void 
   const key = `${ts.uris[module].toString()}#${U(routine)}`;
   let panel = graphPanels.get(key);
   if (!panel) {
-    panel = vscode.window.createWebviewPanel('robotCode.rapidCallGraph', `Call graph: ${routine}`, vscode.ViewColumn.Beside, { enableScripts: true });
+    panel = vscode.window.createWebviewPanel('robotCode.rapidCallGraph', `Call graph: ${routine}`, vscode.ViewColumn.Beside, { enableScripts: true, localResourceRoots: [] });
     graphPanels.set(key, panel);
     panel.onDidDispose(() => graphPanels.delete(key));
   }
@@ -275,7 +275,7 @@ function showRapidCallGraph(ts: TaskSet, module: number, routine: string): void 
     ed.selection = new vscode.Selection(pos, pos);
     ed.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
   });
-  panel.webview.html = renderGraph(g, routine);
+  panel.webview.html = withCsp(renderGraph(g, routine), panel.webview.cspSource);
   panel.reveal();
 }
 

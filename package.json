@@ -2,7 +2,7 @@
   "name": "robot-code",
   "displayName": "RUKUS Robotic Extensions — FANUC & ABB (Beta)",
   "description": "BETA - in active development, not yet proven on a live cell. One extension for FANUC and ABB robots: FANUC TP (.ls) and KAREL (.kl), ABB RAPID (.mod/.sys/.prg) with hover docs, go-to-definition, diagnostics, linting, flowcharts and call graphs; controller backups and live controllers (FANUC over HTTP/FTP, ABB IRC5 and OmniCore over Robot Web Services) with registers, RAPID data, I/O, alarms and positions; ktrans integration and the RUKUS desktop app.",
-  "version": "26.109.8",
+  "version": "26.109.9",
   "publisher": "rukus-team",
   "license": "MIT",
   "repository": {
@@ -45,11 +45,19 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Language features work in untrusted folders. Running ktrans and scanning extra backup folders use workspace-trusted settings only.",
+      "description": "Language features work in untrusted folders. An untrusted folder cannot choose controllers (its settings and cell.json are ignored for that), turn on robot connections or uploads, or point ktrans, RUKUS data or reference files elsewhere.",
       "restrictedConfigurations": [
         "robotCode.karel.ktransPath",
+        "robotCode.karel.ktransConfig",
+        "robotCode.karel.compileOnSave",
         "robotCode.data.backupFolders",
-        "robotCode.karel.compileOnSave"
+        "robotCode.robots",
+        "robotCode.abb.controllers",
+        "robotCode.controllers.scope",
+        "robotCode.experimental.robotConnections",
+        "robotCode.live.upload",
+        "robotCode.rukus.dataFolder",
+        "robotCode.sysvars.referenceFile"
       ]
     },
     "virtualWorkspaces": {
@@ -1091,6 +1099,11 @@
         "icon": "$(key)"
       },
       {
+        "command": "robotCode.live.forgetIdentity",
+        "title": "FANUC: Forget Controller Identity",
+        "category": "RUKUS"
+      },
+      {
         "command": "robotCode.live.downloadFile",
         "title": "Download (editable local copy)…",
         "category": "RUKUS",
@@ -1540,7 +1553,7 @@
         "id": "robotCode.hintComment",
         "description": "In-line hint colour for the controller comment of a register/IO written without one (drawn as a `{comment}` decoration, so no theme can tint its background).",
         "defaults": {
-          "dark": "#5f6f7f",
+          "dark": "#77899a",
           "light": "#6b7280",
           "highContrast": "#d0d0d0",
           "highContrastLight": "#3c3c3c"
@@ -1551,7 +1564,7 @@
         "description": "In-line hint colour for a bit/IO that read ON (muted; `workbench.colorCustomizations` can override).",
         "defaults": {
           "dark": "#7fae8a",
-          "light": "#5f8a63",
+          "light": "#577e5a",
           "highContrast": "#b5f27a",
           "highContrastLight": "#1e6a12"
         }
@@ -1560,8 +1573,8 @@
         "id": "robotCode.hintStateOff",
         "description": "In-line hint colour for a bit/IO that read OFF.",
         "defaults": {
-          "dark": "#6b7280",
-          "light": "#8a919b",
+          "dark": "#818896",
+          "light": "#6d7580",
           "highContrast": "#d0d0d0",
           "highContrastLight": "#3c3c3c"
         }
@@ -1571,7 +1584,7 @@
         "description": "In-line hint colour for a numeric value (register, timer, group).",
         "defaults": {
           "dark": "#b8935a",
-          "light": "#9a7b3f",
+          "light": "#8d713a",
           "highContrast": "#ffb86b",
           "highContrastLight": "#8a4200"
         }
@@ -1581,7 +1594,7 @@
         "description": "In-line hint colour for a string value (string register).",
         "defaults": {
           "dark": "#7fae8a",
-          "light": "#5f8a63",
+          "light": "#577e5a",
           "highContrast": "#b5f27a",
           "highContrastLight": "#1e6a12"
         }
@@ -1591,7 +1604,7 @@
         "description": "In-line hint colour for a simulated value (a point read as SIM).",
         "defaults": {
           "dark": "#b0a45e",
-          "light": "#8a7d2e",
+          "light": "#80742b",
           "highContrast": "#ffd23f",
           "highContrastLight": "#6b4d00"
         }
@@ -1600,8 +1613,8 @@
         "id": "robotCode.hintStale",
         "description": "In-line hint colour for a value read longer ago than robotCode.live.staleAfterSeconds.",
         "defaults": {
-          "dark": "#5a6472",
-          "light": "#a3adb8",
+          "dark": "#7d8999",
+          "light": "#677686",
           "highContrast": "#a0a0a0",
           "highContrastLight": "#5a5a5a"
         }
@@ -1621,7 +1634,7 @@
         "description": "In-line hint colour for a cartesian-representation position frame label.",
         "defaults": {
           "dark": "#6f97b8",
-          "light": "#5a7a9a",
+          "light": "#587797",
           "highContrast": "#9ecbff",
           "highContrastLight": "#0f4a85"
         }
@@ -1630,8 +1643,8 @@
         "id": "robotCode.hintFrameOther",
         "description": "In-line hint colour for a position frame label that is neither joint nor cartesian.",
         "defaults": {
-          "dark": "#6b7280",
-          "light": "#8a919b",
+          "dark": "#818896",
+          "light": "#6d7580",
           "highContrast": "#d0d0d0",
           "highContrastLight": "#3c3c3c"
         }
@@ -2331,6 +2344,10 @@
           "when": "config.robotCode.experimental.robotConnections"
         },
         {
+          "command": "robotCode.live.forgetIdentity",
+          "when": "config.robotCode.experimental.robotConnections"
+        },
+        {
           "command": "robotCode.live.downloadFile",
           "when": "config.robotCode.experimental.robotConnections"
         },
@@ -2992,6 +3009,11 @@
           "group": "b@1"
         },
         {
+          "command": "robotCode.live.forgetIdentity",
+          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "group": "b@2"
+        },
+        {
           "command": "robotCode.live.removeRobot",
           "when": "view == robotCode.robots && viewItem =~ /^robot-/",
           "group": "b@2"
@@ -3429,11 +3451,17 @@
           "maximum": 64,
           "markdownDescription": "Overrides `robotCode.karel.coreVersion` with one limit for every name. Leave empty to follow the core version."
         },
+        "robotCode.abb.allowWrites": {
+          "type": "boolean",
+          "default": false,
+          "scope": "machine",
+          "markdownDescription": "Let the ABB Actions (speed, motors, RAPID start, modules, outputs, RAPID data, write access) change a **real** controller. Off: they work on RobotStudio virtual controllers only, and a real controller is read-only. Stop RAPID is never held back. A real OmniCore also needs `#robotCode.abb.allowRealOmniCoreWrites#`."
+        },
         "robotCode.abb.allowRealOmniCoreWrites": {
           "type": "boolean",
           "default": false,
           "scope": "machine",
-          "markdownDescription": "Let the ABB Actions (speed, motors, RAPID start, modules, outputs, RAPID data, write access) change a **real** OmniCore. Off: on an OmniCore they work on RobotStudio virtual controllers only - write access and writes were checked there (RobotWare 8.2.1), not yet on a real controller. Turn on only to validate one. IRC5 is not affected; Stop RAPID is never held back."
+          "markdownDescription": "Let the ABB Actions (speed, motors, RAPID start, modules, outputs, RAPID data, write access) change a **real** OmniCore. Off: on an OmniCore they work on RobotStudio virtual controllers only - write access and writes were checked there (RobotWare 8.2.1), not yet on a real controller. Turn on only to validate one; `#robotCode.abb.allowWrites#` must be on as well. IRC5 is not affected; Stop RAPID is never held back."
         },
         "robotCode.abb.controllers": {
           "type": "array",
@@ -3842,8 +3870,8 @@
         },
         "robotCode.live.upload": {
           "type": "boolean",
-          "default": true,
-          "markdownDescription": "Allow **Push to Robot** (Ctrl+Alt+Shift+U): the open `.ls` goes onto the connected robot's device over FTP and replaces the program of that name. It is the one command that writes to a controller; it always asks first, is refused if the robot changed since the snapshot, refuses a program the controller reports as running, and reads the program back afterwards. Off hides it."
+          "default": false,
+          "markdownDescription": "Allow **Push to Robot** (Ctrl+Alt+Shift+U): the open `.ls` goes onto the connected robot's device over FTP and replaces the program of that name. It is the one command that writes to a controller, so it is off until you turn it on; it always asks first, is refused if the robot changed since the snapshot, refuses a program the controller reports as running, and reads the program back afterwards. Off hides it."
         },
         "robotCode.tp.diagnostics.duplicatePositionTolerance": {
           "type": "number",
@@ -3940,17 +3968,6 @@
             }
           },
           "default": [
-            {
-              "name": "Ford (GVOSS)",
-              "lines": [
-                "********************************",
-                "${DESCRIPTION}",
-                "",
-                " NOTE: This program has",
-                " ${GROUPS} motion",
-                "********************************"
-              ]
-            },
             {
               "name": "GM",
               "lines": [
@@ -4110,15 +4127,19 @@
     "sysvars": "node scripts/build-sysvars.mjs",
     "release": "node scripts/release.mjs",
     "version:id": "node scripts/version-id.mjs",
-    "notepadpp": "node scripts/make-notepadpp.mjs && node esbuild.mjs --npp"
+    "notepadpp": "node scripts/make-notepadpp.mjs && node esbuild.mjs --npp",
+    "lint": "eslint ."
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/node": "^20.14.0",
     "@types/vscode": "^1.90.0",
     "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^3.2.0",
     "esbuild": "^0.24.0",
+    "eslint": "^9.39.5",
     "typescript": "^5.5.0",
+    "typescript-eslint": "^8.71.1",
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.3.2"
   },

@@ -99,9 +99,28 @@ export function programNameFromUri(uri: vscode.Uri): string {
   return base.replace(/\.[^.]+$/, '').toUpperCase();
 }
 
+/**
+ * The only commands a hover's links may run. Hovers show text from the workspace and from
+ * controllers (comments, alarm messages), so a fully trusted hover would let a crafted comment
+ * link to any command - a controller write among them. Add a command here only if a hover links
+ * to it and it changes nothing on a controller.
+ */
+export const HOVER_COMMANDS: readonly string[] = [
+  'robotCode.data.addBackupFolder', 'robotCode.karel.showReference',
+  'robotCode.live.getTasks', 'robotCode.tp.insertRegisterComment',
+];
+
+/** Trust for a hover: its links may run HOVER_COMMANDS and nothing else. */
+export const hoverTrust = (): { enabledCommands: string[] } => ({ enabledCommands: [...HOVER_COMMANDS] });
+
+/** Workspace or controller text inside Markdown: shown as written, never as a link or formatting. */
+export function escapeMd(s: string): string {
+  return s.replace(/[\\`*_[\]()<>#|!~]/g, c => `\\${c}`);
+}
+
 export function md(...lines: string[]): vscode.MarkdownString {
   const m = new vscode.MarkdownString(lines.join('\n'), true); // supportThemeIcons: $(icon) renders
-  m.isTrusted = true;
+  m.isTrusted = hoverTrust();
   m.supportHtml = false;
   return m;
 }

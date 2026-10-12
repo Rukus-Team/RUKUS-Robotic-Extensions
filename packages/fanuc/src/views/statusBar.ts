@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 import * as path from 'node:path';
 import type { FanucServices } from '../services';
 import { ageTicked } from '@core/live/views';
+import { targetKindOfHost, targetKindLabel } from '@core/live/targetKind';
 import { syncStateOf, comparedChanged } from '@core/snapshotSync';
 import { snapshotStatus, syncRelation, syncColorToken, type SnapshotStatus, type SyncRelation } from '@core/containerCompare';
 
@@ -138,8 +139,11 @@ export function registerContextStatus(ctx: vscode.ExtensionContext, s: FanucServ
         command = connect(focused.profile.name);
         tips.unshift(`**${displayName}** — connection failed (${focused.profile.host})${focused.error ? `: ${focused.error}` : ''}. **Click to try again.**`);
       } else if (focused.state === 'connected' && focused.snapshot) {
+        // connected reads as neutral, named Virtual or Live; colour is kept for faults
+        const kind = targetKindOfHost(focused.profile.host);
+        displayName = `${targetKindLabel(kind)} ${focused.profile.name}`;
         const ping = focused.pingedAt ? ` · checked ${ago(focused.pingedAt)}` : '';
-        const run = (s.live?.activeTpTasks() ?? []).find(t => t.robot.toLowerCase() === displayName.toLowerCase());
+        const run = (s.live?.activeTpTasks() ?? []).find(t => t.robot.toLowerCase() === focused.profile.name.toLowerCase());
         if (focused.reachable === false) {
           // the heartbeat got no answer: connected on paper, but the controller is not replying now
           glyph = '$(circle-slash)';
@@ -150,19 +154,19 @@ export function registerContextStatus(ctx: vscode.ExtensionContext, s: FanucServ
           const cur = run.task.current!;
           const stale = run.age > 15000;
           glyph = `$(${stale ? 'history' : run.task.status === 'RUNNING' ? 'debug-start' : 'debug-pause'})`;
-          color = new vscode.ThemeColor('charts.green');
+          color = undefined;
           command = 'robotCode.live.revealRunning';
           tips.unshift(`**${displayName}** — task ${run.task.taskNo} ${run.task.name}: ${cur.program} line ${cur.line} · ${run.task.status} (read ${ago(Date.now() - run.age)}). Click to reveal the line.`);
         } else {
-          glyph = '$(circle-filled)';
-          color = new vscode.ThemeColor('charts.green');
+          glyph = kind === 'virtual' ? '$(vm)' : '$(circle-filled)';
+          color = undefined;
           command = 'robotCode.live.focusView';
-          tips.unshift(`**${displayName}** — connected (${focused.profile.host}) · ${focused.profile.useFtp ? `FTP ${focused.profile.ftpPort}` : `HTTP ${focused.profile.httpPort}`} · device ${focused.profile.device}${ping}${live.length > 1 ? ` (and ${live.length - 1} more connected)` : ''}. Click to open the Controllers view.`);
+          tips.unshift(`**${displayName}** — connected (${kind === 'virtual' ? 'virtual controller on this PC' : 'real controller'}, ${focused.profile.host}) · ${focused.profile.useFtp ? `FTP ${focused.profile.ftpPort}` : `HTTP ${focused.profile.httpPort}`} · device ${focused.profile.device}${ping}${live.length > 1 ? ` (and ${live.length - 1} more connected)` : ''}. Click to open the Controllers view.`);
           const pos = focused.snapshot?.position;
           const posAt = focused.snapshot?.fetchedAt.get('position');
           if (pos && pos.frameNo !== undefined) tips.push(`Active UF/UT: UF ${pos.frameNo} / UT ${pos.toolNo ?? '?'} (CURPOS read ${posAt ? ago(posAt) : '?'})`);
           else tips.push('Active UF/UT: press Get on Position in the Controllers view');
-          const ds = s.data.datasets.find(d => d.name.toUpperCase() === displayName.toUpperCase());
+          const ds = s.data.datasets.find(d => d.name.toUpperCase() === focused.profile.name.toUpperCase());
           if (ds?.activePayloadMass !== undefined) tips.push(`Active payload ${ds.activePayloadMass} kg (from the backup)`);
         }
       } else {
@@ -179,7 +183,7 @@ export function registerContextStatus(ctx: vscode.ExtensionContext, s: FanucServ
     } else {
       const failed = all.some(x => x.state === 'error');
       if (failed) { displayName = 'no robot'; glyph = '$(error)'; color = new vscode.ThemeColor('errorForeground'); }
-      else if (live.length) { displayName = live[0].profile.name; glyph = '$(circle-filled)'; color = new vscode.ThemeColor('charts.green'); }
+      else if (live.length) { const kind = targetKindOfHost(live[0].profile.host); displayName = `${targetKindLabel(kind)} ${live[0].profile.name}`; glyph = kind === 'virtual' ? '$(vm)' : '$(circle-filled)'; color = undefined; }
       else if (all.length) { displayName = 'no robot'; glyph = '$(circle-outline)'; color = new vscode.ThemeColor('disabledForeground'); }
       else { displayName = 'offline'; glyph = '$(circle-outline)'; color = new vscode.ThemeColor('disabledForeground'); }
       tips.unshift(failed ? 'A robot connection failed — see the Controllers view' : live.length ? `${live[0].profile.name} connected. Click to open the Controllers view.` : all.length ? 'No robot connected. Click to open the Controllers view.' : 'No robots configured. Click to open the Controllers view.');

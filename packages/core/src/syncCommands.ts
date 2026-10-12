@@ -22,10 +22,11 @@ import {
   writeWorkingCopy, workingFileFor, targetFromUri, snapshotCopy, fileNameForUri, noteRobotCompare,
   comparedChanged, syncStateOf, markerForDocument, type FetchOutcome,
 } from './snapshotSync';
-import { parseAlarms } from './live/parsers';
+import { parseAlarms, activeAlarms, alarmPriorityLabel } from './live/parsers';
 import type { AlarmEntry } from './live/types';
 import { config, showRecoverableError } from './util';
 import { gated, robotConnectionsEnabled } from './experimental';
+import { commandRegistrar } from './commandBoundary';
 
 /** A node from the SnapshotTree, or a plain resource. */
 interface SyncNode {
@@ -44,7 +45,7 @@ interface SyncNode {
 }
 
 export function registerSyncCommands(ctx: vscode.ExtensionContext, s: Services): void {
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
+  const reg = commandRegistrar(ctx, s.output);
 
   reg('robotCode.sync.fetchFile', gated((arg?: unknown) => fetchFileCommand(s, arg)));
   reg('robotCode.sync.pullFile', gated((arg?: unknown) => pullFileCommand(s, arg)));
@@ -670,8 +671,8 @@ export async function fetchControllerErrors(s: Services, conn: RobotConnection):
   for (const file of ['ERRCURR.LS', 'ERRALL.LS']) {
     try {
       const text = await live.readText(conn.profile, file);
-      const alarms = parseAlarms(text);
-      if (alarms.length) return alarms.slice(-8).reverse();
+      const alarms = activeAlarms(parseAlarms(text));
+      if (alarms.length) return alarms;
     } catch { /* try the next file */ }
   }
   return [];
@@ -685,7 +686,7 @@ async function errorsCommand(s: Services, arg?: unknown): Promise<void> {
     { location: vscode.ProgressLocation.Window, title: `Reading errors from ${conn.profile.name}` },
     () => fetchControllerErrors(s, conn));
   if (!alarms.length) { vscode.window.showInformationMessage(`No controller errors read from ${conn.profile.name}.`); return; }
-  s.output.appendLine(`[RUKUS] ${conn.profile.name} errors:\n  ${alarms.map(a => `${a.time} ${a.code ?? ''} ${a.message}`).join('\n  ')}`);
+  s.output.appendLine(`[RUKUS] ${conn.profile.name} errors:\n  ${alarms.map(a => `${a.time} ${alarmPriorityLabel(a.severity)} ${a.message}`).join('\n  ')}`);
   const pick = await vscode.window.showWarningMessage(`${alarms.length} controller error(s) on ${conn.profile.name}: ${alarms[0].message}`, 'Open Output', 'Error Watcher in RUKUS');
   if (pick === 'Open Output') s.output.show(true);
   if (pick === 'Error Watcher in RUKUS') await vscode.commands.executeCommand('robotCode.rukus.alarms', conn.profile.name);

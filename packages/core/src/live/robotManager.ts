@@ -20,6 +20,10 @@ import { FETCH_KINDS } from './types';
 import type { RobotProfile, LiveSnapshot, ConnectionState, RemoteFile, FetchKind, ControllerOptionEntry, OptionHighlight } from './types';
 import type { CellControllerSpec } from '../robotContainers';
 import { upsertCellController, removeCellController } from '../robotContainers';
+import { getBoundSecret, storeBoundSecret, deleteBoundSecret } from './boundSecrets';
+import { fanucIdentityMismatch, fanucExpectationOf, type ExpectedFanuc } from './fanucIdentity';
+import type { ControllerInfo } from './types';
+import { errorDetail } from '../errors';
 
 /**
  * What this extension has asked of one controller since VS Code started.
@@ -133,6 +137,8 @@ export class RobotManager implements vscode.Disposable {
   constructor(private ctx: vscode.ExtensionContext, private output: vscode.OutputChannel) {
     this.loadProfiles();
     this.disposables.push(vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration('robotCode.robots')) this.loadProfiles(); }));
+    // trusting the folder lets its own controllers (workspace settings, cell.json) in
+    this.disposables.push(vscode.workspace.onDidGrantWorkspaceTrust(() => this.loadProfiles()));
     this.disposables.push(vscode.workspace.onDidChangeConfiguration(e => {
       // untick the experimental switch and every open session ends with it
       if (e.affectsConfiguration('robotCode.experimental.robotConnections') && !robotConnectionsEnabled()) for (const c of this.connections.values()) this.disconnect(c.profile.name);
@@ -143,11 +149,16 @@ export class RobotManager implements vscode.Disposable {
   dispose() { for (const c of this.connections.values()) this.stopAuto(c); for (const d of this.disposables) d.dispose(); this._onDidChange.dispose(); this._onDidConnect.dispose(); }
 
   // ---- profiles ----
-  /** Read profiles from VS Code settings. When cellRoot exists, only workspace-scoped profiles are returned. */
+  /**
+   * Read profiles from VS Code settings. When cellRoot exists, only workspace-scoped profiles are returned.
+   * An untrusted folder's own controllers are left out: a cloned repo must not choose the hosts this
+   * PC connects to (and sends saved passwords to). `robotCode.robots` is a restricted setting, so
+   * `get` already skips the folder's value; `inspect` does not, hence the check.
+   */
   static readProfiles(cellRoot?: string): RobotProfile[] {
     const cfg = vscode.workspace.getConfiguration('robotCode');
     let raw: any[];
-    if (cellRoot) {
+    if (cellRoot && vscode.workspace.isTrusted) {
       // Cell.json is the source of truth for workspace controllers — only load workspace-scoped settings
       const insp = cfg.inspect<any[]>('robots');
       raw = insp?.workspaceValue ?? [];
@@ -216,7 +227,8 @@ export class RobotManager implements vscode.Disposable {
     for (const [arr, target] of [[insp?.workspaceValue, vscode.ConfigurationTarget.Workspace], [insp?.globalValue, vscode.ConfigurationTarget.Global]] as const) {
       if (arr?.some(x => x?.name === name)) await cfg.update('robots', arr.filter(x => x?.name !== name), target);
     }
-    await this.ctx.secrets.delete(secretKey(name));
+    await deleteBoundSecret(this.ctx.secrets, secretKey(name));
+    await this.forgetIdentity(name);
   }
 
   /**
@@ -229,7 +241,8 @@ export class RobotManager implements vscode.Disposable {
    * aren't in cell.json are pruned — only cell.json + workspace-scoped profiles survive.
    */
   mergeCellProfiles(defs: Record<string, CellControllerSpec>): void {
-    if (Object.keys(defs).length === 0) return;
+    // cell.json is part of the folder: an untrusted one does not get to pick controller hosts
+    if (Object.keys(defs).length === 0 || !vscode.workspace.isTrusted) return;
     let changed = false;
 
     // Prune: remove connections that aren't in cell.json and aren't in workspace settings
@@ -290,14 +303,67 @@ export class RobotManager implements vscode.Disposable {
   list(): RobotConnection[] { return [...this.connections.values()].sort((a, b) => a.profile.name.localeCompare(b.profile.name)); }
   connected(): RobotConnection[] { return this.list().filter(c => c.state === 'connected' && c.snapshot); }
 
-  async setPassword(name: string, password: string): Promise<void> { await this.ctx.secrets.store(secretKey(name), password); }
-  async getPassword(name: string): Promise<string> { return (await this.ctx.secrets.get(secretKey(name))) ?? ''; }
+  // the password comes back only for the host it was saved for (boundSecrets.ts); another host gets none
+  async setPassword(name: string, password: string, host = this.connections.get(name)?.profile.host): Promise<void> { await storeBoundSecret(this.ctx.secrets, secretKey(name), password, host); }
+  async getPassword(name: string, host = this.connections.get(name)?.profile.host): Promise<string> { return (await getBoundSecret(this.ctx.secrets, secretKey(name), host)) ?? ''; }
+
+  // ---- identity ----
+  /**
+   * The controller a profile is tied to, by F number (fanucIdentity.ts): remembered from the first
+   * file header read, checked against every header read after and before every upload. Connect
+   * itself reads no file, so the first check is the first Get (or the first upload).
+   */
+  expectedIdentity(name: string): ExpectedFanuc | undefined { return this.ctx.globalState.get<ExpectedFanuc>(identityKey(name)); }
+
+  /** Forget the remembered controller, so the next read takes whichever one answers. */
+  async forgetIdentity(name: string): Promise<void> {
+    await this.ctx.globalState.update(identityKey(name), undefined);
+    this.log(name, 'controller identity forgotten');
+  }
+
+  /**
+   * Check a header against the profile's controller; remember it on first sight. A different
+   * controller ends the session (state error, with the reason) and the reason is returned.
+   */
+  private async checkIdentity(c: RobotConnection, seen: ControllerInfo): Promise<string | undefined> {
+    const name = c.profile.name;
+    const expected = this.expectedIdentity(name);
+    const mismatch = fanucIdentityMismatch(name, c.profile.host, expected, seen);
+    if (mismatch) {
+      this.stopAuto(c);
+      c.state = 'error'; c.error = mismatch; c.snapshot = undefined; c.reachable = undefined;
+      this.log(name, `wrong controller: ${mismatch}`);
+      this._onDidChange.fire(name);
+      return mismatch;
+    }
+    const first = expected ? undefined : fanucExpectationOf(seen);
+    if (first) { await this.ctx.globalState.update(identityKey(name), first); this.log(name, `controller identity remembered: F number ${first.fNumber}`); }
+    return undefined;
+  }
+
+  /**
+   * Before a write: read the identity file and check it. Throws when the controller at the
+   * address is not this profile's. A header without an F number passes (nothing to compare).
+   */
+  async verifyIdentity(name: string): Promise<void> {
+    const c = this.connections.get(name);
+    if (!c) throw new Error(`Unknown robot ${name}`);
+    const unit = FETCH_UNITS.info;
+    let text: string;
+    try { text = await this.readText(c.profile, unit.file); }
+    catch { text = await this.readText(c.profile, unit.fallback!); }
+    const seen = parseControllerInfo(text);
+    const mismatch = await this.checkIdentity(c, seen);
+    if (mismatch) throw new Error(mismatch);
+    if (c.snapshot) Object.assign(c.snapshot.info, stripEmpty(seen));
+  }
 
   // ---- connection ----
   /**
    * Connect = prove the controller answers, and nothing else. The probe is a static
    * web-server page (or a bare FTP login), never a .DG file, so the robot is not asked
    * to generate anything. The snapshot starts empty; every panel waits for its Get.
+   * Which controller answered is checked on the first file read (checkIdentity).
    */
   async connect(name: string): Promise<void> {
     const c = this.connections.get(name);
@@ -354,7 +420,7 @@ export class RobotManager implements vscode.Disposable {
 
   private async probeFtp(p: RobotProfile): Promise<void> {
     this.count(p.name, 'connect probe');
-    const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name) });
+    const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) });
     try { await c.connect(); } finally { await c.quit().catch(() => { /* already closing */ }); }
   }
 
@@ -452,9 +518,12 @@ export class RobotManager implements vscode.Disposable {
           let text: string;
           try { text = await this.readText(c.profile, unit.file); }
           catch (e) { if (!unit.fallback) throw e; text = await this.readText(c.profile, unit.fallback); }
-          unit.apply(c.snapshot, text);
-          // Free: every controller file header carries F number / version / date.
-          Object.assign(c.snapshot.info, stripEmpty(parseControllerInfo(text)));
+          // Free: every controller file header carries F number / version / date - and so says
+          // whether this is still the profile's controller. A different one ends the session.
+          const seen = parseControllerInfo(text);
+          if (await this.checkIdentity(c, seen)) { failed.push(...kinds.slice(kinds.indexOf(kind))); break; }
+          unit.apply(c.snapshot!, text);
+          Object.assign(c.snapshot!.info, stripEmpty(seen));
           c.snapshot.fetchedAt.set(kind, Date.now());
           if (kind !== 'info') c.snapshot.fetchedAt.set('info', Date.now());
           c.snapshot.errors.delete(kind);
@@ -503,13 +572,18 @@ export class RobotManager implements vscode.Disposable {
   private armAuto(c: RobotConnection) {
     this.stopAuto(c);
     if (!c.profile.autoRefresh || c.state !== 'connected') return;
+    // A refresh that throws must not end the loop: the page would keep showing the last values
+    // as if they were current. Log it and arm the next tick all the same.
     const tick = async () => {
       if (c.state !== 'connected' || !c.profile.autoRefresh) return;
       const started = Date.now();
-      await this.refresh(c.profile.name);
-      if (c.state === 'connected' && c.profile.autoRefresh) c.timer = setTimeout(tick, Math.max(500, c.profile.pollIntervalMs - (Date.now() - started)));
+      try { await this.refresh(c.profile.name); }
+      catch (e) { this.log(c.profile.name, `auto-refresh failed: ${errorDetail(e)}`); }
+      finally {
+        if (c.state === 'connected' && c.profile.autoRefresh) c.timer = setTimeout(() => void tick(), Math.max(500, c.profile.pollIntervalMs - (Date.now() - started)));
+      }
     };
-    c.timer = setTimeout(tick, c.profile.pollIntervalMs);
+    c.timer = setTimeout(() => void tick(), c.profile.pollIntervalMs);
   }
   private stopAuto(c: RobotConnection) { if (c.timer) { clearTimeout(c.timer); c.timer = undefined; } }
 
@@ -544,7 +618,7 @@ export class RobotManager implements vscode.Disposable {
   async readText(p: RobotProfile, file: string, device = p.device): Promise<string> {
     this.gate();
     const text = p.useFtp
-      ? await ftpGetText({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name) }, device, file)
+      ? await ftpGetText({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) }, device, file)
       : await httpGetText({ host: p.host, port: p.httpPort }, device, file);
     this.count(p.name, `${device}${file}`, text.length);
     return text;
@@ -557,7 +631,7 @@ export class RobotManager implements vscode.Disposable {
    */
   async writeBinary(p: RobotProfile, file: string, data: Uint8Array, device = p.device): Promise<void> {
     this.gate();
-    const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser || 'anonymous', password: await this.getPassword(p.name) });
+    const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser || 'anonymous', password: await this.getPassword(p.name, p.host) });
     try { await c.connect(); await c.cwd(device); await c.store(file, data); } finally { await c.quit(); }
     this.count(p.name, `${device}${file} (upload)`, data.length);
   }
@@ -565,7 +639,7 @@ export class RobotManager implements vscode.Disposable {
     this.gate();
     let data: Uint8Array;
     if (p.useFtp) {
-      const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name) });
+      const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) });
       try { await c.connect(); await c.cwd(device); data = await c.retrieve(file); } finally { await c.quit(); }
     } else {
       data = await httpGetBinary({ host: p.host, port: p.httpPort }, device, file);
@@ -591,7 +665,7 @@ export class RobotManager implements vscode.Disposable {
       onFile(name, result, i);
     };
     if (p.useFtp) {
-      const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name) });
+      const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) });
       const stop = () => isCancelled() || !!signal?.aborted;
       try { await c.connect(); await c.cwd(device); await c.retrieveMany(files, report, stop); }
       finally { await c.quit(); }
@@ -634,11 +708,11 @@ export class RobotManager implements vscode.Disposable {
     // Counted as one request even though httpList may read several index pages - the
     // interesting number is "how many times did we go and ask", and the bytes are exact.
     this.count(p.name, `list ${device}`);
-    if (p.useFtp) return ftpList({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name) }, device);
+    if (p.useFtp) return ftpList({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) }, device);
     try { return await httpList({ host: p.host, port: p.httpPort }, device); }
     catch (e) {
       // web server listing blocked -> fall back to FTP if a user is configured
-      if (p.ftpUser || await this.getPassword(p.name)) return ftpList({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name) }, device);
+      if (p.ftpUser || await this.getPassword(p.name, p.host)) return ftpList({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) }, device);
       throw e;
     }
   }
@@ -678,6 +752,7 @@ export class RobotManager implements vscode.Disposable {
   showLog() { this.output.show(true); }
 }
 
+function identityKey(name: string) { return `robotCode.live.identity.${name}`; }
 function secretKey(name: string) { return `robotCode.ftpPassword.${name}`; }
 
 /** write a profile back where it already lives, so a workspace profile stays in the workspace */

@@ -41,6 +41,7 @@ import { registerReportIssue } from '@core/reportIssue';
 import { registerFileIcons } from '@core/fileIcons';
 import { registerRukusClusters } from '@core/rukus/clusters';
 import { windowFolders, setWindowFolders } from '@core/util';
+import { errorDetail, isOwnFailure } from '@core/errors';
 
 const sameFolder = (a: string, b: string) => a.replace(/[\\/]+$/, '').toLowerCase() === b.replace(/[\\/]+$/, '').toLowerCase();
 
@@ -61,6 +62,11 @@ export function activate(ctx: vscode.ExtensionContext) {
   if (fanuc) installFanucRegisterReaders();
   const s = new FanucServices();
   ctx.subscriptions.push(s, ktransDiagnostics);
+  // A promise of ours that rejects with nobody listening would otherwise leave no trace in our
+  // log. The host is shared with other extensions, so only failures from our own code are kept.
+  const onUnhandled = (reason: unknown) => { if (isOwnFailure(reason, ctx.extensionPath)) s.output.appendLine(`[RUKUS] unhandled rejection: ${errorDetail(reason)}`); };
+  process.on('unhandledRejection', onUnhandled);
+  ctx.subscriptions.push({ dispose: () => process.off('unhandledRejection', onUnhandled) });
   if (fanuc) {
     s.sysvars = new SysVarsReference(ctx.extensionPath, s.output);
     registerSysVarProviders(ctx, s.sysvars);
@@ -77,7 +83,7 @@ export function activate(ctx: vscode.ExtensionContext) {
     registerKarelProviders(ctx, s);
     registerAlarmLookup(ctx);
   }
-  const abbControllers = abb ? (registerRapidProviders(ctx, s), registerRapidView(ctx, s), registerAbbTools(ctx), registerAbbControllers(ctx, s)) : undefined;
+  const abbControllers = abb ? (registerRapidProviders(ctx, s), registerRapidView(ctx, s), registerAbbTools(ctx, s.output), registerAbbControllers(ctx, s)) : undefined;
   // core: the robot connections (and their form, which ABB uses too), containers, RUKUS
   s.live = registerLive(ctx, s);
   if (fanuc) {

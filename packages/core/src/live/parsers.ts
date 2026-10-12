@@ -143,6 +143,56 @@ export function parseAlarms(text: string): AlarmEntry[] {
   return out;
 }
 
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+/** "10-OCT-26 11:02:40" (dd-MMM-yy HH:mm:ss) as a sortable number; NaN when it does not parse */
+export function alarmTime(time: string): number {
+  const m = /^(\d{2})-([A-Z]{3})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/.exec(time.trim());
+  const month = m ? MONTHS.indexOf(m[2]) : -1;
+  if (!m || month < 0) return NaN;
+  return Date.UTC(2000 + +m[3], month, +m[1], +m[4], +m[5], +m[6]);
+}
+
+/**
+ * Alarm rows newest first. The file order is not assumed: an R-30iB Plus (V9.40) writes ERRALL.LS
+ * newest first, older files oldest first. The first and last rows' own times decide; on equal
+ * times the lower row number is the newer one.
+ */
+export function newestFirst(rows: AlarmEntry[]): AlarmEntry[] {
+  if (rows.length < 2) return rows.slice();
+  const first = alarmTime(rows[0].time), last = alarmTime(rows[rows.length - 1].time);
+  const keep = first !== last && !isNaN(first) && !isNaN(last) ? first > last : rows[0].seq <= rows[rows.length - 1].seq;
+  return keep ? rows.slice() : rows.slice().reverse();
+}
+
+/** Current errors: the newest rows up to (not including) the latest RESET, alarm codes only. */
+export function activeAlarms(rows: AlarmEntry[], max = 8): AlarmEntry[] {
+  const out: AlarmEntry[] = [];
+  for (const a of newestFirst(rows)) {
+    if (a.isReset) break;
+    if (a.code) out.push(a);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+export type AlarmPriority = 'High' | 'Medium' | 'Low' | 'Info';
+
+/** Severity column as a priority: STOP/SERVO/ABORT/SYSTEM high, PAUSE medium, WARN low, else info. */
+export function alarmPriority(severity: string): AlarmPriority {
+  const s = severity.toUpperCase();
+  if (/STOP|SERVO|ABORT|SYSTEM/.test(s)) return 'High';
+  if (/PAUSE/.test(s)) return 'Medium';
+  if (/WARN/.test(s)) return 'Low';
+  return 'Info';
+}
+
+/** Priority as a symbol and a word, never colour alone. */
+export function alarmPriorityLabel(severity: string): string {
+  const p = alarmPriority(severity);
+  return `${{ High: '■', Medium: '▲', Low: '●', Info: '○' }[p]} ${p}`;
+}
+
 /** Numeric summary for the tree/tooltips */
 export function fmtCart(c: CartPosition): string {
   const f = (n: number) => n.toFixed(2);

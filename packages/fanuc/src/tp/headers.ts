@@ -33,20 +33,6 @@ export function commentOverrun(body: string, limit = COMMENT_WIDTH): { from: num
 
 export const DEFAULT_HEADER_TEMPLATES: HeaderTemplate[] = [
   {
-    // The shape every program in the Ford GVOSS Robot Programming Guide (FANUC, 2024-10)
-    // opens with: a 32-star banner, what the program does, a blank comment, then a NOTE
-    // naming the motion groups it drives, and the banner again. No author/date/rev lines.
-    name: 'Ford (GVOSS)',
-    lines: [
-      '********************************',
-      '${DESCRIPTION}',
-      '',
-      ' NOTE: This program has',
-      ' ${GROUPS} motion',
-      '********************************',
-    ],
-  },
-  {
     name: 'GM',
     lines: [
       '--------------------------------',

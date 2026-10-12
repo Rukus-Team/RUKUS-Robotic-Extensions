@@ -10,7 +10,8 @@
  * each asks before it changes the controller (Stop does not ask).
  */
 import * as vscode from 'vscode';
-import { WEBVIEW_BASE_CSS } from '@core/webviewStyle';
+import { WEBVIEW_BASE_CSS, ACTIVATE_JS, withCsp } from '@core/webviewStyle';
+import { escapeHtml } from '@core/util';
 import { ROBOT_PAGE_CSS } from '@core/live/dashboard';
 import type { AbbControllers, AbbConnection } from './controllers';
 import { ABB_ACTIONS } from './actions';
@@ -34,11 +35,11 @@ const panels = new Map<string, vscode.WebviewPanel>();
 export function openAbbPage(ctx: vscode.ExtensionContext, ctrls: AbbControllers, name: string): void {
   let panel = panels.get(name);
   if (!panel) {
-    panel = vscode.window.createWebviewPanel('robotCode.abbPage', name, vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true });
+    panel = vscode.window.createWebviewPanel('robotCode.abbPage', name, vscode.ViewColumn.Active, { enableScripts: true, localResourceRoots: [], retainContextWhenHidden: true });
     panels.set(name, panel);
     panel.onDidDispose(() => panels.delete(name));
     ctx.subscriptions.push(panel);
-    panel.webview.html = html(name);
+    panel.webview.html = withCsp(html(name), panel.webview.cspSource);
     const push = () => { const c = ctrls.get(name); if (panel && c) void panel.webview.postMessage({ type: 'state', state: { ...serialize(c), mine: ctrls.holdsAccess(name) } }); };
     const sub = ctrls.onDidChange(n => { if (!n || n === name) push(); });
     panel.onDidDispose(() => sub.dispose());
@@ -116,9 +117,9 @@ function serialize(c: AbbConnection) {
 function html(name: string): string {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${WEBVIEW_BASE_CSS}
 ${ROBOT_PAGE_CSS}
-  .pill.motoron, .pill.running, .pill.AUTO { background: var(--ok) } .pill.motoroff, .pill.stopped { background: var(--muted) } .pill.guardstop, .pill.emergencystop, .pill.emergencystopreset { background: var(--bad) } .pill.MANR, .pill.MANF { background: var(--warn); color: #222 }
-  .pill.t3 { background: var(--bad) } .pill.t2 { background: var(--warn); color: #222 } .pill.t1 { background: var(--blue) }
-  .pill.free { background: var(--ok) } .pill.held { background: var(--warn); color: #222 }
+  .pill.motoron, .pill.running, .pill.AUTO { --pill: var(--ok) } .pill.motoroff, .pill.stopped { --pill: var(--muted) } .pill.guardstop, .pill.emergencystop, .pill.emergencystopreset { --pill: var(--bad) } .pill.MANR, .pill.MANF { --pill: var(--warn) }
+  .pill.t3 { --pill: var(--bad) } .pill.t2 { --pill: var(--warn) } .pill.t1 { --pill: var(--blue) }
+  .pill.free { --pill: var(--ok) } .pill.held { --pill: var(--warn) }
   .optgroup { margin-top: 10px } .optgroup .og { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 4px } .optgroup .chips { max-height: 200px }
   .card.act { border-top-color: var(--warn) } .card.act h2 .ic { background: var(--warn) }
   .chip.opt { cursor: pointer } .chip.opt:hover { border-color: var(--vscode-focusBorder) }
@@ -128,7 +129,7 @@ ${ROBOT_PAGE_CSS}
   .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 12.5px; align-items: center } .kv .k { color: var(--muted) } .kv.state { margin-top: 10px; gap: 6px 12px }
 </style></head><body>
 <div class="head">
-  <h1><span class="dot" id="dot"></span><span id="name">${name}</span></h1>
+  <h1><span class="dot" id="dot"></span><span id="name">${escapeHtml(name)}</span></h1>
   <div class="sub" id="sub">…</div>
   <div class="spacer"></div>
   <div class="btns">
@@ -144,6 +145,7 @@ ${ROBOT_PAGE_CSS}
 <script>
   const vscode = acquireVsCodeApi();
   const folded = new Set((vscode.getState() || {}).folded || []);
+${ACTIVATE_JS}
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   let st = null, ioQuery = '', ioType = '', optQuery = '';
@@ -181,6 +183,8 @@ ${ROBOT_PAGE_CSS}
     const nOptions = (st.optionGroups ?? []).find(g => g.kind === 'option')?.items.length ?? 0;
     const chip = x => '<span class="chip opt" tabindex="0" role="button" data-opt="' + x.index + '" title="' + esc((st.optionShort[x.index] ?? '') + ' Click for more.') + '"><span class="c" style="max-width:none">' + esc(x.text) + '</span></span>';
     const mods = st.tasks.flatMap(t => t.modules.map(m => ({ ...m, task: t.name }))).sort((a, b) => (a.type === 'SysMod') - (b.type === 'SysMod') || a.task.localeCompare(b.task) || a.name.localeCompare(b.name));
+    // a redraw replaces the cards: focus goes back to the row or button that had it
+    const focusKey = rcFocusKey();
     $('body').innerHTML = \`
       <div class="grid">
         <div class="card run"><h2><span class="ic"></span>State<span class="n">\${stamp('state')} \${getBtn('getState')}</span></h2>\${!p ? unread('getState', 'Controller state has not been read.') :
@@ -228,9 +232,10 @@ ${ROBOT_PAGE_CSS}
     for (const b of document.querySelectorAll('[data-get]')) b.onclick = () => vscode.postMessage({ type: b.dataset.get });
     for (const b of document.querySelectorAll('[data-act]')) b.onclick = () => vscode.postMessage({ type: 'action', cmd: b.dataset.act });
     // an option: hover for the short explanation, click (or Enter) for the whole one in a panel
-    for (const b of document.querySelectorAll('[data-opt]')) { b.onclick = () => vscode.postMessage({ type: 'optionInfo', index: Number(b.dataset.opt) }); b.onkeydown = e => { if (e.key === 'Enter') b.onclick(); }; }
+    for (const b of document.querySelectorAll('[data-opt]')) rcActivate(b, () => vscode.postMessage({ type: 'optionInfo', index: Number(b.dataset.opt) }));
     for (const a of document.querySelectorAll('[data-ptr]')) a.onclick = e => { e.preventDefault(); vscode.postMessage({ type: 'pointer', which: a.dataset.ptr, task: a.dataset.task }); };
-    for (const r of document.querySelectorAll('tr[data-mod]')) r.onclick = () => vscode.postMessage({ type: 'module', module: r.dataset.mod, task: r.dataset.task, moduleType: r.dataset.type });
+    // keyboard: Tab reaches each module; Enter or Space opens it, as a click does
+    for (const r of document.querySelectorAll('tr[data-mod]')) rcActivate(r, () => vscode.postMessage({ type: 'module', module: r.dataset.mod, task: r.dataset.task, moduleType: r.dataset.type }));
     for (const card of document.querySelectorAll('.card')) {
       const id = [...card.classList].find(c => c !== 'card' && c !== 'wide' && c !== 'folded');
       const h = card.querySelector('h2');
@@ -243,6 +248,7 @@ ${ROBOT_PAGE_CSS}
       h.onkeydown = e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === h) { e.preventDefault(); toggle(); } };
       apply();
     }
+    rcRestoreFocus(focusKey);
   }
   window.addEventListener('message', e => { if (e.data.type === 'state') { st = e.data.state; render(); } });
   vscode.postMessage({ type: 'ready' });

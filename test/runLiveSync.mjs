@@ -33,6 +33,7 @@ fs.writeFileSync(path.join(user, 'User', 'settings.json'), JSON.stringify({
   'telemetry.telemetryLevel': 'off', 'window.restoreWindows': 'none',
   'robotCode.experimental.robotConnections': true,
   'robotCode.sync.promptOnOpen': false,
+  'robotCode.live.upload': true,
 }));
 
 const exe = await downloadAndUnzipVSCode({ version: 'stable', cachePath: path.join(cacheRoot, 'vscode') });
@@ -46,9 +47,11 @@ const code = await runTests({
   extensionTestsEnv: { ROBOT_CODE_TEST_OUT: out, ROBOT_CODE_LIVE_HOST: host, ...(process.env.ROBOT_CODE_SHOT_DIR ? { ROBOT_CODE_SHOT_DIR: path.resolve(process.env.ROBOT_CODE_SHOT_DIR) } : {}) },
 }).catch(e => { console.error('runTests failed:', e?.message ?? e); return 1; });
 
+let failed = -1;   // no results file counts as a failure
 if (fs.existsSync(out)) {
   const r = JSON.parse(fs.readFileSync(out, 'utf8'));
   for (const x of r) console.log((x.ok ? 'PASS' : 'FAIL').padEnd(5), x.name, x.detail && (!x.ok || x.note) ? '\n        => ' + x.detail : '');
-  console.log(`${r.filter(x => !x.ok).length} failed of ${r.length}`);
+  failed = r.filter(x => !x.ok).length;
+  console.log(`${failed} failed of ${r.length}`);
 } else console.log('no results file written');
-process.exit(code);
+process.exit(code || (failed === 0 ? 0 : 1));

@@ -10,6 +10,7 @@ import { taskFoldersOf } from '../rapid/task';
 import { readBackupInfo, backupRootOf } from '../backupInfo';
 import { diffAbbBackups, abbBackupDiffMarkdown, isAbbBackup } from './backupDiff';
 import { unusedRoutines, unusedRoutinesMarkdown, rapidXref, xrefMarkdown, type TaskModules } from './analysis';
+import { commandRegistrar, type CommandLog } from '@core/commandBoundary';
 
 const RAPID = /\.(mod|modx|sys|sysx|prg)$/i;
 
@@ -84,8 +85,8 @@ async function pickBackup(title: string, near?: string): Promise<string | undefi
   return r?.[0]?.fsPath;
 }
 
-export function registerAbbTools(ctx: vscode.ExtensionContext): void {
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
+export function registerAbbTools(ctx: vscode.ExtensionContext, output: CommandLog): void {
+  const reg = commandRegistrar(ctx, output);
 
   reg('robotCode.abb.compareBackups', async (a?: vscode.Uri, b?: vscode.Uri) => {
     const dirA = a instanceof vscode.Uri ? a.fsPath : await pickBackup('ABB backup A (older)');

@@ -92,8 +92,8 @@ export function abbConnectionKind(ctrls: AbbControllers): ConnectionKind {
         const was = originalName ?? p.name;
         return list.some(x => x.name === was) ? list.map(x => (x.name === was ? p : x)) : [...list, p];
       });
-      if (password !== undefined) await ctrls.setPassword(p.name, password);
-      else if (oldPassword !== undefined) await ctrls.setPassword(p.name, oldPassword);
+      if (password !== undefined) await ctrls.setPassword(p.name, password, p.host);
+      else if (oldPassword !== undefined) await ctrls.setPassword(p.name, oldPassword, p.host);
       if (originalName && originalName !== p.name) await ctrls.forgetPassword(originalName);
       return p.name;
     },
