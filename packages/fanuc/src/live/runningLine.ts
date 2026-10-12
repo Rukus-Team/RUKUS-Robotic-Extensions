@@ -11,7 +11,7 @@
 import * as vscode from 'vscode';
 import type { FanucServices } from '../services';
 import type { RobotManager } from '@core/live/robotManager';
-import { programNameFromUri } from '@core/util';
+import { escapeMd, hoverTrust, programNameFromUri } from '@core/util';
 import { ageTicked } from '@core/live/views';
 import { gated } from '@core/experimental';
 
@@ -56,9 +56,9 @@ export function registerRunningLine(ctx: vscode.ExtensionContext, s: FanucServic
         const line = prog.lines.find(l => l.num === cur.line);
         if (!line) continue;
         const hover = new vscode.MarkdownString(
-          `**${robot}** task ${task.taskNo} (${task.name}) was ${task.status} here — TP line ${cur.line}\n\n` +
+          `**${escapeMd(robot)}** task ${task.taskNo} (${escapeMd(task.name)}) was ${escapeMd(task.status)} here — TP line ${cur.line}\n\n` +
           `Program state read **${fmtAge(age)}**. [Read it again](command:robotCode.live.getTasks?${encodeURIComponent(JSON.stringify(robot))})`);
-        hover.isTrusted = true;
+        hover.isTrusted = hoverTrust();
         (task.status === 'RUNNING' ? runRanges : pauseRanges).push({ range: ed.document.lineAt(line.line).range, hoverMessage: hover });
       }
       ed.setDecorations(running, runRanges);

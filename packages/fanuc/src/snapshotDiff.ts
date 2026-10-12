@@ -13,9 +13,10 @@ import { parseTp, type TpProgram } from './tp/parser';
 import { diffPositions, positionDiffMarkdown } from './tools/positionDiff';
 import { parseNumReg } from './data/vaParser';
 import { snapshotCopy, targetFromUri } from '@core/snapshotSync';
+import { commandRegistrar } from '@core/commandBoundary';
 
 export function registerSnapshotDiffCommands(ctx: vscode.ExtensionContext, s: FanucServices): void {
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
+  const reg = commandRegistrar(ctx, s.output);
   reg('robotCode.sync.comparePositions', (arg?: unknown) => comparePositions(s, arg));
   reg('robotCode.sync.compareRegisters', (arg?: unknown) => compareRegisters(s, arg));
 }

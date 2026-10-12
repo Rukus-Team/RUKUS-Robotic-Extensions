@@ -33,6 +33,8 @@ const safeSegment = (s: string) => s !== '' && s !== '.' && s !== '..' && !/[\\/
 
 export async function takeBackup(c: RwsClient, name: string, localRoot: string, opts: {
   remove?: boolean; progress?: BackupProgress; timeoutMs?: number; pollMs?: number;
+  /** Cancel: stops between and during requests. What is on the controller and on disk so far stays. */
+  signal?: AbortSignal;
 } = {}): Promise<BackupResult> {
   if (!validBackupName(name)) throw new Error(`"${name}" is not a usable backup name (letters, digits, _ - .)`);
   const t0 = Date.now();
@@ -49,7 +51,10 @@ export async function takeBackup(c: RwsClient, name: string, localRoot: string, 
 
   const deadline = Date.now() + (opts.timeoutMs ?? 10 * 60_000);
   let seenRunning = false;
+  const signal = opts.signal;
+  const stopIfCancelled = () => { if (signal?.aborted) throw new Error('cancelled'); };
   for (;;) {
+    stopIfCancelled();
     const st = await c.backupState() ?? '';
     if (/progress/i.test(st)) { seenRunning = true; say('The controller is writing the backup…'); }
     else if (/error|timeout|fail/i.test(st)) throw new Error(`The controller reports: ${st}`);
@@ -62,7 +67,7 @@ export async function takeBackup(c: RwsClient, name: string, localRoot: string, 
   say('Listing the backup…');
   const files: { rel: string[]; size: number }[] = [];
   const walk = async (rel: string[]) => {
-    const l = await c.listDir([remote, ...rel].join('/'));
+    const l = await c.listDir([remote, ...rel].join('/'), signal);
     for (const f of l.files) if (safeSegment(f.name)) files.push({ rel: [...rel, f.name], size: f.size });
     for (const d of l.dirs) if (safeSegment(d)) await walk([...rel, d]);
   };
@@ -74,7 +79,7 @@ export async function takeBackup(c: RwsClient, name: string, localRoot: string, 
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
     say(`Downloading ${f.rel.join('/')}`, i, files.length);
-    const data = await c.file([remote, ...f.rel].join('/'));
+    const data = await c.file([remote, ...f.rel].join('/'), signal);
     const to = path.join(local, ...f.rel);
     fs.mkdirSync(path.dirname(to), { recursive: true });
     fs.writeFileSync(to, data);
@@ -82,6 +87,7 @@ export async function takeBackup(c: RwsClient, name: string, localRoot: string, 
   }
   say('Downloaded', files.length, files.length);
 
+  stopIfCancelled();
   let removed = false;
   if (opts.remove) { say(`Removing ${remote} from the controller…`); await c.deletePath(remote); removed = true; }
   return { remote, local, files: files.length, bytes, removed, ms: Date.now() - t0 };

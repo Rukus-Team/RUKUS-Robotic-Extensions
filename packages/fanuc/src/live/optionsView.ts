@@ -13,16 +13,17 @@ import type { RobotManager } from '@core/live/robotManager';
 import { escapeHtml } from '@core/util';
 import { gated } from '@core/experimental';
 import { boundRobot, profileNamed } from '@core/robotBinding';
-import { WEBVIEW_BASE_CSS, LIST_LIMIT_JS, emptyState } from '@core/webviewStyle';
+import { WEBVIEW_BASE_CSS, LIST_LIMIT_JS, emptyState, withCsp } from '@core/webviewStyle';
 import { ORDER_FILE, readControllerOptions, parseOrderFile, optionHighlights, type ControllerOption } from './controllerOptions';
 import { describeOption } from '@core/live/optionInfo';
 import { showOptionPanel } from '@core/live/optionPanel';
 import { FANUC_OPTION_DOCS, fanucCodeNote } from './optionDocs';
+import { commandRegistrar } from '@core/commandBoundary';
 
 interface Source { title: string; where: string; options: ControllerOption[] }
 
 export function registerOptionsView(ctx: vscode.ExtensionContext, s: FanucServices, robots: RobotManager) {
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
+  const reg = commandRegistrar(ctx, s.output);
   const nameOf = (node?: any): string | undefined => node?.c?.profile?.name ?? (typeof node === 'string' ? node : undefined);
 
   // the robot page's card: read once, keep on the snapshot
@@ -110,7 +111,7 @@ function openPanel(ctx: vscode.ExtensionContext, robots: RobotManager, src: Sour
   let panel = panels.get(src.title);
   if (panel) panel.reveal();
   else {
-    panel = vscode.window.createWebviewPanel('robotCode.controllerOptions', `Options: ${src.title}`, vscode.ViewColumn.Active, { enableScripts: true });
+    panel = vscode.window.createWebviewPanel('robotCode.controllerOptions', `Options: ${src.title}`, vscode.ViewColumn.Active, { enableScripts: true, localResourceRoots: [] });
     panels.set(src.title, panel);
     panel.onDidDispose(() => panels.delete(src.title), null, ctx.subscriptions);
     panel.webview.onDidReceiveMessage(async (m: { copy?: string; refresh?: boolean; info?: number }) => {
@@ -120,12 +121,12 @@ function openPanel(ctx: vscode.ExtensionContext, robots: RobotManager, src: Sour
       if (m.refresh) {
         const c = robots.get(src.title);
         const fresh = c?.state === 'connected' ? await readControllerOptions(robots, c.profile, true) : undefined;
-        if (fresh) { src.options = fresh; robots.setOptions(src.title, fresh, optionHighlights(fresh)); panel!.webview.html = render(src); }
+        if (fresh) { src.options = fresh; robots.setOptions(src.title, fresh, optionHighlights(fresh)); panel!.webview.html = withCsp(render(src), panel!.webview.cspSource); }
         else vscode.window.showWarningMessage(`${src.title} is not connected, so the list was not read again.`);
       }
     }, null, ctx.subscriptions);
   }
-  panel.webview.html = render(src);
+  panel.webview.html = withCsp(render(src), panel.webview.cspSource);
 }
 
 function render(src: Source): string {

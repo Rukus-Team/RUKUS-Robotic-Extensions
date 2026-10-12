@@ -5,9 +5,12 @@
  * except Stop. They run through AbbControllers.control, which logs the write, reads the state
  * again after it, and explains an OmniCore that refuses for want of write access.
  *
- * Every command takes (controller name or tree node, opts?). `opts` is for tests and scripts: given,
- * nothing is asked - not even the confirmation - as with Back Up and Download. A command returns
- * true when the controller took the write, false when it refused (the error is shown).
+ * Every command takes (controller name or tree node, opts?). `opts` is for the extension's own
+ * tests: given, nothing is asked - not even the confirmation. It is honoured only when the
+ * extension runs under a test runner; anywhere else (another extension, a `command:` link, a
+ * keybinding's args) it is dropped, so every write is confirmed. On a real controller, Motors On
+ * and Start RAPID are confirmed by typing the controller's name. A command returns true when the
+ * controller took the write, false when it refused (the error is shown).
  */
 import * as vscode from 'vscode';
 import * as path from 'node:path';
@@ -15,6 +18,7 @@ import * as fs from 'node:fs/promises';
 import { controlStationName, type AbbControllers, type AbbConnection } from './controllers';
 import type { RwsSignal } from '../rws/client';
 import { ctrlStateLabel, opModeLabel, execStateLabel, runModeLabel, taskTypeLabel } from './names';
+import { commandRegistrar, type CommandLog } from '@core/commandBoundary';
 
 type NameOf = (node?: any, only?: (c: AbbConnection) => boolean) => Promise<string | undefined>;
 
@@ -40,11 +44,24 @@ export function uploadName(localPath: string | undefined, text: string): string 
 }
 
 
-export function registerAbbActions(ctx: vscode.ExtensionContext, ctrls: AbbControllers, nameOf: NameOf): void {
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
+export function registerAbbActions(ctx: vscode.ExtensionContext, ctrls: AbbControllers, nameOf: NameOf, output: CommandLog): void {
+  // outside a test run only the controller (name or tree node) is passed on: no caller skips the confirmation
+  const scripted = ctx.extensionMode === vscode.ExtensionMode.Test;
+  const register = commandRegistrar(ctx, output);
+  const reg = (id: string, fn: (...a: any[]) => any) => register(id, (node?: unknown, ...rest: unknown[]) => fn(node, ...(scripted ? rest : [])));
   const show = (e: unknown) => void vscode.window.showErrorMessage(`ABB: ${(e as any)?.message ?? e}`);
   const connected = (node?: any) => nameOf(node, c => c.state === 'connected');
   const confirm = async (message: string, detail: string, button: string) => (await vscode.window.showWarningMessage(message, { modal: true, detail }, button)) === button;
+  /** the highest-consequence writes on a real controller: the user types the controller's name */
+  const typedConfirm = async (name: string, action: string) => {
+    if (ctrls.isVirtual(name)) return true;
+    const typed = await vscode.window.showInputBox({
+      title: `${action} on ${name}: a real controller`, ignoreFocusOut: true,
+      prompt: `Type ${name} to confirm. The robot can move.`,
+      validateInput: v => (v.trim() === name ? undefined : `Type ${name} exactly`),
+    });
+    return typed?.trim() === name;
+  };
   const done = (msg: string) => vscode.window.setStatusBarMessage(`$(check) ${msg}`, 4000);
   const panelText = (c: AbbConnection) => {
     const p = c.snapshot.panel;
@@ -83,6 +100,7 @@ export function registerAbbActions(ctx: vscode.ExtensionContext, ctrls: AbbContr
     const c = ctrls.get(name)!;
     if (!yes && !(await confirm(`Turn the motors ${on ? 'on' : 'off'} on ${name}?`,
       `${panelText(c)} ${on ? 'Motors on needs AUTO mode (in manual the enabling device decides). With motors on the robot can move as soon as RAPID runs.' : 'Motors off stops any motion and RAPID with it.'}`, on ? 'Motors On' : 'Motors Off'))) return;
+    if (!yes && on && !(await typedConfirm(name, 'Motors On'))) return;
     try { await ctrls.control(name, `motors ${on ? 'on' : 'off'}`, cl => cl.setMotors(on)); done(`${name}: motors ${on ? 'on' : 'off'}`); return true; } catch (e) { show(e); return false; }
   };
   reg('robotCode.abb.motorsOn', motors(true));
@@ -102,6 +120,7 @@ export function registerAbbActions(ctx: vscode.ExtensionContext, ctrls: AbbContr
       mode = pick.value;
       if (!(await confirm(`Start RAPID on ${name} in ${pick.label}? THE ROBOT WILL MOVE.`,
         `${panelText(c)}${pp ? ` Program pointer (last read): ${pp}.` : ''} RAPID starts from the program pointer, at the speed override. Make sure nobody is in the cell.`, `Start (${pick.label})`))) return;
+      if (!(await typedConfirm(name, 'Start RAPID'))) return;
     }
     try { await ctrls.control(name, `RAPID start (${runModeLabel(mode)})`, cl => cl.startRapid(mode), ['state', 'tasks']); done(`${name}: RAPID started`); return true; } catch (e) { show(e); return false; }
   });

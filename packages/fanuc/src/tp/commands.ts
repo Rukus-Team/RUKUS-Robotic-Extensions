@@ -20,12 +20,13 @@ import { planCommentSyncMany, describeSyncPlan } from '@fanuc/tools/commentSync'
 import { showProgramFlow } from './flowView';
 import { comparePositions } from '@fanuc/tools/positionDiffCommand';
 import { callSitesOf } from './providers';
+import { commandRegistrar } from '@core/commandBoundary';
 
 export function registerTpCommands(ctx: vscode.ExtensionContext, s: FanucServices) {
   const auto = new AutoRenumber(s);
   ctx.subscriptions.push(auto);
 
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
+  const reg = commandRegistrar(ctx, s.output);
 
   reg('robotCode.tp.renumber', async () => {
     const ed = tpEditor(); if (!ed) return;

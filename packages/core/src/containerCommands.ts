@@ -20,6 +20,7 @@ import {
   ROBOT_DIR, ROBOT_JSON, CELL_DIR, CELL_JSON,
   type RobotMarker, type RobotMarkerSpec, type CellControllerSpec,
 } from './robotContainers';
+import { commandRegistrar } from './commandBoundary';
 
 /** the scheme that serves a file's normalized text for the working-vs-snapshot diff */
 const NORM_SCHEME = 'robocode-norm';
@@ -44,7 +45,7 @@ function keepGitignoreCurrent(robotRoot: string) {
 }
 
 export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Services) {
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
+  const reg = commandRegistrar(ctx, s.output);
 
   /** every robot marker, or pick one when there are several */
   const pickMarker = async (marker?: RobotMarker): Promise<RobotMarker | undefined> => {

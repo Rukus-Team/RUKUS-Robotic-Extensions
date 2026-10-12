@@ -16,6 +16,7 @@ import { StatusWatch, type StatusUpdate } from './liveStatus';
 import { identityMismatch, expectationOf, controllerLabel, type ControllerIdentity, type ExpectedController } from './identity';
 import { cfgInstances, ipSettings, wirelessEnabled, reachability, type PortSetting, type Reachability } from './network';
 import { rememberEvents, type EventCatalog } from './eventCatalog';
+import { getBoundSecret, storeBoundSecret, deleteBoundSecret } from '@core/live/boundSecrets';
 import { takeBackup, type BackupProgress, type BackupResult } from './backup';
 import { RwsClient, RwsError, type RwsSystem, type RwsPanel, type RwsTask, type RwsPointer, type RwsJointTarget, type RwsRobTarget, type RwsModuleInfo, type RwsModuleText, type RwsSignal, type RwsEvent, type RwsWriteAccess, type RwsIdentity, isControlStationId, newControlStationId } from '../rws/client';
 
@@ -156,13 +157,15 @@ export class AbbControllers implements vscode.Disposable {
     for (const [n, c] of next) this.conns.set(n, c);
   }
 
-  async setPassword(name: string, password: string) { await this.secrets.store(SECRET(name), password); }
-  async getPassword(name: string) { return this.secrets.get(SECRET(name)); }
-  async hasPassword(name: string) { return (await this.secrets.get(SECRET(name))) !== undefined; }
-  async forgetPassword(name: string) { await this.secrets.delete(SECRET(name)); await this.secrets.delete(PIN(name)); }
-  async setStationPin(name: string, pin: string) { await this.secrets.store(PIN(name), pin); }
-  async getStationPin(name: string) { return this.secrets.get(PIN(name)); }
-  async forgetStationPin(name: string) { await this.secrets.delete(PIN(name)); }
+  // the password and PIN come back only for the host they were saved for (boundSecrets.ts)
+  private hostOf(name: string) { return this.conns.get(name)?.profile.host; }
+  async setPassword(name: string, password: string, host = this.hostOf(name)) { await storeBoundSecret(this.secrets, SECRET(name), password, host); }
+  async getPassword(name: string) { return getBoundSecret(this.secrets, SECRET(name), this.hostOf(name)); }
+  async hasPassword(name: string) { return (await this.getPassword(name)) !== undefined; }
+  async forgetPassword(name: string) { await deleteBoundSecret(this.secrets, SECRET(name)); await deleteBoundSecret(this.secrets, PIN(name)); }
+  async setStationPin(name: string, pin: string) { await storeBoundSecret(this.secrets, PIN(name), pin, this.hostOf(name)); }
+  async getStationPin(name: string) { return getBoundSecret(this.secrets, PIN(name), this.hostOf(name)); }
+  async forgetStationPin(name: string) { await deleteBoundSecret(this.secrets, PIN(name)); }
 
   /**
    * This PC's control station id for a controller (RW 8): a GUID in braces, made once and kept.
@@ -191,19 +194,26 @@ export class AbbControllers implements vscode.Disposable {
   }
 
   /**
-   * Writes to an OmniCore are let through on a virtual controller only: write access and a write
-   * were proved on a RobotWare 8.2.1 VC, not yet on a real controller. A real OmniCore stays
-   * read-only until `robotCode.abb.allowRealOmniCoreWrites` is turned on (to validate one).
-   * Undefined when writes may go ahead, else why not.
+   * Writes go through on a virtual controller (one that says so in /ctrl/identity). A real one -
+   * or one that did not say - only reads until `robotCode.abb.allowWrites` is turned on. A real
+   * OmniCore also needs `robotCode.abb.allowRealOmniCoreWrites`: write access and writes were proved
+   * on a RobotWare 8.2.1 VC, not yet on a real controller. Undefined when writes may go ahead, else why not.
    */
   writeBlocked(name: string): string | undefined {
     const c = this.conns.get(name);
-    if (!c || c.profile.family !== 'omnicore') return undefined;
+    if (!c) return undefined;
     if (c.snapshot.identity?.virtual === true) return undefined;
-    if (vscode.workspace.getConfiguration('robotCode').get<boolean>('abb.allowRealOmniCoreWrites', false)) return undefined;
+    const cfg = vscode.workspace.getConfiguration('robotCode');
+    const real = c.snapshot.identity?.virtual === false ? 'a real controller' : 'a controller that did not say it is virtual';
+    if (!cfg.get<boolean>('abb.allowWrites', false))
+      return `${name} is ${real}, so this extension only reads it. To let the ABB Actions change a real controller, turn on "robotCode.abb.allowWrites" (a setting of this PC only).`;
+    if (c.profile.family !== 'omnicore' || cfg.get<boolean>('abb.allowRealOmniCoreWrites', false)) return undefined;
     const what = c.snapshot.identity?.virtual === false ? `a real OmniCore (${c.snapshot.identity.type ?? 'not virtual'})` : 'an OmniCore that did not say it is virtual';
     return `${name} is ${what}. Changing an OmniCore has been checked on RobotStudio virtual controllers only, so on a real one this extension only reads. To validate a real controller, turn on "robotCode.abb.allowRealOmniCoreWrites".`;
   }
+
+  /** True when the controller said it is virtual (a RobotStudio VC). */
+  isVirtual(name: string): boolean { return this.conns.get(name)?.snapshot.identity?.virtual === true; }
 
   /** The controller as it described itself on Connect (/ctrl/identity and /rw/system). */
   identityOf(c: AbbConnection): ControllerIdentity {
@@ -235,8 +245,8 @@ export class AbbControllers implements vscode.Disposable {
   async connect(name: string): Promise<void> {
     const c = this.conns.get(name);
     if (!c) throw new Error(`No ABB controller named ${name}.`);
-    const password = await this.secrets.get(SECRET(name));
-    if (password === undefined) throw new Error(`No password stored for ${name}.`);
+    const password = await this.getPassword(name);
+    if (password === undefined) throw new Error(`No password stored for ${name} at ${c.profile.host}.`);
     await this.endSession(c);
     c.client = new RwsClient({ host: c.profile.host, port: c.profile.port, family: c.profile.family, https: c.profile.https ?? c.profile.family === 'omnicore', user: c.profile.user ?? 'Default User', password });
     c.state = 'connecting'; c.error = undefined; this._onDidChange.fire(name);
@@ -348,7 +358,7 @@ export class AbbControllers implements vscode.Disposable {
   }
 
   /** WRITE, confirmed by the caller: a backup into $BACKUP/<backupName>, downloaded to <localRoot>/<backupName>. */
-  async backup(name: string, backupName: string, localRoot: string, opts: { remove?: boolean; progress?: BackupProgress } = {}): Promise<BackupResult> {
+  async backup(name: string, backupName: string, localRoot: string, opts: { remove?: boolean; progress?: BackupProgress; signal?: AbortSignal } = {}): Promise<BackupResult> {
     const c = this.conns.get(name);
     if (!c?.client || c.state !== 'connected') throw new Error(`${name} is not connected.`);
     const before = c.client.requests;

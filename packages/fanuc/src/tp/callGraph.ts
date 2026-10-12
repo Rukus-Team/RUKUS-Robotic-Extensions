@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'node:path';
 import { FanucServices } from '../services';
 import { programNameFromUri, escapeHtml } from '@core/util';
-import { WEBVIEW_BASE_CSS } from '@core/webviewStyle';
+import { WEBVIEW_BASE_CSS, withCsp } from '@core/webviewStyle';
 import type { ProgramKind } from '@core/brand';
 
 interface Node { name: string; layer: number; exists: boolean; comment?: string; kind: ProgramKind | 'missing'; isRoot: boolean; macro?: boolean }
@@ -24,7 +24,7 @@ export async function showCallGraph(ctx: vscode.ExtensionContext, s: FanucServic
   const key = `${root}@${near ? s.index.groupOf(near) : ''}`;
   let panel = panels.get(key);
   if (!panel) {
-    panel = vscode.window.createWebviewPanel('robotCode.callGraph', `Call graph: ${root}${near && s.index.groups().size > 1 ? ` (${path.basename(path.dirname(near.fsPath))})` : ''}`, vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
+    panel = vscode.window.createWebviewPanel('robotCode.callGraph', `Call graph: ${root}${near && s.index.groups().size > 1 ? ` (${path.basename(path.dirname(near.fsPath))})` : ''}`, vscode.ViewColumn.Beside, { enableScripts: true, localResourceRoots: [], retainContextWhenHidden: true });
     panels.set(key, panel);
     panel.onDidDispose(() => panels.delete(key));
     panel.webview.onDidReceiveMessage(async (m: { open?: string }) => {
@@ -33,10 +33,10 @@ export async function showCallGraph(ctx: vscode.ExtensionContext, s: FanucServic
       if (info) await vscode.window.showTextDocument(info.uri, { preview: true, viewColumn: vscode.ViewColumn.One });
       else vscode.window.showInformationMessage(`${m.open} is not in the workspace.`);
     });
-    const sub = s.index.onDidChange(() => { if (panels.get(key) === panel) panel!.webview.html = render(build(s, root!, near)); });
+    const sub = s.index.onDidChange(() => { if (panels.get(key) === panel) panel!.webview.html = withCsp(render(build(s, root!, near)), panel!.webview.cspSource); });
     panel.onDidDispose(() => sub.dispose());
   }
-  panel.webview.html = render(build(s, root, near));
+  panel.webview.html = withCsp(render(build(s, root, near)), panel.webview.cspSource);
   panel.reveal();
 }
 

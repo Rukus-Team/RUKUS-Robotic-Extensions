@@ -6,15 +6,16 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { FanucServices } from '../services';
-import { WEBVIEW_BASE_CSS } from '@core/webviewStyle';
+import { WEBVIEW_BASE_CSS, withCsp } from '@core/webviewStyle';
 import { diffBackups, backupDiffMarkdown, type BackupDiff } from './backupDiff';
 import { buildXref, xrefFindings, xrefCsv, xrefMarkdown, type XrefEntry } from './xref';
 import { escapeHtml, config, windowFolders } from '@core/util';
 import { openInRukus, rukusHandlerRegistered } from '@core/rukus/launch';
 import { findUnusedPrograms, unusedProgramsMarkdown } from './unusedPrograms';
+import { commandRegistrar } from '@core/commandBoundary';
 
 export function registerTools(ctx: vscode.ExtensionContext, s: FanucServices) {
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
+  const reg = commandRegistrar(ctx, s.output);
 
   reg('robotCode.tools.diffBackups', async (a?: vscode.Uri, b?: vscode.Uri) => {
     const dirA = a instanceof vscode.Uri ? a.fsPath : await pickFolder(s, 'Backup A (older)');
@@ -135,7 +136,7 @@ const CSS = `${WEBVIEW_BASE_CSS}
 `;
 
 function showDiffPanel(ctx: vscode.ExtensionContext, d: BackupDiff) {
-  const panel = vscode.window.createWebviewPanel('robotCode.backupDiff', `Backup diff: ${path.basename(d.a)} ⟷ ${path.basename(d.b)}`, vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true });
+  const panel = vscode.window.createWebviewPanel('robotCode.backupDiff', `Backup diff: ${path.basename(d.a)} ⟷ ${path.basename(d.b)}`, vscode.ViewColumn.Active, { enableScripts: true, localResourceRoots: [], retainContextWhenHidden: true });
   ctx.subscriptions.push(panel);
   panel.webview.onDidReceiveMessage(async (m: { diff?: [string, string, string]; open?: string; save?: boolean }) => {
     if (m.diff) await vscode.commands.executeCommand('vscode.diff', vscode.Uri.file(m.diff[0]), vscode.Uri.file(m.diff[1]), m.diff[2]);
@@ -151,7 +152,7 @@ function showDiffPanel(ctx: vscode.ExtensionContext, d: BackupDiff) {
   const progRows = d.programs.map(p => `<tr data-s="${escapeHtml(p.name.toLowerCase())}"><td class="mono">${p.fileA && p.fileB ? `<a data-diff='${escapeHtml(JSON.stringify([p.fileA, p.fileB, `${p.name}: A ⟷ B`]))}'>${escapeHtml(p.name)}</a>` : `<a data-open="${escapeHtml(p.fileA ?? p.fileB ?? '')}">${escapeHtml(p.name)}</a>`}</td><td class="${p.kind}">${p.kind}</td><td class="num">${p.linesA ?? '—'} → ${p.linesB ?? '—'}</td><td class="num"><span class="added">+${p.linesAdded}</span> <span class="removed">−${p.linesRemoved}</span></td><td class="num">${p.positions.length || '<span class="muted">0</span>'}</td><td>${escapeHtml(p.commentA === p.commentB ? p.commentA ?? '' : `${p.commentA ?? ''} → ${p.commentB ?? ''}`)}</td></tr>`).join('');
   const posRows = d.programs.filter(p => p.positions.length).map(p => `<h2>${escapeHtml(p.name)} — ${p.positions.length} position${p.positions.length === 1 ? '' : 's'}</h2><table><thead><tr><th>P</th><th>Change</th><th class="num">ΔX</th><th class="num">ΔY</th><th class="num">ΔZ</th><th class="num">ΔW</th><th class="num">ΔP</th><th class="num">ΔR</th><th class="num">Dist</th><th>Frame</th></tr></thead><tbody>${p.positions.map(q => `<tr><td class="mono">P[${q.index}]</td><td class="${q.kind}">${q.kind}</td><td class="num">${f(q.dx)}</td><td class="num">${f(q.dy)}</td><td class="num">${f(q.dz)}</td><td class="num">${f(q.dw)}</td><td class="num">${f(q.dp)}</td><td class="num">${f(q.dr)}</td><td class="num">${q.kind === 'moved' ? `<b>${q.distance.toFixed(3)}</b>` : ''}</td><td>${q.ufChanged ? `UF ${q.ufChanged[0]}→${q.ufChanged[1]} ` : ''}${q.utChanged ? `UT ${q.utChanged[0]}→${q.utChanged[1]}` : ''}</td></tr>`).join('')}</tbody></table>`).join('');
   const valTable = (title: string, prefix: string, rows: BackupDiff['numregs']) => rows.length ? `<h2>${title} (${rows.length})</h2><table><thead><tr><th>Register</th><th>Change</th><th>A</th><th>B</th><th>Comment A</th><th>Comment B</th></tr></thead><tbody>${rows.map(r => `<tr data-s="${prefix.toLowerCase()}[${r.index}] ${escapeHtml(String(r.commentA ?? '') + ' ' + String(r.commentB ?? '')).toLowerCase()}"><td class="mono">${prefix}[${r.index}]</td><td class="${r.kind}">${r.kind}</td><td class="mono">${escapeHtml(String(r.a ?? ''))}</td><td class="mono">${escapeHtml(String(r.b ?? ''))}</td><td>${escapeHtml(r.commentA ?? '')}</td><td>${escapeHtml(r.commentB ?? '')}</td></tr>`).join('')}</tbody></table>` : '';
-  panel.webview.html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${CSS}</style></head><body>
+  panel.webview.html = withCsp(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>${CSS}</style></head><body>
   <div class="bar"><h1 style="margin:0">Backup diff</h1><input id="q" type="search" placeholder="Filter…"><button class="primary" id="save">Save as Markdown</button></div>
   <div class="muted mono">A: ${escapeHtml(d.a)}<br>B: ${escapeHtml(d.b)}</div>
   <div class="tiles">${tile(sum.programs, 'programs')}${tile(sum.positions, 'positions moved')}${tile(sum.numregs, 'R changed')}${tile(sum.posregs, 'PR changed')}${tile(sum.strregs, 'SR changed')}${tile(sum.io, 'I/O comments')}${tile(sum.macros, 'macros')}${tile(sum.otherFiles, 'other files')}</div>
@@ -166,11 +167,11 @@ function showDiffPanel(ctx: vscode.ExtensionContext, d: BackupDiff) {
     document.body.addEventListener('click', e => { const a = e.target.closest('a'); if (!a) return; if (a.dataset.diff) vscode.postMessage({ diff: JSON.parse(a.dataset.diff) }); if (a.dataset.open) vscode.postMessage({ open: a.dataset.open }); });
     document.getElementById('save').addEventListener('click', () => vscode.postMessage({ save: true }));
     document.getElementById('q').addEventListener('input', e => { const f = e.target.value.toLowerCase().trim(); for (const r of document.querySelectorAll('tr[data-s]')) r.hidden = f && !r.dataset.s.includes(f); });
-  </script></body></html>`;
+  </script></body></html>`, panel.webview.cspSource);
 }
 
 function showXrefPanel(ctx: vscode.ExtensionContext, entries: XrefEntry[], uris: Map<string, vscode.Uri>) {
-  const panel = vscode.window.createWebviewPanel('robotCode.xref', 'Register & I/O cross-reference', vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true });
+  const panel = vscode.window.createWebviewPanel('robotCode.xref', 'Register & I/O cross-reference', vscode.ViewColumn.Active, { enableScripts: true, localResourceRoots: [], retainContextWhenHidden: true });
   ctx.subscriptions.push(panel);
   const findings = xrefFindings(entries);
   panel.webview.onDidReceiveMessage(async (m: { open?: { program: string; line: number }; save?: 'csv' | 'md' }) => {
@@ -191,7 +192,7 @@ function showXrefPanel(ctx: vscode.ExtensionContext, entries: XrefEntry[], uris:
     const warn = findings.filter(f => f.entry === e).map(f => `<div class="warn">⚠ ${escapeHtml(f.finding)}</div>`).join('');
     return `<tr data-k="${e.kind}" data-s="${escapeHtml(`${e.kind}[${e.index}] ${comment} ${[...e.writers, ...e.readers].join(' ')}`).toLowerCase()}"><td class="mono"><b>${e.kind}[${e.index}]</b></td><td>${escapeHtml(comment)}${warn}</td><td class="num">${e.writers.size}</td><td class="num">${e.readers.size}</td><td class="num">${e.uses.length}</td><td><details><summary>${e.uses.length} use${e.uses.length === 1 ? '' : 's'} in ${new Set(e.uses.map(u => u.program)).size} program${new Set(e.uses.map(u => u.program)).size === 1 ? '' : 's'}</summary>${uses}</details></td></tr>`;
   }).join('');
-  panel.webview.html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${CSS} details summary { cursor: pointer; opacity: .8 } details div { padding: 1px 0 1px 12px }</style></head><body>
+  panel.webview.html = withCsp(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>${CSS} details summary { cursor: pointer; opacity: .8 } details div { padding: 1px 0 1px 12px }</style></head><body>
   <div class="bar"><h1 style="margin:0">Cross-reference</h1><input id="q" type="search" placeholder="Filter by item, comment or program…"><select id="k"><option value="">All kinds</option>${kinds.map(k => `<option>${k}</option>`).join('')}</select><label><input type="checkbox" id="fo"> findings only</label><button id="csv">Export CSV</button><button class="primary" id="md">Save Markdown</button></div>
   <div class="tiles"><div class="tile"><b>${entries.length}</b><span>items</span></div><div class="tile"><b>${entries.reduce((n, e) => n + e.uses.length, 0)}</b><span>uses</span></div><div class="tile"><b>${uris.size}</b><span>programs</span></div><div class="tile"><b class="warn">${findings.length}</b><span>findings</span></div></div>
   <table><thead><tr><th>Item</th><th>Comment / findings</th><th class="num">Writers</th><th class="num">Readers</th><th class="num">Uses</th><th>Where</th></tr></thead><tbody>${rows}</tbody></table>
@@ -203,5 +204,5 @@ function showXrefPanel(ctx: vscode.ExtensionContext, entries: XrefEntry[], uris:
     document.body.addEventListener('click', e => { const a = e.target.closest('a[data-open]'); if (a) vscode.postMessage({ open: JSON.parse(a.dataset.open) }); });
     document.getElementById('csv').addEventListener('click', () => vscode.postMessage({ save: 'csv' }));
     document.getElementById('md').addEventListener('click', () => vscode.postMessage({ save: 'md' }));
-  </script></body></html>`;
+  </script></body></html>`, panel.webview.cspSource);
 }

@@ -36,6 +36,7 @@ import {
 } from './store';
 import { CELL_DIR, CELL_JSON, parseCellJson, type CellControllerSpec, type CellMarker } from '../robotContainers';
 import { ROBOT_FOLDER_PATTERNS, robotNameFromFolder } from '@core/backupFolders';
+import { commandRegistrar } from '../commandBoundary';
 
 export class RukusClusters implements vscode.Disposable {
   private readonly _onDidChange = new vscode.EventEmitter<void>();
@@ -423,7 +424,7 @@ export function registerRukusClusters(ctx: vscode.ExtensionContext, s: Services)
   const tree = new ClustersTree(r);
   ctx.subscriptions.push(r);
   if (viewDeclared(ctx, 'robotCode.rukusClusters')) ctx.subscriptions.push(watchViewVisibility(vscode.window.createTreeView('robotCode.rukusClusters', { treeDataProvider: tree, showCollapseAll: false })));
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id, fn));
+  const reg = commandRegistrar(ctx, s.output);
   reg('robotCode.rukus.openCluster', async (arg?: string | Node) => {
     const name = typeof arg === 'string' ? arg : arg && 't' in arg && arg.t === 'cluster' ? arg.c.name : undefined;
     if (name) return r.openCluster(name);

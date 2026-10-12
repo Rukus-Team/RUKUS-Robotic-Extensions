@@ -1,6 +1,6 @@
 // Live sync test (opt-in): push / pull-after-push / conflict gate against a REAL controller at
 // ROBOT_CODE_LIVE_HOST, run by test/runLiveSync.mjs. Writes only its own program RCPUSHT and
-// deletes it (and its compiled .TP) at the end. The modal "Upload?" is answered by stubbing
+// deletes it (and its compiled .TP) at the end. The modal "Upload?" / "Replace?" is answered by stubbing
 // vscode.window - this file sits in the extension folder, so it shares the extension's API object.
 // Robot-side reads and writes go through curl (FTP), so the controller is checked independently
 // of the code under test.
@@ -67,7 +67,8 @@ exports.run = async function () {
     const opts = rest[0] && typeof rest[0] === 'object' && !Array.isArray(rest[0]) && !('title' in rest[0]) ? rest[0] : undefined;
     const items = rest.filter(r => typeof r === 'string' || (r && typeof r === 'object' && 'title' in r));
     seen.push({ kind, msg, modal: !!opts?.modal, detail: opts?.detail, items: items.map(i => typeof i === 'string' ? i : i.title) });
-    if (/^Upload .* to .*\?$/.test(msg) && items.includes('Upload')) return 'Upload';
+    const confirm = items.find(i => /^(Upload|Replace) /.test(i));
+    if (/^(Upload|Replace) .* (to|on) .*\?$/.test(msg) && confirm) return confirm;
     return undefined;
   };
   vscode.window.showWarningMessage = answer('warning');
@@ -115,7 +116,7 @@ exports.run = async function () {
     check('2. always: the push lands on the robot', hasReg(robot, 2), body(robot));
     check('2. always: snapshot = robot read-back', snapshotText() !== undefined && lf(snapshotText()) === lf(robot), `snapshot ${snapshotText() === undefined ? 'missing' : body(snapshotText())}`);
     check('2. always: working copy = robot read-back', lf(workingText()) === lf(robot), `working:\n${lf(workingText())}\n---- robot:\n${lf(robot)}`);
-    check('2. always: no modal besides the Upload confirm', msgs.filter(m => m.modal && !/^Upload /.test(m.msg)).length === 0, JSON.stringify(msgs));
+    check('2. always: no modal besides the Upload confirm', msgs.filter(m => m.modal && !/^(Upload|Replace) /.test(m.msg)).length === 0, JSON.stringify(msgs));
     note('2. messages', JSON.stringify(msgs.map(m => m.msg)));
 
     // ---- 3. never: the working copy keeps exactly what was sent
@@ -151,7 +152,7 @@ exports.run = async function () {
     robot = robotText();
     check('5. conflict: the push is refused with the "differs from the snapshot" modal', msgs.some(m => m.modal && /differs from the snapshot/.test(m.msg)), JSON.stringify(msgs));
     check('5. conflict: the pendant change on the robot is NOT overwritten', hasReg(robot, 9) && !hasReg(robot, 5) && lf(robot) === lf(pendantOnRobot), body(robot));
-    check('5. conflict: nothing asked to confirm an upload', !msgs.some(m => /^Upload /.test(m.msg)), JSON.stringify(msgs));
+    check('5. conflict: nothing asked to confirm an upload', !msgs.some(m => /^(Upload|Replace) /.test(m.msg)), JSON.stringify(msgs));
 
     // ---- 7. controller options: the robot page's card and the full list
     const opt = since();
@@ -180,7 +181,7 @@ exports.run = async function () {
       const after = since();
       await vscode.commands.executeCommand('robotCode.sync.pushFile', file);
       await sleep(1500);
-      const msgs = after().filter(m => !/^Upload /.test(m.msg));
+      const msgs = after().filter(m => !/^(Upload|Replace) /.test(m.msg));
       const now = curl([`${ftp}${prog}.LS`]);
       check(`8. ${prog}: the push is refused or fails with a message`, msgs.some(m => m.kind === 'warning' || m.kind === 'error'), JSON.stringify(after()));
       check(`8. ${prog}: the program on the robot is unchanged`, lf(now) === lf(before), body(now));

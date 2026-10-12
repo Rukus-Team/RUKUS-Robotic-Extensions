@@ -16,6 +16,7 @@ import type { Xyzwpr } from '../tp/frameMath';
 import { parseNumReg, parsePosReg, parseStrReg, parseIoComments, parseMacroTable, parsePayloads, parseUserAlarms, KNOWN_VA_FILES, robotNameFromFolder, type UserAlarmEntry, type NumRegEntry, type PosRegEntry, type StrRegEntry, type IoEntry, type MacroEntry, type PayloadEntry } from './vaParser';
 import { windowFolders, isHiddenBackup, onDidChangeBackupLists } from '@core/util';
 import { classifyPath, markerOf, type RobotMarker } from '@core/robotContainers';
+import { errorDetail } from '@core/errors';
 
 export interface DataSource { file: string; kind: string; entries: number }
 
@@ -83,6 +84,8 @@ export class DataStore implements vscode.Disposable {
    * (dated backups, stray copies) are ignored. Empty = today's behavior.
    */
   markersProvider: () => readonly RobotMarker[] = () => [];
+  /** Where a failed background refresh is written. Set by Services to the output channel. */
+  log: (message: string) => void = () => {};
 
   constructor() {
     const watcher = vscode.workspace.createFileSystemWatcher('**/*.{va,VA}');
@@ -132,7 +135,11 @@ export class DataStore implements vscode.Disposable {
   posreg(index: number, group = 1, uri?: vscode.Uri | string): PosRegEntry | undefined { return this.dataset(uri)?.posreg(index, group); }
   macro(name: string, uri?: vscode.Uri | string): MacroEntry | undefined { return this.dataset(uri)?.macro(name); }
 
-  private scheduleRefresh() { if (this.timer) clearTimeout(this.timer); this.timer = setTimeout(() => this.refresh(), 500); }
+  private scheduleRefresh() {
+    if (this.timer) clearTimeout(this.timer);
+    // the watcher calls this; a rejected refresh would otherwise vanish without a trace
+    this.timer = setTimeout(() => { this.refresh().catch(e => this.log(`[data] .va refresh failed: ${errorDetail(e)}`)); }, 500);
+  }
 
   /** re-entrant: concurrent callers share the in-flight refresh instead of interleaving */
   async refresh(): Promise<void> {

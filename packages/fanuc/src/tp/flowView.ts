@@ -12,7 +12,7 @@ import { buildFlow, flowToMermaid, edgeCaption, type FlowGraph, type FlowNode } 
 import type { FanucServices } from '../services';
 import { buildKarelFlow, karelFlowScopes, scopeAt } from '../karel/flow';
 import { escapeHtml } from '@core/util';
-import { WEBVIEW_BASE_CSS } from '@core/webviewStyle';
+import { WEBVIEW_BASE_CSS, withCsp } from '@core/webviewStyle';
 
 const panels = new Map<string, vscode.WebviewPanel>();
 
@@ -49,7 +49,7 @@ export async function showKarelFlow(ctx: vscode.ExtensionContext, s: FanucServic
 function openFlow(key: string, name: string, doc: vscode.TextDocument, build: (d: vscode.TextDocument) => FlowGraph) {
   let panel = panels.get(key);
   if (!panel) {
-    panel = vscode.window.createWebviewPanel('robotCode.flow', `Flow: ${name}`, vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
+    panel = vscode.window.createWebviewPanel('robotCode.flow', `Flow: ${name}`, vscode.ViewColumn.Beside, { enableScripts: true, localResourceRoots: [], retainContextWhenHidden: true });
     panels.set(key, panel);
     panel.onDidDispose(() => panels.delete(key));
     panel.webview.onDidReceiveMessage(async (m: { reveal?: number; mermaid?: boolean }) => {
@@ -64,10 +64,10 @@ function openFlow(key: string, name: string, doc: vscode.TextDocument, build: (d
         vscode.window.setStatusBarMessage('Mermaid flowchart copied to clipboard', 3000);
       }
     });
-    const sub = vscode.workspace.onDidChangeTextDocument(e => { if (e.document.uri.toString() === doc.uri.toString() && panels.get(key) === panel) panel!.webview.html = render(build(e.document), name); });
+    const sub = vscode.workspace.onDidChangeTextDocument(e => { if (e.document.uri.toString() === doc.uri.toString() && panels.get(key) === panel) panel!.webview.html = withCsp(render(build(e.document), name), panel!.webview.cspSource); });
     panel.onDidDispose(() => sub.dispose());
   }
-  panel.webview.html = render(build(doc), name);
+  panel.webview.html = withCsp(render(build(doc), name), panel.webview.cspSource);
   panel.reveal(vscode.ViewColumn.Beside, true);
 }
 

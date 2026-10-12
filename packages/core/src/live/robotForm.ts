@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import type { Services } from '../services';
 import { RobotManager } from './robotManager';
 import type { RobotProfile } from './types';
-import { WEBVIEW_BASE_CSS } from '../webviewStyle';
+import { WEBVIEW_BASE_CSS, ACTIVATE_JS, withCsp } from '../webviewStyle';
 import { connectionHint } from './connectionHints';
 import { parseControllerInfo } from './parsers';
 import { connectionKind, connectionKinds, onDidChangeConnectionKinds, type ConnectionKind } from './connectionKinds';
@@ -21,7 +21,7 @@ export function openRobotForm(ctx: vscode.ExtensionContext, s: Services, robots:
   const state = (select?: { brand: string; name?: string }) => ({ type: 'profiles', brands: brandsForView(), profiles: profilesForView(robots), datasets: datasetSuggestions(s, robots), select });
   const initial = { brand: brand && connectionKind(brand) ? brand : 'fanuc', name: editName };
   if (!panel) {
-    panel = vscode.window.createWebviewPanel('robotCode.robotForm', 'Robot Connections', vscode.ViewColumn.Active, { enableScripts: true, retainContextWhenHidden: true });
+    panel = vscode.window.createWebviewPanel('robotCode.robotForm', 'Robot Connections', vscode.ViewColumn.Active, { enableScripts: true, localResourceRoots: [], retainContextWhenHidden: true });
     panel.onDidDispose(() => { panel = undefined; });
     ctx.subscriptions.push(panel);
     const push = () => { if (panel) void panel.webview.postMessage(state()); };
@@ -42,7 +42,7 @@ export function openRobotForm(ctx: vscode.ExtensionContext, s: Services, robots:
             const p = toProfile(m.profile);
             const started = Date.now();
             try {
-              if (m.password) await robots.setPassword(p.name || '__test__', m.password);
+              if (m.password) await robots.setPassword(p.name || '__test__', m.password, p.host);
               const text = await robots.readText({ ...p, name: m.password ? (p.name || '__test__') : p.name }, 'CURPOS.DG');
               const info = parseControllerInfo(text);
               let robotName: string | undefined;
@@ -58,7 +58,7 @@ export function openRobotForm(ctx: vscode.ExtensionContext, s: Services, robots:
             if (!p.name || !p.host) { await panel!.webview.postMessage({ type: 'error', text: 'Name and IP address are required.' }); break; }
             if (m.originalName && m.originalName !== p.name) { robots.disconnect(m.originalName); await robots.removeProfile(m.originalName); }
             await robots.addProfile(p);
-            if (m.password) await robots.setPassword(p.name, m.password);
+            if (m.password) await robots.setPassword(p.name, m.password, p.host);
             robots.log(p.name, `profile saved (${p.host}, ${p.useFtp ? 'FTP' : 'HTTP'})`);
             await panel!.webview.postMessage({ type: 'saved', name: p.name });
             if (m.connect) await vscode.commands.executeCommand('robotCode.live.connect', p.name);
@@ -75,7 +75,7 @@ export function openRobotForm(ctx: vscode.ExtensionContext, s: Services, robots:
       } catch (e: any) { await panel!.webview.postMessage({ type: 'error', text: e?.message ?? String(e) }); }
     });
   }
-  panel.webview.html = html();
+  panel.webview.html = withCsp(html(), panel.webview.cspSource);
   panel.reveal();
   if (editName || brand) void panel.webview.postMessage(state(initial));
 }
@@ -196,6 +196,7 @@ function html(): string {
 <div class="toast" id="toast"></div>
 <script>
   const vscode = acquireVsCodeApi();
+${ACTIVATE_JS}
   const $ = id => document.getElementById(id);
   // brand = the selector; current = name being edited in that brand, null = new
   let profiles = [], brands = [{ id: 'fanuc', label: 'FANUC' }], brand = 'fanuc', current = null;
@@ -280,8 +281,11 @@ function html(): string {
   function updateProto() { const ftp = document.querySelector('input[name=proto]:checked').value === 'ftp'; for (const id of ['lUser','ftpUser','lPass','ftpPass']) $(id).style.opacity = ftp ? '1' : '.45'; }
   function renderList() {
     const tagged = brands.length > 1;
-    $('list').innerHTML = profiles.map(p => '<div class="row' + (p.name === current && p.brand === brand ? ' active' : '') + '" data-b="' + esc(p.brand) + '" data-n="' + esc(p.name) + '"><span class="dot ' + p.state + '"></span>' + (tagged ? '<span class="tag ' + esc(p.brand) + '">' + esc((brands.find(b => b.id === p.brand) || {}).label || p.brand) + '</span>' : '') + '<span class="n">' + esc(p.name) + '</span><span class="h">' + esc(p.host) + (p.detail ? ' · ' + esc(p.detail) : '') + '</span></div>').join('') || '<div class="row muted">No controllers yet</div>';
-    for (const r of document.querySelectorAll('.row[data-n]')) r.onclick = () => { brand = r.dataset.b; current = r.dataset.n; show(profileOf(brand, current)); renderList(); };
+    // the list is redrawn on every pick and every connection change: keep keyboard focus on its row
+    const focusKey = rcFocusKey();
+    $('list').innerHTML = profiles.map(p => '<div class="row' + (p.name === current && p.brand === brand ? ' active" aria-current="true' : '') + '" data-b="' + esc(p.brand) + '" data-n="' + esc(p.name) + '"><span class="dot ' + p.state + '"></span>' + (tagged ? '<span class="tag ' + esc(p.brand) + '">' + esc((brands.find(b => b.id === p.brand) || {}).label || p.brand) + '</span>' : '') + '<span class="n">' + esc(p.name) + '</span><span class="h">' + esc(p.host) + (p.detail ? ' · ' + esc(p.detail) : '') + '</span></div>').join('') || '<div class="row muted">No controllers yet</div>';
+    for (const r of document.querySelectorAll('.row[data-n]')) rcActivate(r, () => { brand = r.dataset.b; current = r.dataset.n; show(profileOf(brand, current)); renderList(); });
+    rcRestoreFocus(focusKey);
   }
   function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
   function toast(t) { const el = $('toast'); el.textContent = t; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 4000); }
@@ -319,7 +323,7 @@ function html(): string {
       else renderBrands();
       renderList();
       $('suggest').innerHTML = m.datasets.length ? '<h2>Found in your backups</h2><div class="chips">' + m.datasets.map(n => '<span class="chip" data-n="' + esc(n) + '">' + esc(n) + '</span>').join('') + '</div><div class="help">Click a name to start a controller for it in the brand selected on the right, then enter its IP.</div>' : '';
-      for (const c of document.querySelectorAll('.chip')) c.onclick = () => { current = null; show(null); nameInput().value = c.dataset.n; renderList(); (isFanuc() ? $('host') : $('k_host')).focus(); };
+      for (const c of document.querySelectorAll('.chip')) rcActivate(c, () => { current = null; show(null); nameInput().value = c.dataset.n; renderList(); (isFanuc() ? $('host') : $('k_host')).focus(); });
     }
     if (m.type === 'testResult') {
       const res = testDone();

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { FanucServices } from '../services';
 import { escapeHtml } from '@core/util';
-import { WEBVIEW_BASE_CSS, emptyState } from '@core/webviewStyle';
+import { WEBVIEW_BASE_CSS, emptyState, withCsp } from '@core/webviewStyle';
 import { findUses } from '@core/views/findUses';
 import type { Dataset } from './dataStore';
 import { describePayload, ualmSeverityName } from './vaParser';
@@ -29,14 +29,14 @@ function valueClass(v: string): string {
 
 export function openRegisterTable(ctx: vscode.ExtensionContext, s: FanucServices) {
   if (!panel) {
-    panel = vscode.window.createWebviewPanel('robotCode.registerTable', 'Registers & I/O', vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
+    panel = vscode.window.createWebviewPanel('robotCode.registerTable', 'Registers & I/O', vscode.ViewColumn.Beside, { enableScripts: true, localResourceRoots: [], retainContextWhenHidden: true });
     panel.onDidDispose(() => { panel = undefined; });
     panel.webview.onDidReceiveMessage((m: { find?: { kind: string; index: number; folder: string }; copy?: string; robot?: string }) => {
       if (m.find) void findUses(m.find.kind, m.find.index, m.find.folder);
       if (m.copy) void vscode.env.clipboard.writeText(m.copy);
-      if (m.robot !== undefined) { current = m.robot; if (panel) panel.webview.html = render(s); }
+      if (m.robot !== undefined) { current = m.robot; if (panel) panel.webview.html = withCsp(render(s), panel.webview.cspSource); }
     });
-    const sub = s.data.onDidChange(() => { if (panel) panel.webview.html = render(s); });
+    const sub = s.data.onDidChange(() => { if (panel) panel.webview.html = withCsp(render(s), panel.webview.cspSource); });
     panel.onDidDispose(() => sub.dispose());
     ctx.subscriptions.push(panel);
   }
@@ -44,7 +44,7 @@ export function openRegisterTable(ctx: vscode.ExtensionContext, s: FanucServices
   const active = vscode.window.activeTextEditor?.document.uri;
   const ds = active ? s.data.dataset(active) : undefined;
   if (ds) current = ds.folder;
-  panel.webview.html = render(s);
+  panel.webview.html = withCsp(render(s), panel.webview.cspSource);
   panel.reveal();
 }
 

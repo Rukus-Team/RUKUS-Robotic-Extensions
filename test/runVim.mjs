@@ -53,9 +53,11 @@ const code = await runTests({
   extensionTestsEnv: { ROBOT_CODE_TEST_OUT: out, ROBOT_CODE_VIM_FILE: path.join(ws, 'VIMTEST.LS') },
 }).catch(e => { console.error('runTests failed:', e?.message ?? e); return 1; });
 fs.rmSync(ws, { recursive: true, force: true });
+let failed = -1;   // no results file counts as a failure
 if (fs.existsSync(out)) {
   const r = JSON.parse(fs.readFileSync(out, 'utf8'));
   for (const x of r) console.log((x.ok ? 'PASS' : x.info ? 'INFO' : 'FAIL').padEnd(5), x.name, x.detail ? '=> ' + x.detail : '');
-  console.log(`${r.filter(x => !x.ok && !x.info).length} failed of ${r.filter(x => !x.info).length}`);
+  failed = r.filter(x => !x.ok && !x.info).length;
+  console.log(`${failed} failed of ${r.filter(x => !x.info).length}`);
 } else console.log('no results file written');
-process.exit(code);
+process.exit(code || (failed === 0 ? 0 : 1));

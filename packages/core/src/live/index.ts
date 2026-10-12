@@ -23,6 +23,7 @@ import * as os from 'node:os';
 import { FETCH_KINDS } from './types';
 import { config, windowFolders, setWindowFolders, showRecoverableError } from '../util';
 import { gated } from '../experimental';
+import { commandRegistrar } from '../commandBoundary';
 import { brandForFile } from '../brand';
 import type { FetchKind } from './types';
 
@@ -92,8 +93,8 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
 
   // Every robotCode.live.* command talks to a robot, so each waits behind the experimental
   // switch; the RUKUS hand-offs only start RUKUS, and the hidden _ ones are for the tests.
-  const reg = (id: string, fn: (...a: any[]) => any) => ctx.subscriptions.push(vscode.commands.registerCommand(id,
-    id.startsWith('robotCode.live.') && !id.startsWith('robotCode.live._') ? gated(fn) : fn));
+  const register = commandRegistrar(ctx, s.output);
+  const reg = (id: string, fn: (...a: any[]) => any) => register(id, id.startsWith('robotCode.live.') && !id.startsWith('robotCode.live._') ? gated(fn) : fn);
   const nameOf = (node?: any): string | undefined => node?.c?.profile?.name ?? (typeof node === 'string' ? node : undefined);
   const pickRobot = async (name?: string, onlyConnected = false): Promise<string | undefined> => {
     if (typeof name === 'string' && robots.get(name)) return name;
@@ -202,6 +203,22 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     if (!name) return;
     const pw = await vscode.window.showInputBox({ prompt: `FTP password for ${name}`, password: true });
     if (pw !== undefined) { await robots.setPassword(name, pw); vscode.window.setStatusBarMessage(`Password stored for ${name}`, 3000); }
+  });
+
+  // the profile takes whichever controller answers at its address on the next read (fanucIdentity.ts)
+  reg('robotCode.live.forgetIdentity', async (node?: any) => {
+    const name = await pickRobot(nameOf(node));
+    if (!name) return;
+    const known = robots.expectedIdentity(name);
+    if (!known) { vscode.window.showInformationMessage(`${name} has no controller remembered yet; the next read remembers the one that answers.`); return; }
+    const forget = 'Forget';
+    const ok = await vscode.window.showWarningMessage(`Forget which controller ${name} is?`, {
+      modal: true,
+      detail: `${name} is tied to F number ${known.fNumber}${known.robotName ? ` (${known.robotName})` : ''}. After this, the next read from ${name}'s address remembers whichever controller answers there.`,
+    }, forget);
+    if (ok !== forget) return;
+    await robots.forgetIdentity(name);
+    vscode.window.setStatusBarMessage(`$(check) ${name}: controller identity forgotten`, 4000);
   });
 
   reg('robotCode.live.connect', async (node?: any) => {

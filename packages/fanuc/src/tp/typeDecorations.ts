@@ -18,7 +18,7 @@ import * as vscode from 'vscode';
 import type { FanucServices } from '../services';
 import { findPosition, positionMarkdown, frameHintFields, isIndirectLabelIndex, type PositionHintField } from './parser';
 import { accessOfRef } from '../tools/xref';
-import { config, md, spanToRange } from '@core/util';
+import { config, md, escapeMd, hoverTrust, spanToRange } from '@core/util';
 import { TYPE_COLOR } from '@core/views/typeStyle';
 import { resolveProgram, isPcProgram, robotOf } from '@core/resolve';
 
@@ -35,7 +35,8 @@ export function registerTypeDecorations(ctx: vscode.ExtensionContext, s: FanucSe
     commentHint: vscode.window.createTextEditorDecorationType({ after: { color: new vscode.ThemeColor('robotCode.hintComment'), margin: '0' } }),
     egBlock: vscode.window.createTextEditorDecorationType({ isWholeLine: true, backgroundColor: new vscode.ThemeColor('editor.findRangeHighlightBackground') }),
     read: vscode.window.createTextEditorDecorationType({ borderStyle: 'none none dotted none', borderWidth: '1px', borderColor: new vscode.ThemeColor('editorLineNumber.foreground') }),
-    commentedCont: vscode.window.createTextEditorDecorationType({ color: '#5c6370', fontStyle: 'italic', textDecoration: 'line-through' }),
+    // the theme-aware comment hint colour (4.5:1 in the default themes); italic and struck through say "commented out"
+    commentedCont: vscode.window.createTextEditorDecorationType({ color: new vscode.ThemeColor('robotCode.hintComment'), fontStyle: 'italic', textDecoration: 'line-through' }),
   };
   ctx.subscriptions.push(...Object.values(types));
 
@@ -106,8 +107,8 @@ export function registerTypeDecorations(ctx: vscode.ExtensionContext, s: FanucSe
           if (!c) continue;
           const at = new vscode.Position(d.line, d.span.col + d.span.len);
           const insert = `command:robotCode.tp.insertRegisterComment?${encodeURIComponent(JSON.stringify([ed.document.uri.toString(), d.line, d.span.col + d.span.len - 1, c]))}`;
-          const hover = new vscode.MarkdownString(`Controller comment: **${c}** — not written in the program.\n\n[$(insert) Auto-fill comment](${insert})`);
-          hover.isTrusted = true;
+          const hover = new vscode.MarkdownString(`Controller comment: **${escapeMd(c)}** — not written in the program.\n\n[$(insert) Auto-fill comment](${insert})`);
+          hover.isTrusted = hoverTrust();
           hover.supportThemeIcons = true;
           b.commentHint.push({ range: new vscode.Range(at, at), renderOptions: { after: { contentText: `{${c}}` } }, hoverMessage: hover });
         }

@@ -24,6 +24,8 @@ export interface ControllerData extends vscode.Disposable {
   readonly datasets: readonly ControllerDataset[];
   readonly onDidChange: vscode.Event<void>;
   markersProvider: () => readonly RobotMarker[];
+  /** where a failed background refresh is written; set by Services */
+  log: (message: string) => void;
   dataset(uri?: vscode.Uri | string): ControllerDataset | undefined;
   folderOf(uri: vscode.Uri | string): string | undefined;
   refresh(): Promise<void>;
@@ -60,6 +62,9 @@ export class Services<D extends ControllerData = ControllerData> implements vsco
       : 'unmanaged';
     this.index.snapshotRoots = () => this.containers.markers.map(m => m.snapshotDir);
     this.data.markersProvider = () => this.containers.markers;
+    const log = (message: string) => this.output.appendLine(`[${new Date().toLocaleTimeString()}] ${message}`);
+    this.index.log = log;
+    this.data.log = log;
     this.containers.onDidChange(() => {
       // Merge cell-defined controllers into RobotManager when available
       if (this.live) {
@@ -71,6 +76,11 @@ export class Services<D extends ControllerData = ControllerData> implements vsco
       void this.data.refresh().then(() => void this.index.refresh());
     });
     this.data.onDidChange(() => this.index.regroup());
+    // cell.json controllers are skipped until the folder is trusted
+    vscode.workspace.onDidGrantWorkspaceTrust(() => {
+      const defs = this.containers.controllerDefs();
+      if (this.live && Object.keys(defs).length) this.live.mergeCellProfiles(defs);
+    });
   }
 
   dispose() {
