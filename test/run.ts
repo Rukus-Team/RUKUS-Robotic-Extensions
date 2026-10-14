@@ -1867,6 +1867,11 @@ if (backupDir) {
     const optKw = (l: ReturnType<typeof tokenise>[number], text: string) => l.some(t => t.text.trim() === text && t.scopes.some(s => /^keyword|^support\.function|^entity|^storage\.modifier\.motion-option/.test(s)));
     const expect: Array<[number, string]> = [[2, 'LINE'], [3, 'Search Start'], [4, 'STOP_TRACKING'], [5, 'Weld Start'], [6, 'TORQ_LIMIT'], [7, 'SOFTFLOAT'], [8, 'Prompt Box Msg'], [9, 'PALLETIZING'], [10, 'MROT'], [11, 'GET_READING']];
     for (const [i, text] of expect) check(optKw(opt[i], text), `option syntax coloured: "${text}" in ${JSON.stringify(opt[i].map(t => [t.text, t.scopes.at(-1)]))}`);
+    // the catalog runs before the base keyword rule, so it must not take the control-flow words
+    const flow = tokenise('/PROG X\n/MN\n   1:  IF R[1]=1 THEN ;\n   2:  ELSE ;\n   3:  ENDIF ;\n   4:  WAIT DI[1]=ON TIMEOUT,LBL[1] ;\n   5:  FOR R[2]=1 TO 5 ;\n   6:  ENDFOR ;\n/POS\n/END\n');
+    for (const [i, word] of [[2, 'IF'], [3, 'ELSE'], [4, 'ENDIF'], [5, 'WAIT'], [5, 'TIMEOUT'], [7, 'ENDFOR']] as Array<[number, string]>) {
+      check(flow[i].some(t => t.text.trim() === word && t.scopes.some(s => /^keyword\.control\./.test(s)) && !t.scopes.includes('keyword.control.option.tp')), `${word} keeps the base control-flow colour: ${JSON.stringify(flow[i].map(t => [t.text, t.scopes.at(-1)]))}`);
+    }
     // the numberless styles: the body after the colon is coloured like any instruction
     const bare = tokenise('/PROG X\n/MN\n     :  !BANNER ;\n     :J P[1] 100% FINE ;\n     :  CALL SUB ;\n/POS\n/END\n');
     check(bare[2].some(t => /BANNER/.test(t.text) && t.scopes.some(s => s.startsWith('comment'))) && has(bare[3], 'J', 'keyword.control.motion.tp') && has(bare[4], 'CALL', 'keyword.control.call.tp'), `numberless colon lines are coloured as instructions: ${JSON.stringify([bare[2], bare[3]].map(l => l.map(t => [t.text, t.scopes[t.scopes.length - 1]])))}`);
