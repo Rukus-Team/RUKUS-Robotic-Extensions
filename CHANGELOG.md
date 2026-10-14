@@ -1,5 +1,11 @@
 # Changelog
 
+## 26.109.10 - 2026-10-14 - TP keyword colours
+
+### Fixed
+- **TP: WAIT, ENDIF, ELSE, ENDFOR, TIMEOUT and the other control words have the keyword colour again.** They had
+  picked up the option-instruction colour.
+
 ## 26.109.9 - 2026-10-12 - Robot safety, reliability and accessibility
 
 Robot safety: every write to a controller is confirmed, a real controller is read-only until you allow
