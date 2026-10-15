@@ -1,9 +1,14 @@
 /**
  * The RAPID reference: every instruction, function and data type of RobotWare 6 with its
  * syntax and arguments, generated from ABB's manual by scripts/import-rapid-manual.mjs into
- * reference.json. Pure, so the tests can use it.
+ * reference.json, plus what RobotWare 8 (OmniCore) adds, from scripts/import-rapid-rw8.mjs:
+ * reference-rw8.json (new entries, new arguments, other options) and manual-names.json (which
+ * manual lists which name, for the "RobotWare 6 only" / "RobotWare 8 only" notes). Pure, so the
+ * tests can use it.
  */
 import data from './reference.json';
+import rw8 from './reference-rw8.json';
+import manual from './manual-names.json';
 
 export interface RapidRefArg {
   name: string;
@@ -14,6 +19,8 @@ export interface RapidRefArg {
   /** arguments with the same number are alternatives (`\V | \T`) */
   alt?: number;
   desc?: string;
+  /** '8': only RobotWare 8 has this argument */
+  rw?: '8';
 }
 
 export interface RapidRefEntry {
@@ -25,9 +32,83 @@ export interface RapidRefEntry {
   returns?: string;
   components?: { name: string; type?: string; desc?: string }[];
   option?: string;
+  /** the option RobotWare 8 files it under when that differs ('RobotWare Base': RW8 has it in the base system) */
+  option8?: string;
+  /** the RobotWare 8 return type when it differs */
+  returns8?: string;
+  /** '6' / '8': only that RobotWare's manual lists it (unset: both, or neither manual) */
+  rw?: '6' | '8';
 }
 
-const entries = ((data as unknown as { entries: RapidRefEntry[] }).entries ?? []);
+/** reference-rw8.json: a whole new entry (it has a summary), or additions to an entry of reference.json */
+interface Rw8Entry {
+  name: string; kind: RapidRefEntry['kind']; summary?: string; syntax?: string; args?: RapidRefArg[]; returns?: string;
+  components?: RapidRefEntry['components']; option?: string; fixKind?: boolean;
+  addArgs?: (RapidRefArg & { after?: string })[]; option8?: string; returns8?: string;
+}
+
+const U = (s: string) => s.toUpperCase();
+const manualNames = manual as unknown as { rw6: { entries: string[][] }; rw8: { entries: string[][] } };
+const listed = (rw: { entries: string[][] }) => new Set(rw.entries.map(e => U(e[1])));
+const in6 = listed(manualNames.rw6), in8 = listed(manualNames.rw8);
+
+/** reference.json with RobotWare 8's additions merged in, in name order */
+function merge(): RapidRefEntry[] {
+  const base = ((data as unknown as { entries: RapidRefEntry[] }).entries ?? []).map(e => ({ ...e }));
+  const extra = (rw8 as unknown as { entries: Rw8Entry[] }).entries ?? [];
+  // the RW6 import filed a few functions as instructions (StrFormat, GetTorqueMargin): RW6.16 and RW8 agree on the kind
+  const fixed = new Set(extra.filter(x => x.fixKind).map(x => U(x.name)));
+  const out = base.filter(e => !fixed.has(U(e.name)));
+  const at = new Map(out.map(e => [`${e.kind}:${U(e.name)}`, e]));
+  for (const x of extra) {
+    const was = at.get(`${x.kind}:${U(x.name)}`);
+    if (!was) {
+      if (x.summary === undefined) continue;
+      const e: RapidRefEntry = { name: x.name, kind: x.kind, summary: x.summary, syntax: x.syntax ?? x.name };
+      if (x.args) e.args = x.args;
+      if (x.returns) e.returns = x.returns;
+      if (x.components) e.components = x.components;
+      if (x.option) e.option = x.option;
+      out.push(e);
+      at.set(`${x.kind}:${U(x.name)}`, e);
+      continue;
+    }
+    if (x.addArgs?.length) {
+      const args = [...(was.args ?? [])];
+      for (const { after, ...arg } of x.addArgs) {
+        const i = after ? args.findIndex(b => U(b.name) === U(after)) : -1;
+        args.splice(i >= 0 ? i + 1 : args.length, 0, { ...arg, rw: '8' });
+      }
+      was.args = args;
+    }
+    if (x.option8) was.option8 = x.option8;
+    if (x.returns8) was.returns8 = x.returns8;
+  }
+  for (const e of out) {
+    const n = U(e.name);
+    if (in6.has(n) && !in8.has(n)) e.rw = '6';
+    else if (in8.has(n) && !in6.has(n)) e.rw = '8';
+  }
+  return out.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || a.kind.localeCompare(b.kind));
+}
+
+/** Which RobotWare manuals list a name: 'both', only '6', only '8', or undefined (neither: an option manual we lack, SpotWare). */
+export function rapidManualRw(name: string): '6' | '8' | 'both' | undefined {
+  const n = U(name);
+  return in6.has(n) && in8.has(n) ? 'both' : in6.has(n) ? '6' : in8.has(n) ? '8' : undefined;
+}
+
+/** Every name of this kind either manual lists (or the one given), spelled as there; identifiers only, not `:=` or `Compact IF`. */
+export function rapidManualNames(kind: RapidRefEntry['kind'], rw?: '6' | '8'): string[] {
+  const seen = new Map<string, string>();
+  for (const [v, list] of [['6', manualNames.rw6.entries], ['8', manualNames.rw8.entries]] as const) {
+    if (rw && rw !== v) continue;
+    for (const [k, n] of list) if (k === kind && /^[A-Za-z_]\w*$/.test(n) && !seen.has(U(n))) seen.set(U(n), n);
+  }
+  return [...seen.values()];
+}
+
+const entries = merge();
 const byName = new Map<string, RapidRefEntry>();
 // an instruction and a function may share a name (e.g. both exist for some I/O); keep both reachable
 const byKind = new Map<string, RapidRefEntry>();
@@ -59,9 +140,12 @@ export function instructionSnippet(e: RapidRefEntry): string {
 
 /** The hover text for an entry: syntax, what it is for, its arguments. */
 export function rapidRefMarkdown(e: RapidRefEntry): string {
-  const out = [`**${e.name}** _(${e.kind}${e.returns ? ` → ${e.returns}` : ''}${e.option ? ` · option ${e.option}` : ''})_`, '```rapid', e.syntax, '```', e.summary];
+  const ret = e.returns ? ` → ${e.returns}${e.returns8 ? ` (RW8: ${e.returns8})` : ''}` : '';
+  const opt = `${e.option ? ` · option ${e.option}` : ''}${e.option8 ? ` · RW8: ${e.option8}` : ''}`;
+  const rw = e.rw === '6' ? ' · RobotWare 6 (IRC5) only' : e.rw === '8' ? ' · RobotWare 8 (OmniCore) only' : '';
+  const out = [`**${e.name}** _(${e.kind}${ret}${opt}${rw})_`, '```rapid', e.syntax, '```', e.summary];
   if (e.args?.length) {
-    out.push('', ...e.args.map(a => `- \`${a.optional ? '[' : ''}${a.switch || a.optional ? '\\' : ''}${a.name}${a.optional ? ']' : ''}\`${a.type ? ` *${a.type}*` : ''}${a.desc ? ` - ${a.desc}` : ''}`));
+    out.push('', ...e.args.map(a => `- \`${a.optional ? '[' : ''}${a.switch || a.optional ? '\\' : ''}${a.name}${a.optional ? ']' : ''}\`${a.type ? ` *${a.type}*` : ''}${a.rw === '8' ? ' _(RobotWare 8)_' : ''}${a.desc ? ` - ${a.desc}` : ''}`));
   }
   if (e.components?.length) out.push('', ...e.components.map(c => `- \`${c.name}\`${c.type ? ` *${c.type}*` : ''}${c.desc ? ` - ${c.desc}` : ''}`));
   return out.join('\n');

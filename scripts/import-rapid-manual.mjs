@@ -3,6 +3,8 @@
 // (3HAC050917, RobotWare 6).
 //
 //   node scripts/import-rapid-manual.mjs "<3HAC050917 ... RW 6-en.pdf>"
+//   node scripts/import-rapid-manual.mjs "<pdf>" --out <file.json> --source "<label>"
+//     (another edition, e.g. RobotWare 8's 3HAC098387, to a file of your choice: scripts/import-rapid-rw8.mjs uses it)
 //
 // The PDF is run through pdftotext twice, into the OS temp dir (never the repo):
 //  - plain (reading order) for the prose: Usage, Arguments, Return value, Components. Each
@@ -23,9 +25,10 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const pdf = process.argv[2];
+const flag = name => { const i = process.argv.indexOf(name); return i > 2 ? process.argv[i + 1] : undefined; };
 if (!pdf || !fs.existsSync(pdf)) { console.error('usage: node scripts/import-rapid-manual.mjs "<3HAC050917 RAPID Instructions, Functions and Data Types.pdf>"'); process.exit(2); }
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const outPath = path.join(repo, 'packages', 'abb', 'src', 'rapid', 'reference.json');
+const outPath = flag('--out') ? path.resolve(flag('--out')) : path.join(repo, 'packages', 'abb', 'src', 'rapid', 'reference.json');
 
 // ---------------------------------------------------------------- pdftotext
 function pdftotext(layout) {
@@ -100,7 +103,7 @@ function clean(lines, id, name, title) {
     let s = l
       .replace(/Technical reference manual - RAPID Instructions, Functions and Data types/g, '')
       .replace(/Continues on next page/g, '')
-      .replace(/3HAC050917-001 Revision: \S+/g, '')
+      .replace(/3HAC0\d{5}-001 Revision: \S+/g, '')
       .replace(/(?:©|\uFFFD)?\s*Copyright \d{4}-\d{4} ABB\. All rights reserved\./g, '');
     if (/^\s*[123] (Instructions|Functions|Data types)\s*$/.test(s)) return;
     s = s.replace(/\s+[123] (Instructions|Functions|Data types)\s*$/, '');
@@ -470,7 +473,7 @@ const out = entries
   .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }) || a.name.localeCompare(b.name) || a.kind.localeCompare(b.kind));
 
 const doc = {
-  source: '3HAC050917 RAPID Instructions, Functions and Data Types, RobotWare 6',
+  source: flag('--source') ?? '3HAC050917 RAPID Instructions, Functions and Data Types, RobotWare 6',
   generated: new Date().toISOString().slice(0, 10),
   entries: out,
 };
