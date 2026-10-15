@@ -1,5 +1,21 @@
 # Changelog
 
+## 26.109.11 - 2026-10-15 - All of RAPID for RobotWare 6 and 8
+
+### Added
+- **ABB RAPID: every instruction, function and data type in ABB's RobotWare 6 (IRC5) and RobotWare 8 (OmniCore)
+  RAPID reference manuals is known.** Hover, argument hints, typed completion and colouring cover all of them, and
+  none is flagged as an unknown routine any more (before: about 450 of 672 RW6 names were coloured and a third of the
+  instructions were flagged).
+- **Hover says when something is RobotWare 8 (OmniCore) only or RobotWare 6 (IRC5) only**, and lists the arguments
+  that only RobotWare 8 has (for example `\KeepStartPath`, `\ISOLatin1Encoding`).
+- The names of EGM, SoftMove and Force Control are known (no warning, coloured) but have no argument hints yet:
+  their application manuals were not part of this import.
+
+### Changed
+- The RAPID colouring and the Notepad++ RAPID files are regenerated from the full name list. StrFormat and
+  GetTorqueMargin are listed as functions.
+
 ## 26.109.10 - 2026-10-14 - TP keyword colours
 
 ### Fixed
