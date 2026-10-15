@@ -1,0 +1,2779 @@
+{
+  "source": "3HAC098387 RAPID Instructions, Functions and Data Types, RobotWare 8 (names, syntax and types; summaries in our own words)",
+  "generated": "2026-10-15",
+  "entries": [
+    {
+      "name": "BytesReset",
+      "kind": "instruction",
+      "summary": "Sets every element of a byte array to 0.",
+      "syntax": "BytesReset ByteArr",
+      "args": [
+        {
+          "name": "ByteArr",
+          "type": "byte{*}",
+          "optional": false,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "BytesToVal",
+      "kind": "function",
+      "summary": "Decodes a value of any data type from a byte array (optionally a slice of it); TRUE when it worked.",
+      "syntax": "BytesToVal (ByteArr [\\StartIndex] [\\ToIndex] Value)",
+      "args": [
+        {
+          "name": "ByteArr",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "StartIndex",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "ToIndex",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Value",
+          "type": "anytype",
+          "optional": false,
+          "switch": false
+        }
+      ],
+      "returns": "bool"
+    },
+    {
+      "name": "CamStartSetParameter",
+      "kind": "instruction",
+      "summary": "Begins changing a named camera parameter without waiting for the camera; CamWaitSetParameter waits for it.",
+      "syntax": "CamStartSetParameter Camera ParName [\\NumVal] | [\\BoolVal] | [\\StrVal]",
+      "args": [
+        {
+          "name": "Camera",
+          "type": "cameradev",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "ParName",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "NumVal",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "alt": 1
+        },
+        {
+          "name": "BoolVal",
+          "type": "bool",
+          "optional": true,
+          "switch": false,
+          "alt": 1
+        },
+        {
+          "name": "StrVal",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "alt": 1
+        }
+      ],
+      "option": "Integrated Vision"
+    },
+    {
+      "name": "CamWaitSetParameter",
+      "kind": "instruction",
+      "summary": "Waits until the camera has finished a parameter change started by CamStartSetParameter.",
+      "syntax": "CamWaitSetParameter Camera",
+      "args": [
+        {
+          "name": "Camera",
+          "type": "cameradev",
+          "optional": false,
+          "switch": false
+        }
+      ],
+      "option": "Integrated Vision"
+    },
+    {
+      "name": "CapC",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "TriggArray",
+          "type": "triggdata{*}",
+          "optional": true,
+          "switch": false,
+          "after": "T1"
+        }
+      ]
+    },
+    {
+      "name": "CapInitSupervision",
+      "kind": "instruction",
+      "summary": "Clears and prepares CAP process supervision before new conditions are set up.",
+      "syntax": "CapInitSupervision",
+      "option": "Continuous Application Platform"
+    },
+    {
+      "name": "CapL",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "TriggArray",
+          "type": "triggdata{*}",
+          "optional": true,
+          "switch": false,
+          "after": "T1"
+        }
+      ]
+    },
+    {
+      "name": "CapRemoveSupervision",
+      "kind": "instruction",
+      "summary": "Takes I/O conditions out of CAP supervision again.",
+      "syntax": "CapRemoveSupervision Signal Condition Listtype [\\Deactivate]",
+      "args": [
+        {
+          "name": "Signal",
+          "type": "signaldi",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Condition",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Listtype",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Deactivate",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        }
+      ],
+      "option": "Continuous Application Platform"
+    },
+    {
+      "name": "CapSetDOAtStop",
+      "kind": "instruction",
+      "summary": "Names a digital output and the value CAP writes to it when the process stops.",
+      "syntax": "CapSetDOAtStop Signal Value",
+      "args": [
+        {
+          "name": "Signal",
+          "type": "signaldo",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Value",
+          "type": "dionum",
+          "optional": false,
+          "switch": false
+        }
+      ],
+      "option": "Continuous Application Platform"
+    },
+    {
+      "name": "CapSetupSupervision",
+      "kind": "instruction",
+      "summary": "Adds an I/O signal condition that CAP watches during a process phase.",
+      "syntax": "CapSetupSupervision Signal Condition Listtype [ErrIndSig]",
+      "args": [
+        {
+          "name": "Signal",
+          "type": "signaldi",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Condition",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Listtype",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "ErrIndSig",
+          "type": "signaldo",
+          "optional": true,
+          "switch": false
+        }
+      ],
+      "option": "Continuous Application Platform"
+    },
+    {
+      "name": "ClearPath",
+      "kind": "instruction",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "Concat",
+      "kind": "function",
+      "summary": "Joins two strings into one (the \\Remaining argument receives what did not fit).",
+      "syntax": "Concat (Str1 Str2 [\\Remaining])",
+      "args": [
+        {
+          "name": "Str1",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Str2",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Remaining",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        }
+      ],
+      "returns": "string"
+    },
+    {
+      "name": "Continue",
+      "kind": "instruction",
+      "summary": "Skips the rest of the current loop pass and starts the next one (FOR / WHILE).",
+      "syntax": "Continue"
+    },
+    {
+      "name": "CorrClear",
+      "kind": "instruction",
+      "option8": "Path Corrections"
+    },
+    {
+      "name": "CorrCon",
+      "kind": "instruction",
+      "option8": "Path Corrections"
+    },
+    {
+      "name": "corrdescr",
+      "kind": "type",
+      "option8": "Path Corrections"
+    },
+    {
+      "name": "CorrDiscon",
+      "kind": "instruction",
+      "option8": "Path Corrections"
+    },
+    {
+      "name": "CorrRead",
+      "kind": "function",
+      "option8": "Path Corrections"
+    },
+    {
+      "name": "CorrWrite",
+      "kind": "instruction",
+      "option8": "Path Corrections"
+    },
+    {
+      "name": "DebugBreak",
+      "kind": "instruction",
+      "summary": "Halts execution at this line while debugging; ignored in normal runs.",
+      "syntax": "DebugBreak"
+    },
+    {
+      "name": "DnumToStr",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "Compact",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 101,
+          "after": "Exp"
+        }
+      ]
+    },
+    {
+      "name": "FitLine",
+      "kind": "instruction",
+      "summary": "Least-squares fit of a straight line through a set of points, with optional fit-error results.",
+      "syntax": "FitLine Points [\\NumPoints] P [V] [\\RMS] [\\MaxErr] [\\IndexWorst]",
+      "args": [
+        {
+          "name": "Points",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "NumPoints",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "P",
+          "type": "pos",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "V",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "RMS",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "MaxErr",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "IndexWorst",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "FitPlane",
+      "kind": "instruction",
+      "summary": "Least-squares fit of a plane through a set of points, with optional fit-error results.",
+      "syntax": "FitPlane Points [\\NumPoints] P Normal [\\RMS] [\\MaxErr] [\\IndexWorst]",
+      "args": [
+        {
+          "name": "Points",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "NumPoints",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "P",
+          "type": "pos",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Normal",
+          "type": "pos",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "RMS",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "MaxErr",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "IndexWorst",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "FitSphere",
+      "kind": "instruction",
+      "summary": "Least-squares fit of a sphere (centre and radius) through a set of points.",
+      "syntax": "FitSphere Points [\\NumPoints] Center Radius [\\RMS] [\\MaxErr] [\\IndexWorst]",
+      "args": [
+        {
+          "name": "Points",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "NumPoints",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Center",
+          "type": "pos",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Radius",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "RMS",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "MaxErr",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "IndexWorst",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "GetNextOption",
+      "kind": "function",
+      "summary": "Steps through the RobotWare options installed on the controller, one name per call.",
+      "syntax": "GetNextOption (ListNumber OptionName)",
+      "args": [
+        {
+          "name": "ListNumber",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "OptionName",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        }
+      ],
+      "returns": "bool"
+    },
+    {
+      "name": "GetNextProduct",
+      "kind": "function",
+      "summary": "Steps through the products installed on the controller, one name (and version) per call.",
+      "syntax": "GetNextProduct (ListNumber ProductName [\\VersionName])",
+      "args": [
+        {
+          "name": "ListNumber",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "ProductName",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "VersionName",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        }
+      ],
+      "returns": "bool"
+    },
+    {
+      "name": "GetSysInfo",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "PassHint",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 101,
+          "after": "SystemName"
+        }
+      ]
+    },
+    {
+      "name": "GetTime",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "MSec",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 101,
+          "after": "Sec"
+        }
+      ]
+    },
+    {
+      "name": "GetTorqueMargin",
+      "kind": "function",
+      "summary": "The smallest motor torque margin seen since ResetTorqueMargin, for a robot or external axis.",
+      "syntax": "GetTorqueMargin ([\\MechUnit] [\\AxisNo])",
+      "args": [
+        {
+          "name": "MechUnit",
+          "type": "mecunit",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "AxisNo",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        }
+      ],
+      "returns": "num",
+      "fixKind": true
+    },
+    {
+      "name": "ICapPathPos",
+      "kind": "instruction",
+      "summary": "Orders an interrupt that reports the weld centre-line position while CAP weaves.",
+      "syntax": "ICapPathPos p_robt sen_pos Interrupt [\\EOffs] [\\NoDispl]",
+      "args": [
+        {
+          "name": "p_robt",
+          "type": "robtarget",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "sen_pos",
+          "type": "pos",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Interrupt",
+          "type": "intnum",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "EOffs",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        },
+        {
+          "name": "NoDispl",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        }
+      ],
+      "option": "Continuous Application Platform"
+    },
+    {
+      "name": "IDelete",
+      "kind": "instruction",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "IOActivate",
+      "kind": "instruction",
+      "summary": "Enables an I/O device from the program and waits up to MaxTime for it.",
+      "syntax": "IOActivate DeviceName MaxTime",
+      "args": [
+        {
+          "name": "DeviceName",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "MaxTime",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "IODeactivate",
+      "kind": "instruction",
+      "summary": "Disables an I/O device from the program and waits up to MaxTime for it.",
+      "syntax": "IODeactivate DeviceName MaxTime",
+      "args": [
+        {
+          "name": "DeviceName",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "MaxTime",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "iodevice_state",
+      "kind": "type",
+      "summary": "The state of an I/O device, as IODeviceState returns it."
+    },
+    {
+      "name": "IODeviceMute",
+      "kind": "instruction",
+      "summary": "Turns the event-log messages of an I/O device off (\\On) or back on (\\Off).",
+      "syntax": "IODeviceMute [\\On] | [\\Off] device_name",
+      "args": [
+        {
+          "name": "On",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1
+        },
+        {
+          "name": "Off",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1
+        },
+        {
+          "name": "device_name",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "IODeviceState",
+      "kind": "function",
+      "summary": "Reads the physical or logical state of an I/O device.",
+      "syntax": "IODeviceState (DeviceName [\\Phys] | [\\Logic])",
+      "args": [
+        {
+          "name": "DeviceName",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Phys",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1
+        },
+        {
+          "name": "Logic",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1
+        }
+      ],
+      "returns": "iodevice_state"
+    },
+    {
+      "name": "ionetwork_state",
+      "kind": "type",
+      "summary": "The state of an I/O network, as IONetworkState returns it."
+    },
+    {
+      "name": "IONetworkState",
+      "kind": "function",
+      "summary": "Reads the physical or logical state of an I/O network.",
+      "syntax": "IONetworkState (NetworkName [\\Phys] | [\\Logic])",
+      "args": [
+        {
+          "name": "NetworkName",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Phys",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1
+        },
+        {
+          "name": "Logic",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1
+        }
+      ],
+      "returns": "ionetwork_state"
+    },
+    {
+      "name": "IRMQMessage",
+      "kind": "instruction",
+      "option8": "Multitasking"
+    },
+    {
+      "name": "IsLeadThrough",
+      "kind": "function",
+      "option8": "GoFa"
+    },
+    {
+      "name": "JSONFromVal",
+      "kind": "instruction",
+      "summary": "Turns a RAPID data object into JSON text (a translationdata table can rename components).",
+      "syntax": "JSONFromVal Object JsonData [\\Table]",
+      "args": [
+        {
+          "name": "Object",
+          "type": "anytype",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "JsonData",
+          "type": "rawbytes",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Table",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        }
+      ]
+    },
+    {
+      "name": "JSONToVal",
+      "kind": "instruction",
+      "summary": "Fills a RAPID data object from JSON text (a translationdata table can rename keys).",
+      "syntax": "JSONToVal JsonData Object [\\Table]",
+      "args": [
+        {
+          "name": "JsonData",
+          "type": "rawbytes",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Object",
+          "type": "anytype",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Table",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        }
+      ]
+    },
+    {
+      "name": "MatrixAdd",
+      "kind": "instruction",
+      "summary": "Adds two matrices element by element into a result matrix.",
+      "syntax": "MatrixAdd A [\\A_m] [\\A_n] B Result",
+      "args": [
+        {
+          "name": "A",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "A_m",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "A_n",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "B",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Result",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "MatrixInverse",
+      "kind": "instruction",
+      "summary": "Inverts a square matrix into a result matrix.",
+      "syntax": "MatrixInverse A [\\A_m] [\\A_n] Result [\\Result_m] [\\Result_n] [\\Tolerance]",
+      "args": [
+        {
+          "name": "A",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "A_m",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "A_n",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Result",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Result_m",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Result_n",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Tolerance",
+          "type": "dnum",
+          "optional": true,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "MatrixMult",
+      "kind": "instruction",
+      "summary": "Multiplies a matrix by a scalar, a vector or another matrix.",
+      "syntax": "MatrixMult A [\\A_m] [\\A_n] Scalar | Vector | B [\\B_m] [\\B_n] ResultVector | Result [\\Result_m] [\\Result_n]",
+      "args": [
+        {
+          "name": "A",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "A_m",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "A_n",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Scalar",
+          "type": "dnum",
+          "optional": false,
+          "switch": false,
+          "alt": 1
+        },
+        {
+          "name": "Vector",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false,
+          "alt": 1
+        },
+        {
+          "name": "B",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false,
+          "alt": 1
+        },
+        {
+          "name": "B_m",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "B_n",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "ResultVector",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false,
+          "alt": 2
+        },
+        {
+          "name": "Result",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false,
+          "alt": 2
+        },
+        {
+          "name": "Result_m",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Result_n",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "MatrixReset",
+      "kind": "instruction",
+      "summary": "Sets every element of a matrix to 0.",
+      "syntax": "MatrixReset A [\\A_m] [\\A_n]",
+      "args": [
+        {
+          "name": "A",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "A_m",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "A_n",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "MatrixSub",
+      "kind": "instruction",
+      "summary": "Subtracts one matrix from another element by element.",
+      "syntax": "MatrixSub A [\\A_m] [\\A_n] B Result",
+      "args": [
+        {
+          "name": "A",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "A_m",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "A_n",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "B",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Result",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "MatrixTranspose",
+      "kind": "instruction",
+      "summary": "Writes the transpose of a matrix into a result matrix.",
+      "syntax": "MatrixTranspose A [\\A_m] [\\A_n] Result [\\Result_m] [\\Result_n]",
+      "args": [
+        {
+          "name": "A",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "A_m",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "A_n",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Result",
+          "type": "dnum{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Result_m",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Result_n",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "MotionProcessModeSet",
+      "kind": "instruction",
+      "option8": "Advanced Robot Motion"
+    },
+    {
+      "name": "MoveAbsJ",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveAbsL",
+      "kind": "instruction",
+      "summary": "Linear TCP move whose destination is given as axis angles (a jointtarget).",
+      "syntax": "MoveAbsL [\\Conc] ToJointPos [\\ID] Speed [\\V] | [\\T] [\\KeepStartPath] [\\KeepEndPath] Zone [\\Z] [\\Inpos] Tool [\\WObj] [\\Corr] [\\TLoad] [\\FollowConveyor]",
+      "args": [
+        {
+          "name": "Conc",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        },
+        {
+          "name": "ToJointPos",
+          "type": "jointtarget",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "ID",
+          "type": "identno",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Speed",
+          "type": "speeddata",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "V",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "alt": 1
+        },
+        {
+          "name": "T",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "alt": 1
+        },
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Zone",
+          "type": "zonedata",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Z",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Inpos",
+          "type": "stoppointdata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Corr",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        },
+        {
+          "name": "TLoad",
+          "type": "loaddata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "FollowConveyor",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        }
+      ]
+    },
+    {
+      "name": "MoveC",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveCAO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveCDO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveCGO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveCSync",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveJ",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveJAO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveJDO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveJGO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveJSync",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveL",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        },
+        {
+          "name": "FollowConveyor",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "after": "TLoad"
+        }
+      ]
+    },
+    {
+      "name": "MoveLAO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveLDO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveLGO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "MoveLSync",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "NumToStr",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "Compact",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 101,
+          "after": "Exp"
+        }
+      ]
+    },
+    {
+      "name": "Open",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ISOLatin1Encoding",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "after": "Bin"
+        }
+      ]
+    },
+    {
+      "name": "PackRawBytes",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "UTF8Encoding",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 101,
+          "after": "Float4"
+        },
+        {
+          "name": "ISOLatin1Encoding",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 101,
+          "after": "UTF8Encoding"
+        }
+      ]
+    },
+    {
+      "name": "PathRecMoveFwd",
+      "kind": "instruction",
+      "option8": "Path Recovery"
+    },
+    {
+      "name": "ProgMemFree",
+      "kind": "function",
+      "returns8": "dnum"
+    },
+    {
+      "name": "RaiseToUser",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "Resume",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 101
+        }
+      ]
+    },
+    {
+      "name": "Rand",
+      "kind": "function",
+      "summary": "A random whole number from 0 to RAND_MAX, optionally from a given seed.",
+      "syntax": "Rand ([\\Seed] [\\SeedEachNTime])",
+      "args": [
+        {
+          "name": "Seed",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        },
+        {
+          "name": "SeedEachNTime",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        }
+      ],
+      "returns": "num"
+    },
+    {
+      "name": "ReadDnum",
+      "kind": "function",
+      "summary": "Reads one number as dnum from a text file or serial device.",
+      "syntax": "ReadDnum (IODevice [\\Delim] [\\Time] [\\ISOLatin1Encoding])",
+      "args": [
+        {
+          "name": "IODevice",
+          "type": "iodev",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Delim",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Time",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "ISOLatin1Encoding",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        }
+      ],
+      "returns": "dnum"
+    },
+    {
+      "name": "ReadNum",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "ISOLatin1Encoding",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "after": "Time"
+        }
+      ]
+    },
+    {
+      "name": "ReadStr",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "ISOLatin1Encoding",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "after": "Line"
+        },
+        {
+          "name": "Status",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "ISOLatin1Encoding"
+        }
+      ]
+    },
+    {
+      "name": "ResetData",
+      "kind": "instruction",
+      "summary": "Puts a data object back to its declared initial value.",
+      "syntax": "ResetData Object",
+      "args": [
+        {
+          "name": "Object",
+          "type": "anytype",
+          "optional": false,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "RestoPath",
+      "kind": "instruction",
+      "option8": "Path Recovery"
+    },
+    {
+      "name": "RMQEmptyQueue",
+      "kind": "instruction",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "RMQFindSlot",
+      "kind": "instruction",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "RMQGetMessage",
+      "kind": "instruction",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "RMQGetMsgData",
+      "kind": "instruction",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "RMQGetMsgHeader",
+      "kind": "instruction",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "RMQGetSlotName",
+      "kind": "function",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "rmqheader",
+      "kind": "type",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "rmqmessage",
+      "kind": "type",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "RMQReadWait",
+      "kind": "instruction",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "RMQSendMessage",
+      "kind": "instruction",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "RMQSendWait",
+      "kind": "instruction",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "rmqslot",
+      "kind": "type",
+      "option8": "RobotStudio Connect or Multitasking"
+    },
+    {
+      "name": "SafetyControllerGetChecksum",
+      "kind": "function",
+      "option8": "SafeMove Premium, SafeMove Premium+, PROFIsafe"
+    },
+    {
+      "name": "SafetyControllerGetGroupChecksum",
+      "kind": "function",
+      "summary": "The checksum of a named protected group in the safety controller's configuration.",
+      "syntax": "SafetyControllerGetGroupChecksum (GroupName)",
+      "args": [
+        {
+          "name": "GroupName",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        }
+      ],
+      "returns": "string"
+    },
+    {
+      "name": "SafetyControllerGetNextGroupName",
+      "kind": "function",
+      "summary": "Steps through the names of the safety configuration's protected groups.",
+      "syntax": "SafetyControllerGetNextGroupName (listno group_name)",
+      "args": [
+        {
+          "name": "listno",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "group_name",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        }
+      ],
+      "returns": "bool"
+    },
+    {
+      "name": "SafetyControllerGetOpModePinCode",
+      "kind": "function",
+      "option8": "SafeMove Premium, SafeMove Premium+, PROFIsafe"
+    },
+    {
+      "name": "SafetyControllerGetSWVersion",
+      "kind": "function",
+      "option8": "SafeMove Premium, SafeMove Premium+, PROFIsafe"
+    },
+    {
+      "name": "SafetyControllerGetUserChecksum",
+      "kind": "function",
+      "option8": "SafeMove Premium, SafeMove Premium+, PROFIsafe"
+    },
+    {
+      "name": "SafetyControllerSyncRequest",
+      "kind": "instruction",
+      "option8": "SafeMove Premium, SafeMove Premium+, PROFIsafe"
+    },
+    {
+      "name": "SetLeadThrough",
+      "kind": "instruction",
+      "option8": "LeadThrough"
+    },
+    {
+      "name": "SocketAccept",
+      "kind": "instruction",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SocketBind",
+      "kind": "instruction",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SocketClose",
+      "kind": "instruction",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SocketConnect",
+      "kind": "instruction",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SocketCreate",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ISOLatin1Encoding",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "after": "UDP"
+        }
+      ],
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "socketdev",
+      "kind": "type",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SocketGetStatus",
+      "kind": "function",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SocketListen",
+      "kind": "instruction",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SocketPeek",
+      "kind": "function",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SocketReceive",
+      "kind": "instruction",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SocketReceiveFrom",
+      "kind": "instruction",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SocketSend",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ISOLatin1Encoding",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "after": "NoOfBytes"
+        }
+      ],
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SocketSendTo",
+      "kind": "instruction",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "socketstatus",
+      "kind": "type",
+      "option8": "RobotWare Base"
+    },
+    {
+      "name": "SoftElbow",
+      "kind": "instruction",
+      "option8": "Seven axis robot"
+    },
+    {
+      "name": "StorePath",
+      "kind": "instruction",
+      "option8": "Path Recovery"
+    },
+    {
+      "name": "StrFormat",
+      "kind": "function",
+      "summary": "Builds a string from a text with numbered placeholders filled by the \\Arg values.",
+      "syntax": "StrFormat (Text [\\Arg1] [\\Arg2] [\\Arg3] [\\Arg4] [\\Arg5] [\\Arg6] [\\Remaining] [\\SmartTruncate])",
+      "args": [
+        {
+          "name": "Text",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Arg1",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Arg2",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Arg3",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Arg4",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Arg5",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Arg6",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Remaining",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "SmartTruncate",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        }
+      ],
+      "returns": "string",
+      "option": "Path Recovery",
+      "fixKind": true
+    },
+    {
+      "name": "StrSize",
+      "kind": "function",
+      "summary": "The size of a string in bytes (a UTF-8 character can take more than one).",
+      "syntax": "StrSize (Str)",
+      "args": [
+        {
+          "name": "Str",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        }
+      ],
+      "returns": "num"
+    },
+    {
+      "name": "TextGet",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "Arg3",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "Arg2"
+        },
+        {
+          "name": "Arg4",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "Arg3"
+        },
+        {
+          "name": "Arg5",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "Arg4"
+        },
+        {
+          "name": "Arg6",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "Arg5"
+        },
+        {
+          "name": "Remaining",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "Arg6"
+        },
+        {
+          "name": "SmartTruncate",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "Remaining"
+        }
+      ]
+    },
+    {
+      "name": "translationdata",
+      "kind": "type",
+      "summary": "Pairs a RAPID component name with a JSON key name for JSONFromVal / JSONToVal.",
+      "components": [
+        {
+          "name": "rapidname",
+          "type": "string"
+        },
+        {
+          "name": "jsonname",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "TriggAbsJ",
+      "kind": "instruction",
+      "summary": "Move to an absolute axis position (jointtarget) that fires trigger events on the way.",
+      "syntax": "TriggAbsJ [\\Conc] ToJointPos [\\ID] [\\NoEoffs] Speed [\\T] Trigg_1 | TriggArray [\\T2] [\\T3] [\\T4] [\\T5] [\\T6] [\\T7] [\\T8] [\\KeepStartPath] [\\KeepEndPath] Zone [\\Inpos] Tool [\\WObj] [\\TLoad]",
+      "args": [
+        {
+          "name": "Conc",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        },
+        {
+          "name": "ToJointPos",
+          "type": "jointtarget",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "ID",
+          "type": "identno",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "NoEoffs",
+          "type": "switch",
+          "optional": true,
+          "switch": true
+        },
+        {
+          "name": "Speed",
+          "type": "speeddata",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "T",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Trigg_1",
+          "type": "triggdata",
+          "optional": false,
+          "switch": false,
+          "alt": 1
+        },
+        {
+          "name": "TriggArray",
+          "type": "triggdata{*}",
+          "optional": false,
+          "switch": false,
+          "alt": 1
+        },
+        {
+          "name": "T2",
+          "type": "triggdata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "T3",
+          "type": "triggdata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "T4",
+          "type": "triggdata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "T5",
+          "type": "triggdata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "T6",
+          "type": "triggdata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "T7",
+          "type": "triggdata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "T8",
+          "type": "triggdata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Zone",
+          "type": "zonedata",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Inpos",
+          "type": "stoppointdata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "TLoad",
+          "type": "loaddata",
+          "optional": true,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "TriggC",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T8"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "TriggJ",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T8"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "TriggJIOs",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "TriggData3"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "TriggL",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "T8"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        },
+        {
+          "name": "FollowConveyor",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "after": "TLoad"
+        }
+      ]
+    },
+    {
+      "name": "TriggLIOs",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "KeepStartPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "TriggData3"
+        },
+        {
+          "name": "KeepEndPath",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "after": "KeepStartPath"
+        }
+      ]
+    },
+    {
+      "name": "UIAlphaEntry",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "Image",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "Icon"
+        }
+      ]
+    },
+    {
+      "name": "UIDisplay",
+      "kind": "instruction",
+      "summary": "Shows a predefined screen on the FlexPendant for the operator, with optional arguments.",
+      "syntax": "UIDisplay ID [\\Args] [\\InstanceId] [\\Status]",
+      "args": [
+        {
+          "name": "ID",
+          "type": "string",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Args",
+          "type": "string",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "InstanceId",
+          "type": "uidisplaynum",
+          "optional": true,
+          "switch": false
+        },
+        {
+          "name": "Status",
+          "type": "uidisplaystatus",
+          "optional": true,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "uidisplaynum",
+      "kind": "type",
+      "summary": "Identifies the screen UIDisplay shows."
+    },
+    {
+      "name": "UIDnumEntry",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "Image",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "Icon"
+        }
+      ]
+    },
+    {
+      "name": "UIDnumTune",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "Image",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "Icon"
+        }
+      ]
+    },
+    {
+      "name": "UINumEntry",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "Image",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "Icon"
+        }
+      ]
+    },
+    {
+      "name": "UINumTune",
+      "kind": "function",
+      "addArgs": [
+        {
+          "name": "Image",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "after": "Icon"
+        }
+      ]
+    },
+    {
+      "name": "UnpackRawBytes",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "UTF8Encoding",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "alt": 101,
+          "after": "Float4"
+        },
+        {
+          "name": "ISOLatin1Encoding",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "alt": 101,
+          "after": "UTF8Encoding"
+        }
+      ]
+    },
+    {
+      "name": "ValToBytes",
+      "kind": "function",
+      "summary": "Encodes a value of any data type into a byte array; returns how many bytes it used.",
+      "syntax": "ValToBytes (Value ByteArr [\\StartIndex])",
+      "args": [
+        {
+          "name": "Value",
+          "type": "anytype",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "ByteArr",
+          "type": "byte{*}",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "StartIndex",
+          "type": "num",
+          "optional": true,
+          "switch": false
+        }
+      ],
+      "returns": "num"
+    },
+    {
+      "name": "WaitAI",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ErrorNumber",
+          "type": "errnum",
+          "optional": true,
+          "switch": false,
+          "after": "UIActiveSignal"
+        },
+        {
+          "name": "TimeOutSignal",
+          "type": "signaldo",
+          "optional": true,
+          "switch": false,
+          "after": "ErrorNumber"
+        },
+        {
+          "name": "TimeOutGOSignal",
+          "type": "signalgo",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutSignal"
+        },
+        {
+          "name": "TimeOutGOValue",
+          "type": "dnum",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutGOSignal"
+        }
+      ]
+    },
+    {
+      "name": "WaitAO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ErrorNumber",
+          "type": "errnum",
+          "optional": true,
+          "switch": false,
+          "after": "UIActiveSignal"
+        },
+        {
+          "name": "TimeOutSignal",
+          "type": "signaldo",
+          "optional": true,
+          "switch": false,
+          "after": "ErrorNumber"
+        },
+        {
+          "name": "TimeOutGOSignal",
+          "type": "signalgo",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutSignal"
+        },
+        {
+          "name": "TimeOutGOValue",
+          "type": "dnum",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutGOSignal"
+        }
+      ]
+    },
+    {
+      "name": "WaitDI",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ErrorNumber",
+          "type": "errnum",
+          "optional": true,
+          "switch": false,
+          "after": "UIActiveSignal"
+        },
+        {
+          "name": "TimeOutSignal",
+          "type": "signaldo",
+          "optional": true,
+          "switch": false,
+          "after": "ErrorNumber"
+        },
+        {
+          "name": "TimeOutGOSignal",
+          "type": "signalgo",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutSignal"
+        },
+        {
+          "name": "TimeOutGOValue",
+          "type": "dnum",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutGOSignal"
+        }
+      ]
+    },
+    {
+      "name": "WaitDO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ErrorNumber",
+          "type": "errnum",
+          "optional": true,
+          "switch": false,
+          "after": "UIActiveSignal"
+        },
+        {
+          "name": "TimeOutSignal",
+          "type": "signaldo",
+          "optional": true,
+          "switch": false,
+          "after": "ErrorNumber"
+        },
+        {
+          "name": "TimeOutGOSignal",
+          "type": "signalgo",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutSignal"
+        },
+        {
+          "name": "TimeOutGOValue",
+          "type": "dnum",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutGOSignal"
+        }
+      ]
+    },
+    {
+      "name": "WaitGI",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ErrorNumber",
+          "type": "errnum",
+          "optional": true,
+          "switch": false,
+          "after": "UIActiveSignal"
+        },
+        {
+          "name": "TimeOutSignal",
+          "type": "signaldo",
+          "optional": true,
+          "switch": false,
+          "after": "ErrorNumber"
+        },
+        {
+          "name": "TimeOutGOSignal",
+          "type": "signalgo",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutSignal"
+        },
+        {
+          "name": "TimeOutGOValue",
+          "type": "dnum",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutGOSignal"
+        }
+      ]
+    },
+    {
+      "name": "WaitGO",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ErrorNumber",
+          "type": "errnum",
+          "optional": true,
+          "switch": false,
+          "after": "UIActiveSignal"
+        },
+        {
+          "name": "TimeOutSignal",
+          "type": "signaldo",
+          "optional": true,
+          "switch": false,
+          "after": "ErrorNumber"
+        },
+        {
+          "name": "TimeOutGOSignal",
+          "type": "signalgo",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutSignal"
+        },
+        {
+          "name": "TimeOutGOValue",
+          "type": "dnum",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutGOSignal"
+        }
+      ]
+    },
+    {
+      "name": "WaitUntil",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ErrorNumber",
+          "type": "errnum",
+          "optional": true,
+          "switch": false,
+          "after": "UIActiveSignal"
+        },
+        {
+          "name": "TimeOutSignal",
+          "type": "signaldo",
+          "optional": true,
+          "switch": false,
+          "after": "ErrorNumber"
+        },
+        {
+          "name": "TimeOutGOSignal",
+          "type": "signalgo",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutSignal"
+        },
+        {
+          "name": "TimeOutGOValue",
+          "type": "dnum",
+          "optional": true,
+          "switch": false,
+          "after": "TimeOutGOSignal"
+        }
+      ]
+    },
+    {
+      "name": "WristOpt",
+      "kind": "instruction",
+      "summary": "Measures four wrist positions to tune TCP reorientation of the robot's wrist.",
+      "syntax": "WristOpt Pos1 Pos2 Pos3 Pos4 CalPosAx4 CalPosAx5",
+      "args": [
+        {
+          "name": "Pos1",
+          "type": "jointtarget",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Pos2",
+          "type": "jointtarget",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Pos3",
+          "type": "jointtarget",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "Pos4",
+          "type": "jointtarget",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "CalPosAx4",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        },
+        {
+          "name": "CalPosAx5",
+          "type": "num",
+          "optional": false,
+          "switch": false
+        }
+      ]
+    },
+    {
+      "name": "Write",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ISOLatin1Encoding",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "after": "NoNewLine"
+        }
+      ]
+    },
+    {
+      "name": "WriteStrBin",
+      "kind": "instruction",
+      "addArgs": [
+        {
+          "name": "ISOLatin1Encoding",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "after": "Str"
+        }
+      ]
+    }
+  ]
+}

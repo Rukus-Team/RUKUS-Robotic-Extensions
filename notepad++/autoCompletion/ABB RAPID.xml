@@ -32,7 +32,9 @@
                 <Param name="Signal signalai" />
             </Overload>
         </KeyWord>
+        <KeyWord name="aiotrigg" />
         <KeyWord name="ALIAS" />
+        <KeyWord name="AliasCamera" />
         <KeyWord name="AliasIO" />
         <KeyWord name="AliasIOReset" />
         <KeyWord name="AND" func="yes">
@@ -170,10 +172,22 @@
                 <Param name="Value2 dnum" />
             </Overload>
         </KeyWord>
+        <KeyWord name="BookErrNo" />
         <KeyWord name="bool" />
-        <KeyWord name="Break" />
+        <KeyWord name="BREAK" />
         <KeyWord name="btnres" />
+        <KeyWord name="busstate" />
+        <KeyWord name="buttondata" />
         <KeyWord name="byte" />
+        <KeyWord name="BytesReset" />
+        <KeyWord name="BytesToVal" func="yes">
+            <Overload retVal="bool" descr="Decodes a value of any data type from a byte array (optionally a slice of it); TRUE when it worked.">
+                <Param name="ByteArr undefined" />
+                <Param name="[\StartIndex num]" />
+                <Param name="[\ToIndex num]" />
+                <Param name="Value anytype" />
+            </Overload>
+        </KeyWord>
         <KeyWord name="ByteToStr" func="yes">
             <Overload retVal="string" descr="ByteToStr (Byte To String) is used to convert a byte into a string data with a defined byte data format.">
                 <Param name="BitData byte" />
@@ -221,6 +235,10 @@
         <KeyWord name="CalibJ" />
         <KeyWord name="CalibL" />
         <KeyWord name="CallByVar" />
+        <KeyWord name="cameradev" />
+        <KeyWord name="camerastatus" />
+        <KeyWord name="cameratarget" />
+        <KeyWord name="CamFlush" />
         <KeyWord name="CamGetExposure" func="yes">
             <Overload retVal="num" descr="CamGetExposure (Camera Get Exposure) is a function that reads the current settings for a camera.">
                 <Param name="Camera cameradev" />
@@ -244,23 +262,61 @@
                 <Param name="Camera cameradev" />
             </Overload>
         </KeyWord>
+        <KeyWord name="CamGetParameter" />
+        <KeyWord name="CamGetResult" />
+        <KeyWord name="CamLoadJob" />
         <KeyWord name="CamNumberOfResults" func="yes">
             <Overload retVal="num" descr="CamNumberOfResults (Camera Number of Results) is a function that reads the number of available vision results and returns it as a numerical value.">
                 <Param name="Camera cameradev" />
                 <Param name="[\SceneId num]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="CamReqImage" />
+        <KeyWord name="CamSetExposure" />
+        <KeyWord name="CamSetParameter" />
+        <KeyWord name="CamSetProgramMode" />
+        <KeyWord name="CamSetRunMode" />
+        <KeyWord name="CamStartLoadJob" />
+        <KeyWord name="CamStartSetParameter" />
+        <KeyWord name="CamWaitLoadJob" />
+        <KeyWord name="CamWaitSetParameter" />
+        <KeyWord name="CancelLoad" />
+        <KeyWord name="capaptrreferencedata" />
+        <KeyWord name="CapAPTrSetup" />
+        <KeyWord name="CapAPTrSetupAI" />
+        <KeyWord name="CapAPTrSetupAO" />
+        <KeyWord name="CapAPTrSetupPERS" />
+        <KeyWord name="CapC" />
+        <KeyWord name="CapCondSetDO" />
+        <KeyWord name="capdata" />
+        <KeyWord name="CapEquiDist" />
         <KeyWord name="CapGetFailSigs" func="yes">
             <Overload retVal="bool" descr="CapGetFailSigs is used to return the names on the signal or signals that failed during supervision of CapL or CapC.">
                 <Param name="ErrorNames string" />
             </Overload>
         </KeyWord>
+        <KeyWord name="CapInitSupervision" />
+        <KeyWord name="CapL" />
+        <KeyWord name="caplatrackdata" />
+        <KeyWord name="CapLATrSetup" />
+        <KeyWord name="CapNoProcess" />
+        <KeyWord name="CapRefresh" />
+        <KeyWord name="CapRemoveSupervision" />
+        <KeyWord name="CapSetDOAtStop" />
+        <KeyWord name="CAPSetStopMode" />
+        <KeyWord name="CapSetupSupervision" />
+        <KeyWord name="capspeeddata" />
+        <KeyWord name="capstopmode" />
+        <KeyWord name="captrackdata" />
+        <KeyWord name="capweavedata" />
+        <KeyWord name="CapWeaveSync" />
         <KeyWord name="CASE" />
         <KeyWord name="CDate" func="yes">
             <Overload retVal="string" descr="CDate (Current Date) is used to read the current system date.">
 
             </Overload>
         </KeyWord>
+        <KeyWord name="cfgdomain" />
         <KeyWord name="CheckProgRef" />
         <KeyWord name="CirPathMode" />
         <KeyWord name="CJointT" func="yes">
@@ -286,13 +342,24 @@
         <KeyWord name="Close" />
         <KeyWord name="CloseDir" />
         <KeyWord name="CollDetect" />
+        <KeyWord name="Comment" />
+        <KeyWord name="Concat" func="yes">
+            <Overload retVal="string" descr="Joins two strings into one (the \Remaining argument receives what did not fit).">
+                <Param name="Str1 string" />
+                <Param name="Str2 string" />
+                <Param name="[\Remaining string]" />
+            </Overload>
+        </KeyWord>
         <KeyWord name="confdata" />
         <KeyWord name="ConfJ" />
         <KeyWord name="ConfL" />
         <KeyWord name="CONNECT" />
         <KeyWord name="CONST" />
+        <KeyWord name="ContactL" />
+        <KeyWord name="CONTINUE" />
         <KeyWord name="CopyFile" />
         <KeyWord name="CopyRawBytes" />
+        <KeyWord name="CornerPathWarning" />
         <KeyWord name="CorrClear" />
         <KeyWord name="CorrCon" />
         <KeyWord name="corrdescr" />
@@ -338,6 +405,13 @@
                 <Param name="[\CTask]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="CSSAct" />
+        <KeyWord name="CSSDeact" />
+        <KeyWord name="CSSDeactMoveL" />
+        <KeyWord name="CSSForceOffsetAct" />
+        <KeyWord name="CSSForceOffsetDeact" />
+        <KeyWord name="cssframe" />
+        <KeyWord name="CSSOffsetTune" />
         <KeyWord name="CTime" func="yes">
             <Overload retVal="string" descr="CTime is used to read the current system time.">
 
@@ -358,6 +432,7 @@
         <KeyWord name="datapos" />
         <KeyWord name="DeactEventBuffer" />
         <KeyWord name="DeactUnit" />
+        <KeyWord name="DebugBreak" />
         <KeyWord name="Decr" />
         <KeyWord name="DecToHex" func="yes">
             <Overload retVal="string" descr="DecToHex is used to convert a number specified in a readable string in the base 10 to the base16.">
@@ -403,6 +478,7 @@
                 <Param name="Signal signaladi" />
             </Overload>
         </KeyWord>
+        <KeyWord name="dionum" />
         <KeyWord name="dir" />
         <KeyWord name="Distance" func="yes">
             <Overload retVal="num" descr="Distance is used to calculate the distance between two points in the space.">
@@ -441,7 +517,31 @@
                 <Param name="Signal signaldo" />
             </Overload>
         </KeyWord>
+        <KeyWord name="DropSensor" />
         <KeyWord name="DropWObj" />
+        <KeyWord name="EGMActJoint" />
+        <KeyWord name="EGMActMove" />
+        <KeyWord name="EGMActPose" />
+        <KeyWord name="egmframetype" />
+        <KeyWord name="EGMGetId" />
+        <KeyWord name="EGMGetState" />
+        <KeyWord name="egmident" />
+        <KeyWord name="EGMMoveC" />
+        <KeyWord name="EGMMoveL" />
+        <KeyWord name="EGMReset" />
+        <KeyWord name="EGMRunJoint" />
+        <KeyWord name="EGMRunPose" />
+        <KeyWord name="EGMSetupAI" />
+        <KeyWord name="EGMSetupAO" />
+        <KeyWord name="EGMSetupGI" />
+        <KeyWord name="EGMSetupLTAPP" />
+        <KeyWord name="EGMSetupUC" />
+        <KeyWord name="egmstate" />
+        <KeyWord name="EGMStop" />
+        <KeyWord name="egmstopmode" />
+        <KeyWord name="EGMStreamStart" />
+        <KeyWord name="EGMStreamStop" />
+        <KeyWord name="egm_minmax" />
         <KeyWord name="ELSE" />
         <KeyWord name="ELSEIF" />
         <KeyWord name="ENDFOR" />
@@ -491,6 +591,7 @@
             </Overload>
         </KeyWord>
         <KeyWord name="execmode" />
+        <KeyWord name="exec_level" />
         <KeyWord name="EXIT" />
         <KeyWord name="ExitCycle" />
         <KeyWord name="Exp" func="yes">
@@ -500,6 +601,59 @@
         </KeyWord>
         <KeyWord name="extjoint" />
         <KeyWord name="FALSE" />
+        <KeyWord name="FCAct" />
+        <KeyWord name="fcboxvol" />
+        <KeyWord name="FCCalib" />
+        <KeyWord name="FCCondForce" />
+        <KeyWord name="FCCondOrient" />
+        <KeyWord name="FCCondPos" />
+        <KeyWord name="FCCondReoriSpeed" />
+        <KeyWord name="fccondstatus" />
+        <KeyWord name="FCCondTCPSpeed" />
+        <KeyWord name="FCCondTorque" />
+        <KeyWord name="FCCondWaitWhile" />
+        <KeyWord name="fccylindervol" />
+        <KeyWord name="FCDeact" />
+        <KeyWord name="fcforcevector" />
+        <KeyWord name="fcframe" />
+        <KeyWord name="FCGetForce" />
+        <KeyWord name="FCGetProcessData" />
+        <KeyWord name="FCIsForceMode" />
+        <KeyWord name="FCLoadID" />
+        <KeyWord name="fcplane" />
+        <KeyWord name="FCPress1LStart" />
+        <KeyWord name="FCPressC" />
+        <KeyWord name="FCPressEnd" />
+        <KeyWord name="FCPressL" />
+        <KeyWord name="fcprocessdata" />
+        <KeyWord name="FCRefCircle" />
+        <KeyWord name="FCRefForce" />
+        <KeyWord name="FCRefLine" />
+        <KeyWord name="FCRefMoveFrame" />
+        <KeyWord name="FCRefRot" />
+        <KeyWord name="FCRefSpiral" />
+        <KeyWord name="FCRefSprForceCart" />
+        <KeyWord name="FCRefStart" />
+        <KeyWord name="FCRefStop" />
+        <KeyWord name="FCRefTorque" />
+        <KeyWord name="FCResetDampingTune" />
+        <KeyWord name="FCResetLPFilterTune" />
+        <KeyWord name="FCSetDampingTune" />
+        <KeyWord name="FCSetLPFilterTune" />
+        <KeyWord name="FCSetMaxForceChangeTune" />
+        <KeyWord name="FCSpdChgAct" />
+        <KeyWord name="FCSpdChgDeact" />
+        <KeyWord name="fcspdchgtunetype" />
+        <KeyWord name="FCSpdChgTunReset" />
+        <KeyWord name="FCSpdChgTunSet" />
+        <KeyWord name="fcspherevol" />
+        <KeyWord name="FCSupvForce" />
+        <KeyWord name="FCSupvOrient" />
+        <KeyWord name="FCSupvPos" />
+        <KeyWord name="FCSupvReoriSpeed" />
+        <KeyWord name="FCSupvTCPSpeed" />
+        <KeyWord name="FCSupvTorque" />
+        <KeyWord name="fcxyznum" />
         <KeyWord name="FileSize" func="yes">
             <Overload retVal="num" descr="FileSize is used to retrieve the size of the specified file.">
                 <Param name="Path string" />
@@ -516,8 +670,16 @@
             </Overload>
         </KeyWord>
         <KeyWord name="fine" />
+        <KeyWord name="FitCircle" />
+        <KeyWord name="FitLine" />
+        <KeyWord name="FitPlane" />
+        <KeyWord name="FitSphere" />
+        <KeyWord name="flypointdata" />
         <KeyWord name="FOR" />
         <KeyWord name="forcedata" />
+        <KeyWord name="FricIdEvaluate" />
+        <KeyWord name="FricIdInit" />
+        <KeyWord name="FricIdSetFricLevels" />
         <KeyWord name="FROM" />
         <KeyWord name="FSSize" func="yes">
             <Overload retVal="num" descr="FSSize (File System Size) is used to retrieve the size of the file system in which a specified file resides.">
@@ -542,6 +704,8 @@
             </Overload>
         </KeyWord>
         <KeyWord name="GetDataVal" />
+        <KeyWord name="GetGroupSignalInfo" />
+        <KeyWord name="GetJointData" />
         <KeyWord name="GetMaxNumberOfCyclicBool" func="yes">
             <Overload retVal="num" descr="GetMaxNumberOfCyclicBool is used for retrieving the maximum number of Cyclic bool conditions that can be connected at the same time.">
 
@@ -581,6 +745,19 @@
                 <Param name="[\Active bool]" />
                 <Param name="[\DriveModule num]" />
                 <Param name="[\OKToDeact bool]" />
+            </Overload>
+        </KeyWord>
+        <KeyWord name="GetNextOption" func="yes">
+            <Overload retVal="bool" descr="Steps through the RobotWare options installed on the controller, one name per call.">
+                <Param name="ListNumber num" />
+                <Param name="OptionName string" />
+            </Overload>
+        </KeyWord>
+        <KeyWord name="GetNextProduct" func="yes">
+            <Overload retVal="bool" descr="Steps through the products installed on the controller, one name (and version) per call.">
+                <Param name="ListNumber num" />
+                <Param name="ProductName string" />
+                <Param name="[\VersionName string]" />
             </Overload>
         </KeyWord>
         <KeyWord name="GetNextSym" func="yes">
@@ -633,6 +810,13 @@
                 <Param name="[\Sec]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="GetTorqueMargin" func="yes">
+            <Overload retVal="num" descr="The smallest motor torque margin seen since ResetTorqueMargin, for a robot or external axis.">
+                <Param name="[\MechUnit mecunit]" />
+                <Param name="[\AxisNo num]" />
+            </Overload>
+        </KeyWord>
+        <KeyWord name="GetTrapData" />
         <KeyWord name="GetTSPStatus" func="yes">
             <Overload retVal="tsp_status" descr="GetTSPStatus is used to check if a task is checked or unchecked in the Task Selection Panel on the FlexPendant.">
                 <Param name="TaskRef taskid" />
@@ -674,6 +858,8 @@
             </Overload>
         </KeyWord>
         <KeyWord name="HollowWristReset" />
+        <KeyWord name="ICap" />
+        <KeyWord name="ICapPathPos" />
         <KeyWord name="icondata" />
         <KeyWord name="IDelete" />
         <KeyWord name="identno" />
@@ -701,13 +887,35 @@
                 <Param name="[\ZeroSpeed]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="InitSuperv" />
         <KeyWord name="INOUT" />
         <KeyWord name="intnum" />
         <KeyWord name="InvertDO" />
+        <KeyWord name="IOActivate" />
         <KeyWord name="IOBusStart" />
+        <KeyWord name="IOBusState" />
+        <KeyWord name="IODeactivate" />
         <KeyWord name="iodev" />
+        <KeyWord name="IODeviceMute" />
+        <KeyWord name="IODeviceState" func="yes">
+            <Overload retVal="iodevice_state" descr="Reads the physical or logical state of an I/O device.">
+                <Param name="DeviceName string" />
+                <Param name="[\Phys]" />
+                <Param name="[\Logic]" />
+            </Overload>
+        </KeyWord>
+        <KeyWord name="iodevice_state" />
         <KeyWord name="IODisable" />
         <KeyWord name="IOEnable" />
+        <KeyWord name="IOEventMessage" />
+        <KeyWord name="IONetworkState" func="yes">
+            <Overload retVal="ionetwork_state" descr="Reads the physical or logical state of an I/O network.">
+                <Param name="NetworkName string" />
+                <Param name="[\Phys]" />
+                <Param name="[\Logic]" />
+            </Overload>
+        </KeyWord>
+        <KeyWord name="ionetwork_state" />
         <KeyWord name="IOUnitState" func="yes">
             <Overload retVal="iounit_state" descr="IOUnitState is used to find out the current state of an I/O device.">
                 <Param name="UnitName string" />
@@ -715,6 +923,8 @@
                 <Param name="[\Logic]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="iounit_state" />
+        <KeyWord name="IPathPos" />
         <KeyWord name="IPers" />
         <KeyWord name="IRMQMessage" />
         <KeyWord name="IsBrakeCheckActive" func="yes">
@@ -804,13 +1014,29 @@
         <KeyWord name="IVarValue" />
         <KeyWord name="IWatch" />
         <KeyWord name="jointtarget" />
+        <KeyWord name="JSONFromVal" />
+        <KeyWord name="JSONToVal" />
+        <KeyWord name="Label" />
         <KeyWord name="LANGUAGE" />
         <KeyWord name="listitem" />
         <KeyWord name="Load" />
         <KeyWord name="load0" />
         <KeyWord name="loaddata" />
+        <KeyWord name="LoadId" />
+        <KeyWord name="loadidnum" />
+        <KeyWord name="loadsession" />
         <KeyWord name="LOCAL" />
         <KeyWord name="MakeDir" />
+        <KeyWord name="ManLoadIdProc" />
+        <KeyWord name="MatrixAdd" />
+        <KeyWord name="MatrixInverse" />
+        <KeyWord name="MatrixMult" />
+        <KeyWord name="MatrixReset" />
+        <KeyWord name="MatrixSolve" />
+        <KeyWord name="MatrixSolveQR" />
+        <KeyWord name="MatrixSub" />
+        <KeyWord name="MatrixSVD" />
+        <KeyWord name="MatrixTranspose" />
         <KeyWord name="Max" func="yes">
             <Overload retVal="num" descr="Max returns the largest of two arguments.">
                 <Param name="A num" />
@@ -878,7 +1104,9 @@
         </KeyWord>
         <KeyWord name="MotionProcessModeSet" />
         <KeyWord name="MotionSup" />
+        <KeyWord name="motsetdata" />
         <KeyWord name="MoveAbsJ" />
+        <KeyWord name="MoveAbsL" />
         <KeyWord name="MoveC" />
         <KeyWord name="MoveCAO" />
         <KeyWord name="MoveCDO" />
@@ -895,6 +1123,7 @@
         <KeyWord name="MoveLDO" />
         <KeyWord name="MoveLGO" />
         <KeyWord name="MoveLSync" />
+        <KeyWord name="MovePnP" />
         <KeyWord name="MToolRotCalib" />
         <KeyWord name="MToolTCPCalib" />
         <KeyWord name="NonMotionMode" func="yes">
@@ -935,6 +1164,7 @@
                 <Param name="ZOffset num" />
             </Overload>
         </KeyWord>
+        <KeyWord name="opcalc" />
         <KeyWord name="Open" />
         <KeyWord name="OpenDir" />
         <KeyWord name="OpMode" func="yes">
@@ -984,12 +1214,16 @@
                 <Param name="[\AxisNo num]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="paridvalidnum" />
         <KeyWord name="PathAccLim" />
         <KeyWord name="PathLengthGet" func="yes">
             <Overload retVal="num" descr="PathLengthGet is used to read the current value of the counter that measures the path-length travelled by the robot’s TCP.">
 
             </Overload>
         </KeyWord>
+        <KeyWord name="PathLengthReset" />
+        <KeyWord name="PathLengthStart" />
+        <KeyWord name="PathLengthStop" />
         <KeyWord name="PathLevel" func="yes">
             <Overload retVal="num" descr="PathLevel is used to get the current path level.">
 
@@ -1021,6 +1255,7 @@
                 <Param name="[\Irpt]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="pnpdata" />
         <KeyWord name="pos" />
         <KeyWord name="pose" />
         <KeyWord name="PoseInv" func="yes">
@@ -1063,20 +1298,42 @@
             </Overload>
         </KeyWord>
         <KeyWord name="PROC" />
+        <KeyWord name="ProcCall" />
         <KeyWord name="ProcerrRecovery" />
+        <KeyWord name="processtimes" />
+        <KeyWord name="progdisp" />
         <KeyWord name="ProgMemFree" func="yes">
             <Overload retVal="num" descr="ProgMemFree (Program Memory Free) is used to get the size of free program memory.">
 
             </Overload>
         </KeyWord>
+        <KeyWord name="PrxActivAndStoreRecord" />
+        <KeyWord name="PrxActivRecord" />
+        <KeyWord name="PrxDbgStoreRecord" />
+        <KeyWord name="PrxDeactRecord" />
         <KeyWord name="PrxGetMaxRecordpos" func="yes">
             <Overload retVal="num" descr="PrxGetMaxRecordpos is used to return the maximum position in mm of the active record.">
                 <Param name="MechUnit mechunit" />
             </Overload>
         </KeyWord>
+        <KeyWord name="PrxResetPos" />
+        <KeyWord name="PrxResetRecords" />
+        <KeyWord name="PrxSetPosOffset" />
+        <KeyWord name="PrxSetRecordSampleTime" />
+        <KeyWord name="PrxSetSyncalarm" />
+        <KeyWord name="PrxStartRecord" />
+        <KeyWord name="PrxStopRecord" />
+        <KeyWord name="PrxStoreRecord" />
+        <KeyWord name="PrxUseFileRecord" />
         <KeyWord name="PulseDO" />
         <KeyWord name="RAISE" />
         <KeyWord name="RaiseToUser" />
+        <KeyWord name="Rand" func="yes">
+            <Overload retVal="num" descr="A random whole number from 0 to RAND_MAX, optionally from a given seed.">
+                <Param name="[\Seed]" />
+                <Param name="[\SeedEachNTime num]" />
+            </Overload>
+        </KeyWord>
         <KeyWord name="rawbytes" />
         <KeyWord name="RawBytesLen" func="yes">
             <Overload retVal="num" descr="RawBytesLen is used to get the current length of valid bytes in a rawbytes variable.">
@@ -1098,6 +1355,15 @@
                 <Param name="FileName string" />
             </Overload>
         </KeyWord>
+        <KeyWord name="ReadDnum" func="yes">
+            <Overload retVal="dnum" descr="Reads one number as dnum from a text file or serial device.">
+                <Param name="IODevice iodev" />
+                <Param name="[\Delim string]" />
+                <Param name="[\Time num]" />
+                <Param name="[\ISOLatin1Encoding]" />
+            </Overload>
+        </KeyWord>
+        <KeyWord name="ReadErrData" />
         <KeyWord name="ReadMotor" func="yes">
             <Overload retVal="num" descr="ReadMotor is used to read the current angles of the different motors of the robot and external axes.">
                 <Param name="[\MecUnit mecunit]" />
@@ -1137,6 +1403,7 @@
                 <Param name="[\TaskName string]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="ReadVarArr" />
         <KeyWord name="RECORD" />
         <KeyWord name="RelTool" func="yes">
             <Overload retVal="robtarget" descr="RelTool (Relative Tool) is used to add a displacement and/or a rotation, expressed in the active tool coordinate system, to a robot position.">
@@ -1154,12 +1421,21 @@
 
             </Overload>
         </KeyWord>
+        <KeyWord name="RemoveAllCyclicBool" />
         <KeyWord name="RemoveCyclicBool" />
         <KeyWord name="RemoveDir" />
         <KeyWord name="RemoveFile" />
+        <KeyWord name="RemoveSuperv" />
         <KeyWord name="RenameFile" />
         <KeyWord name="Reset" />
+        <KeyWord name="ResetAxisDistance" />
+        <KeyWord name="ResetAxisMoveTime" />
+        <KeyWord name="ResetData" />
+        <KeyWord name="ResetPPMoved" />
         <KeyWord name="ResetRetryCount" />
+        <KeyWord name="ResetTorqueMargin" />
+        <KeyWord name="restartblkdata" />
+        <KeyWord name="restartdata" />
         <KeyWord name="RestoPath" />
         <KeyWord name="RETRY" />
         <KeyWord name="RETURN" />
@@ -1214,6 +1490,17 @@
 
             </Overload>
         </KeyWord>
+        <KeyWord name="SafetyControllerGetGroupChecksum" func="yes">
+            <Overload retVal="string" descr="The checksum of a named protected group in the safety controller's configuration.">
+                <Param name="GroupName string" />
+            </Overload>
+        </KeyWord>
+        <KeyWord name="SafetyControllerGetNextGroupName" func="yes">
+            <Overload retVal="bool" descr="Steps through the names of the safety configuration's protected groups.">
+                <Param name="listno num" />
+                <Param name="group_name string" />
+            </Overload>
+        </KeyWord>
         <KeyWord name="SafetyControllerGetOpModePinCode" func="yes">
             <Overload retVal="string" descr="SafetyControllerGetOpModePinCode is used to get the operating mode pin code for the keyless mode selector.">
 
@@ -1229,13 +1516,19 @@
 
             </Overload>
         </KeyWord>
+        <KeyWord name="SafetyControllerSyncRequest" />
         <KeyWord name="SafetyControlSync" />
         <KeyWord name="Save" />
         <KeyWord name="SaveCfgData" />
+        <KeyWord name="SCWrite" />
         <KeyWord name="SearchC" />
         <KeyWord name="SearchExtJ" />
         <KeyWord name="SearchJ" />
         <KeyWord name="SearchL" />
+        <KeyWord name="SenDevice" />
+        <KeyWord name="sensor" />
+        <KeyWord name="sensorstate" />
+        <KeyWord name="sensorvardata" />
         <KeyWord name="Set" />
         <KeyWord name="SetAllDataVal" />
         <KeyWord name="SetAO" />
@@ -1247,13 +1540,20 @@
         <KeyWord name="SetLeadThrough" />
         <KeyWord name="SetSysData" />
         <KeyWord name="SetupCyclicBool" />
+        <KeyWord name="SetupSuperv" />
         <KeyWord name="shapedata" />
+        <KeyWord name="SiClose" />
+        <KeyWord name="SiConnect" />
+        <KeyWord name="SiGetCyclic" />
         <KeyWord name="signalai" />
         <KeyWord name="signalao" />
         <KeyWord name="signaldi" />
         <KeyWord name="signaldo" />
         <KeyWord name="signalgi" />
         <KeyWord name="signalgo" />
+        <KeyWord name="signalorigin" />
+        <KeyWord name="signalxx" />
+        <KeyWord name="SimCollision" />
         <KeyWord name="simdata" />
         <KeyWord name="Sin" func="yes">
             <Overload retVal="num" descr="Sin(Sine)is used to calculate the sine value from an angle value.">
@@ -1266,6 +1566,7 @@
             </Overload>
         </KeyWord>
         <KeyWord name="SingArea" />
+        <KeyWord name="SiSetCyclic" />
         <KeyWord name="SkipWarn" />
         <KeyWord name="SocketAccept" />
         <KeyWord name="SocketBind" />
@@ -1291,6 +1592,7 @@
         <KeyWord name="socketstatus" />
         <KeyWord name="SoftAct" />
         <KeyWord name="SoftDeact" />
+        <KeyWord name="SoftElbow" />
         <KeyWord name="speeddata" />
         <KeyWord name="SpeedLimAxis" />
         <KeyWord name="SpeedLimCheckPoint" />
@@ -1357,6 +1659,7 @@
                 <Param name="[\RetPosAdj num]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="STIsServoTool" />
         <KeyWord name="SToolRotCalib" />
         <KeyWord name="SToolTCPCalib" />
         <KeyWord name="Stop" />
@@ -1387,7 +1690,21 @@
                 <Param name="[\NotInSet]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="StrFormat" func="yes">
+            <Overload retVal="string" descr="Builds a string from a text with numbered placeholders filled by the \Arg values.">
+                <Param name="Text string" />
+                <Param name="[\Arg1 string]" />
+                <Param name="[\Arg2 string]" />
+                <Param name="[\Arg3 string]" />
+                <Param name="[\Arg4 string]" />
+                <Param name="[\Arg5 string]" />
+                <Param name="[\Arg6 string]" />
+                <Param name="[\Remaining string]" />
+                <Param name="[\SmartTruncate string]" />
+            </Overload>
+        </KeyWord>
         <KeyWord name="string" />
+        <KeyWord name="stringdig" />
         <KeyWord name="StrLen" func="yes">
             <Overload retVal="num" descr="StrLen (String Length) is used to find the current length of a string.">
                 <Param name="Str string" />
@@ -1428,6 +1745,11 @@
                 <Param name="Len num" />
             </Overload>
         </KeyWord>
+        <KeyWord name="StrSize" func="yes">
+            <Overload retVal="num" descr="The size of a string in bytes (a UTF-8 character can take more than one).">
+                <Param name="Str string" />
+            </Overload>
+        </KeyWord>
         <KeyWord name="StrToByte" func="yes">
             <Overload retVal="byte" descr="StrToByte (String To Byte) is used to convert a string with a defined byte data format into a byte data.">
                 <Param name="ConStr string" />
@@ -1445,6 +1767,9 @@
         </KeyWord>
         <KeyWord name="STTune" />
         <KeyWord name="STTuneReset" />
+        <KeyWord name="supervtimeouts" />
+        <KeyWord name="SupSyncSensorOff" />
+        <KeyWord name="SupSyncSensorOn" />
         <KeyWord name="switch" />
         <KeyWord name="symnum" />
         <KeyWord name="syncident" />
@@ -1453,6 +1778,7 @@
         <KeyWord name="SyncMoveResume" />
         <KeyWord name="SyncMoveSuspend" />
         <KeyWord name="SyncMoveUndo" />
+        <KeyWord name="SyncToSensor" />
         <KeyWord name="SYSMODULE" />
         <KeyWord name="SystemStopAction" />
         <KeyWord name="Tan" func="yes">
@@ -1506,11 +1832,14 @@
                 <Param name="Signal signaldi" />
             </Overload>
         </KeyWord>
+        <KeyWord name="testsignal" />
+        <KeyWord name="TestSignDefine" />
         <KeyWord name="TestSignRead" func="yes">
             <Overload retVal="num" descr="TestSignRead is used to read the actual test signal value.">
                 <Param name="Channel num" />
             </Overload>
         </KeyWord>
+        <KeyWord name="TestSignReset" />
         <KeyWord name="TextGet" func="yes">
             <Overload retVal="string" descr="TextGet is used to get a text string from the system text tables.">
                 <Param name="Table num" />
@@ -1541,6 +1870,7 @@
         <KeyWord name="TPReadNum" />
         <KeyWord name="TPShow" />
         <KeyWord name="TPWrite" />
+        <KeyWord name="translationdata" />
         <KeyWord name="TRAP" />
         <KeyWord name="trapdata" />
         <KeyWord name="TriggAbsJ" />
@@ -1563,6 +1893,7 @@
         <KeyWord name="TriggJIOs" />
         <KeyWord name="TriggL" />
         <KeyWord name="TriggLIOs" />
+        <KeyWord name="triggmode" />
         <KeyWord name="TriggRampAO" />
         <KeyWord name="TriggSpeed" />
         <KeyWord name="TriggStopProc" />
@@ -1580,7 +1911,9 @@
                 <Param name="[\Dec num]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="TryInt" />
         <KeyWord name="TRYNEXT" />
+        <KeyWord name="tsp_status" />
         <KeyWord name="TuneReset" />
         <KeyWord name="TuneServo" />
         <KeyWord name="tunetype" />
@@ -1614,6 +1947,8 @@
 
             </Overload>
         </KeyWord>
+        <KeyWord name="UIDisplay" />
+        <KeyWord name="uidisplaynum" />
         <KeyWord name="UIDnumEntry" func="yes">
             <Overload retVal="dnum" descr="UIDnumEntry (User Interaction Number Entry) is used to let the operator enter a numeric value from the available user device, such as the FlexPendant.">
                 <Param name="[\Header string]" />
@@ -1701,6 +2036,8 @@
             </Overload>
         </KeyWord>
         <KeyWord name="UIMsgBox" />
+        <KeyWord name="UIMsgWrite" />
+        <KeyWord name="UIMsgWriteAbort" />
         <KeyWord name="UINumEntry" func="yes">
             <Overload retVal="num" descr="UINumEntry (User Interaction Number Entry) is used to let the operator enter a numeric value from the available user device, such as the FlexPendant.">
                 <Param name="[\Header string]" />
@@ -1746,6 +2083,7 @@
             </Overload>
         </KeyWord>
         <KeyWord name="UIShow" />
+        <KeyWord name="uishownum" />
         <KeyWord name="UNDO" />
         <KeyWord name="UnLoad" />
         <KeyWord name="UnpackRawBytes" />
@@ -1779,6 +2117,13 @@
                 <Param name="Signal anytype" />
             </Overload>
         </KeyWord>
+        <KeyWord name="ValToBytes" func="yes">
+            <Overload retVal="num" descr="Encodes a value of any data type into a byte array; returns how many bytes it used.">
+                <Param name="Value anytype" />
+                <Param name="ByteArr byte{*}" />
+                <Param name="[\StartIndex num]" />
+            </Overload>
+        </KeyWord>
         <KeyWord name="ValToStr" func="yes">
             <Overload retVal="string" descr="ValToStr (Value To String) is used to convert a value of any data type to a string.">
                 <Param name="Val anytype" />
@@ -1802,16 +2147,20 @@
         <KeyWord name="WaitGO" />
         <KeyWord name="WaitLoad" />
         <KeyWord name="WaitRob" />
+        <KeyWord name="WaitSensor" />
         <KeyWord name="WaitSyncTask" />
         <KeyWord name="WaitTestAndSet" />
         <KeyWord name="WaitTime" />
         <KeyWord name="WaitUntil" />
         <KeyWord name="WaitWObj" />
+        <KeyWord name="WarmStart" />
+        <KeyWord name="weavestartdata" />
         <KeyWord name="WHILE" />
         <KeyWord name="WITH" />
         <KeyWord name="wobj0" />
         <KeyWord name="wobjdata" />
         <KeyWord name="WorldAccLim" />
+        <KeyWord name="WristOpt" />
         <KeyWord name="Write" />
         <KeyWord name="WriteAnyBin" />
         <KeyWord name="WriteBin" />
@@ -1819,6 +2168,8 @@
         <KeyWord name="WriteCfgData" />
         <KeyWord name="WriteRawBytes" />
         <KeyWord name="WriteStrBin" />
+        <KeyWord name="WriteVar" />
+        <KeyWord name="WriteVarArr" />
         <KeyWord name="WZBoxDef" />
         <KeyWord name="WZCylDef" />
         <KeyWord name="WZDisable" />

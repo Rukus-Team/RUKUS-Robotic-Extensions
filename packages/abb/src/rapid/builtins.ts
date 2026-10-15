@@ -6,17 +6,23 @@
  * that is neither declared in the task nor in this list is reported by the diagnostics,
  * but a controller also carries instructions from its options (SpotWare, Production
  * Manager, Integrated Vision, the site's own installed libraries) that no backup text
- * declares. So an unknown name is at most a warning. The list is what RobotWare 6 ships
- * in the base system and the common options, plus the SpotWare / Servo Tool Control
- * instructions the IRC5 corpus calls.
+ * declares. So an unknown name is at most a warning.
+ *
+ * The exported sets are every name of the RAPID reference (RobotWare 6 and 8, reference.ts) and
+ * of both manuals' tables of contents (manual-names.json), plus the hand lists below: what the
+ * corpus calls and the manuals do not have - SpotWare, Servo Tool Control - and the RAPID of
+ * options documented only in their own application manuals, which RobotStudio does not ship:
+ * Externally Guided Motion (EGM*), SoftMove (CSS*) and Force Control (FC*). Those are names only,
+ * so a call to one is known (no warning, coloured) but has no signature help.
  */
+import { rapidRefEntries, rapidManualNames, type RapidRefEntry } from './reference';
 
 const names: string[][] = [];
 /** the upper-cased set for matching; the spelling as written is kept for completion (see {@link RAPID_BUILTIN_SPELLINGS}) */
 const set = (s: string) => { const list = s.split(/\s+/).filter(Boolean); names.push(list); return new Set(list.map(x => x.toUpperCase())); };
 
-/** Built-in and option instructions (called as `Name args;`). */
-export const RAPID_INSTRUCTIONS: ReadonlySet<string> = set(`
+/** Built-in and option instructions (called as `Name args;`), as first listed by hand. */
+const HAND_INSTRUCTIONS = set(`
   MoveJ MoveL MoveC MoveAbsJ MoveExtJ MoveJDO MoveLDO MoveCDO MoveJSync MoveLSync MoveCSync
   MoveJAO MoveLAO MoveCAO MoveJGO MoveLGO MoveCGO
   SearchJ SearchL SearchC SearchExtJ TriggJ TriggL TriggC TriggJIOs TriggLIOs TriggIO TriggEquip TriggInt
@@ -49,10 +55,19 @@ export const RAPID_INSTRUCTIONS: ReadonlySet<string> = set(`
   SocketCreate SocketConnect SocketSend SocketReceive SocketClose SocketBind SocketListen SocketAccept
   SocketReceiveFrom SocketSendTo RMQSendMessage RMQFindSlot RMQGetMessage RMQGetMsgData RMQGetMsgHeader
   RMQReadWait RMQEmptyQueue RMQSendWait SpyStart SpyStop
+  EGMActJoint EGMActMove EGMActPose EGMGetId EGMMoveC EGMMoveL EGMReset EGMRunJoint EGMRunPose
+  EGMSetupAI EGMSetupAO EGMSetupGI EGMSetupLTAPP EGMSetupUC EGMStop EGMStreamStart EGMStreamStop
+  CSSAct CSSDeact CSSDeactMoveL CSSForceOffsetAct CSSForceOffsetDeact CSSOffsetTune
+  FCAct FCDeact FCCalib FCCondForce FCCondOrient FCCondPos FCCondReoriSpeed FCCondTCPSpeed FCCondTorque
+  FCCondWaitWhile FCPress1LStart FCPressC FCPressEnd FCPressL FCRefCircle FCRefForce FCRefLine
+  FCRefMoveFrame FCRefRot FCRefSpiral FCRefSprForceCart FCRefStart FCRefStop FCRefTorque
+  FCResetDampingTune FCResetLPFilterTune FCSetDampingTune FCSetLPFilterTune FCSetMaxForceChangeTune
+  FCSpdChgAct FCSpdChgDeact FCSpdChgTunSet FCSpdChgTunReset
+  FCSupvForce FCSupvOrient FCSupvPos FCSupvReoriSpeed FCSupvTCPSpeed FCSupvTorque
 `);
 
-/** Built-in functions (called as `Name(...)` in an expression). */
-export const RAPID_FUNCTIONS: ReadonlySet<string> = set(`
+/** Built-in functions (called as `Name(...)` in an expression), as first listed by hand. */
+const HAND_FUNCTIONS = set(`
   Abs ACos ASin ATan ATan2 Cos Sin Tan Exp Pow Sqrt Round Trunc AbsDnum RoundDnum TruncDnum
   NumToDnum DnumToNum StrToVal ValToStr NumToStr DnumToStr StrLen StrPart StrFind StrMatch StrMemb StrOrder
   StrMap StrToByte ByteToStr StrDigCmp StrDigCalc Offs RelTool CRobT CJointT CPos CTool CWObj CSpeedOverride
@@ -67,11 +82,12 @@ export const RAPID_FUNCTIONS: ReadonlySet<string> = set(`
   UIAlphaEntry UIClientExist UIListView UIMessageBox UINumEntry UINumTune UIDnumEntry UIDnumTune CorrRead
   PFRestart PathLevel PPMovedInManMode IsSyncMoveOn TriggDataValid GetServiceInfo GetModalPayloadMode
   GetSignalOrigin GetNextMechUnit GetTSPStatus MirPos RMQGetSlotName
-  STIsCalib STIsClosed STIsIndGun STIsOpen
+  STIsCalib STIsClosed STIsIndGun STIsOpen STIsServoTool
+  EGMGetState FCGetForce FCGetProcessData FCIsForceMode FCLoadID
 `);
 
-/** Built-in data types. */
-export const RAPID_TYPES: ReadonlySet<string> = set(`
+/** Built-in data types, as first listed by hand. */
+const HAND_TYPES = set(`
   num dnum bool string byte switch robtarget jointtarget pos orient pose confdata extjoint robjoint
   tooldata wobjdata loaddata speeddata zonedata stoppointdata signaldi signaldo signalai signalao signalgi signalgo
   intnum clock errnum errstr errdomain errtype trapdata triggdata triggios triggiosdnum triggstrgo
@@ -79,7 +95,39 @@ export const RAPID_TYPES: ReadonlySet<string> = set(`
   opnum execmode symnum event_type handler_type datapos btnres listitem icondata socketdev socketstatus
   rmqslot rmqheader rmqmessage pathrecid tpnum corrdescr tunetype paridnum
   spotdata gunnum forcedata simdata
+  egmident egmstate egmstopmode egm_minmax egmframetype cssframe
+  fcboxvol fccondstatus fccylindervol fcforcevector fcframe fcplane fcprocessdata fcspdchgtunetype fcspherevol fcxyznum
 `);
 
+/**
+ * RAPID's reserved words (RAPID kernel manual, RobotWare 8: RW6's plus BREAK and CONTINUE). The instruction manuals
+ * also list IF, FOR, WHILE, GOTO, RETURN ... and the operators AND, OR, NOT, XOR, DIV, MOD: those are the language's
+ * own, not built-in names. Break and Continue stay instructions too (RW6's Break, RW8's loop Continue are called
+ * as `Break;` / `Continue;`).
+ */
+export const RAPID_RESERVED: ReadonlySet<string> = new Set(('ALIAS AND BACKWARD BREAK CASE CONNECT CONST CONTINUE DEFAULT DIV DO ELSE ELSEIF ENDFOR ENDFUNC ENDIF ENDMODULE ENDPROC ENDRECORD ENDTEST ENDTRAP ENDWHILE ERROR EXIT FALSE FOR FROM FUNC GOTO IF INOUT LOCAL MOD MODULE NOSTEPIN NOT NOVIEW OR PERS PROC RAISE READONLY RECORD RETRY RETURN STEP SYSMODULE TEST THEN TO TRAP TRUE TRYNEXT UNDO VAR VIEWONLY WHILE WITH XOR').split(' '));
+const RESERVED = new Set([...RAPID_RESERVED].filter(w => w !== 'BREAK' && w !== 'CONTINUE'));
+/** The hand list's spellings, then every reference and manual name of this kind not already in it. */
+function known(kind: RapidRefEntry['kind'], hand: string[]): string[] {
+  const seen = new Set(hand.map(x => x.toUpperCase()));
+  const out = [...hand];
+  for (const n of [...rapidRefEntries(kind).map(e => e.name), ...rapidManualNames(kind)]) {
+    const u = n.toUpperCase();
+    if (seen.has(u) || RESERVED.has(u) || !/^[A-Za-z_]\w*$/.test(n)) continue;
+    seen.add(u); out.push(n);
+  }
+  return out;
+}
+const spelled = { instructions: known('instruction', names[0]), functions: known('function', names[1]), types: known('type', names[2]) };
+const upper = (list: string[]) => new Set(list.map(x => x.toUpperCase()));
+
+/** Built-in and option instructions (called as `Name args;`): RobotWare 6 and 8, their options, SpotWare, EGM, SoftMove, Force Control. */
+export const RAPID_INSTRUCTIONS: ReadonlySet<string> = upper(spelled.instructions);
+/** Built-in functions (called as `Name(...)` in an expression). */
+export const RAPID_FUNCTIONS: ReadonlySet<string> = upper(spelled.functions);
+/** Built-in data types. */
+export const RAPID_TYPES: ReadonlySet<string> = upper(spelled.types);
+void HAND_INSTRUCTIONS; void HAND_FUNCTIONS; void HAND_TYPES;
+
 /** Every built-in name spelled as RobotWare writes it (MoveL, not MOVEL), by kind, for completion. */
-export const RAPID_BUILTIN_SPELLINGS = { instructions: names[0], functions: names[1], types: names[2] } as const;
+export const RAPID_BUILTIN_SPELLINGS = spelled;

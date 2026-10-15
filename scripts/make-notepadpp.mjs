@@ -15,6 +15,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rapidNames } from './rapid-names.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const out = path.join(root, 'notepad++');
@@ -66,18 +67,19 @@ const builtins = new Map();
 for (const m of builtinsTs.matchAll(/\bb\('([A-Z0-9_]+)',\s*'([^']*)',\s*'((?:[^'\\]|\\.)*)'(?:,\s*'([^']*)')?\)/g)) builtins.set(m[1], { sig: m[2], doc: m[3].replace(/\\'/g, "'"), ret: m[4] });
 const klBuiltins = uniq([...klBuiltinsGrammar, ...builtins.keys()]);
 
-// RAPID: the extension's built-in names as RobotWare spells them (instructions, functions, types, in
-// that order in builtins.ts) and the grammar's control / storage words
+// RAPID: the extension's built-in names as RobotWare spells them (builtins.ts's hand lists, the RW6 / RW8
+// reference and both manuals' names: scripts/rapid-names.mjs) and the grammar's control / storage words
 const rp = grammar('rapid.tmLanguage.json');
-const rapidBuiltinsTs = readFileSync(path.join(root, 'packages/abb/src/rapid/builtins.ts'), 'utf8');
-const [rpInstructions, rpFunctions, rpTypes] = [...rapidBuiltinsTs.matchAll(/= set\(`([^`]*)`\)/g)].map(m => m[1].split(/\s+/).filter(Boolean));
+const { instructions: rpInstructions, functions: rpFunctions, types: rpTypes } = rapidNames(root);
 const rpControl = words(rp.control.match).concat(['AND', 'OR', 'XOR', 'NOT', 'DIV', 'MOD']);
 const rpStorage = words(rp.storage.match).concat(['NOVIEW', 'READONLY', 'SYSMODULE', 'NOSTEPIN', 'VIEWONLY', 'VERSION', 'LANGUAGE']);
 const rpConstants = ['TRUE', 'FALSE', 'fine', 'vmax', 'tool0', 'wobj0', 'load0', 'ERRNO', 'OP_AUTO', 'OP_MAN_PROG', 'OP_MAN_TEST',
   ...[5, 10, 20, 30, 40, 50, 60, 80, 100, 150, 200, 300, 400, 500, 600, 800, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000].map(v => `v${v}`),
   ...[0, 1, 5, 10, 15, 20, 30, 40, 50, 60, 80, 100, 150, 200].map(z => `z${z}`)];
 const rpRoutine = ['MODULE', 'PROC', 'FUNC', 'TRAP', 'RECORD', 'ENDMODULE', 'ENDPROC', 'ENDFUNC', 'ENDTRAP', 'ENDRECORD', 'BACKWARD', 'ERROR', 'UNDO'];
-const rpReference = JSON.parse(readFileSync(path.join(root, 'packages/abb/src/rapid/reference.json'), 'utf8')).entries;
+// RobotWare 6's reference and the whole entries RobotWare 8 adds (reference-rw8.json, with a summary)
+const rpReference = [...JSON.parse(readFileSync(path.join(root, 'packages/abb/src/rapid/reference.json'), 'utf8')).entries,
+  ...JSON.parse(readFileSync(path.join(root, 'packages/abb/src/rapid/reference-rw8.json'), 'utf8')).entries.filter(e => e.summary !== undefined)];
 
 // ---------------------------------------------------------------- UDL
 // Colours follow the extension's type colours: amber TP, blue PC/KAREL, teal macro, grey data.

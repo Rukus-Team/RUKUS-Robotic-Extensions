@@ -80,6 +80,7 @@ import { run as runRws } from './rws.test';
 import { run as runRapidFormat } from './rapidFormat.test';
 import { run as runRapidAssist } from './rapidAssist.test';
 import { run as runRapidReference } from './rapidReference.test';
+import { run as runRapidCoverage } from './rapidCoverage.test';
 
 const roots = process.argv.slice(2).length ? process.argv.slice(2) : [
   path.resolve(__dirname, '..', '..', 'reference-backup'),
@@ -1782,6 +1783,7 @@ if (backupDir) {
   runRapidFormat(check);
   runRapidAssist(check);
   runRapidReference(check);
+  runRapidCoverage(check);
 }
 
 // ---------- the grammars: every regex compiles, and the scopes the changelog promises are produced ----------

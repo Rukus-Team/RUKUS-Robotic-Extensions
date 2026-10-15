@@ -8,6 +8,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { RAPID_INSTRUCTIONS } from '@abb/rapid/builtins';
+import { rapidRef } from '@abb/rapid/reference';
 
 type Check = (cond: unknown, msg: string) => void;
 
@@ -102,8 +103,9 @@ export function run(check: Check): void {
   // Every base-RobotWare instruction the diagnostics know should be in the manual; the misses
   // (SpotWare, Servo Tool calibration helpers, other option instructions) are reported only.
   const have = new Set(byKind('instruction').map(e => e.name.toUpperCase()));
-  rapidReferenceMisses = [...RAPID_INSTRUCTIONS].filter(n => !have.has(n)).sort();
-  if (rapidReferenceMisses.length) console.log(`  note: RAPID_INSTRUCTIONS not in the 3HAC050917 reference (option/SpotWare instructions): ${rapidReferenceMisses.join(', ')}`);
+  // (RobotWare 8's own instructions come from reference-rw8.json, merged by reference.ts: not misses)
+  rapidReferenceMisses = [...RAPID_INSTRUCTIONS].filter(n => !have.has(n) && !rapidRef(n)).sort();
+  if (rapidReferenceMisses.length) console.log(`  note: RAPID_INSTRUCTIONS in neither the RW6 nor the RW8 reference (option/SpotWare instructions): ${rapidReferenceMisses.join(', ')}`);
   const baseMustHave = ['MOVEL', 'MOVEJ', 'MOVEC', 'MOVEABSJ', 'SEARCHL', 'TRIGGL', 'SETDO', 'WAITDI', 'WAITTIME', 'TPWRITE', 'ACCSET', 'CONFL', 'OPEN', 'CLOSE', 'SOCKETCREATE', 'ISIGNALDI', 'ITIMER'];
   const baseMissing = baseMustHave.filter(n => RAPID_INSTRUCTIONS.has(n) && !have.has(n));
   check(baseMissing.length === 0, `reference: core base-RobotWare instructions present (${baseMissing.join(', ')})`);
