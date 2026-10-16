@@ -9,11 +9,11 @@
  * declares. So an unknown name is at most a warning.
  *
  * The exported sets are every name of the RAPID reference (RobotWare 6 and 8, reference.ts) and
- * of both manuals' tables of contents (manual-names.json), plus the hand lists below: what the
- * corpus calls and the manuals do not have - SpotWare, Servo Tool Control - and the RAPID of
- * options documented only in their own application manuals, which RobotStudio does not ship:
- * Externally Guided Motion (EGM*), SoftMove (CSS*) and Force Control (FC*). Those are names only,
- * so a call to one is known (no warning, coloured) but has no signature help.
+ * of both manuals' tables of contents (manual-names.json), the RAPID of the options documented only
+ * in their own application manuals - Externally Guided Motion (EGM*), SoftMove (CSS*) and Force
+ * Control (FC*), with signatures, from reference-options.json - plus the hand lists below: what the
+ * corpus calls and no manual here has (SpotWare, Servo Tool Control). Those are names only, so a
+ * call to one is known (no warning, coloured) but has no signature help.
  */
 import { rapidRefEntries, rapidManualNames, type RapidRefEntry } from './reference';
 
@@ -55,15 +55,6 @@ const HAND_INSTRUCTIONS = set(`
   SocketCreate SocketConnect SocketSend SocketReceive SocketClose SocketBind SocketListen SocketAccept
   SocketReceiveFrom SocketSendTo RMQSendMessage RMQFindSlot RMQGetMessage RMQGetMsgData RMQGetMsgHeader
   RMQReadWait RMQEmptyQueue RMQSendWait SpyStart SpyStop
-  EGMActJoint EGMActMove EGMActPose EGMGetId EGMMoveC EGMMoveL EGMReset EGMRunJoint EGMRunPose
-  EGMSetupAI EGMSetupAO EGMSetupGI EGMSetupLTAPP EGMSetupUC EGMStop EGMStreamStart EGMStreamStop
-  CSSAct CSSDeact CSSDeactMoveL CSSForceOffsetAct CSSForceOffsetDeact CSSOffsetTune
-  FCAct FCDeact FCCalib FCCondForce FCCondOrient FCCondPos FCCondReoriSpeed FCCondTCPSpeed FCCondTorque
-  FCCondWaitWhile FCPress1LStart FCPressC FCPressEnd FCPressL FCRefCircle FCRefForce FCRefLine
-  FCRefMoveFrame FCRefRot FCRefSpiral FCRefSprForceCart FCRefStart FCRefStop FCRefTorque
-  FCResetDampingTune FCResetLPFilterTune FCSetDampingTune FCSetLPFilterTune FCSetMaxForceChangeTune
-  FCSpdChgAct FCSpdChgDeact FCSpdChgTunSet FCSpdChgTunReset
-  FCSupvForce FCSupvOrient FCSupvPos FCSupvReoriSpeed FCSupvTCPSpeed FCSupvTorque
 `);
 
 /** Built-in functions (called as `Name(...)` in an expression), as first listed by hand. */
@@ -83,7 +74,6 @@ const HAND_FUNCTIONS = set(`
   PFRestart PathLevel PPMovedInManMode IsSyncMoveOn TriggDataValid GetServiceInfo GetModalPayloadMode
   GetSignalOrigin GetNextMechUnit GetTSPStatus MirPos RMQGetSlotName
   STIsCalib STIsClosed STIsIndGun STIsOpen STIsServoTool
-  EGMGetState FCGetForce FCGetProcessData FCIsForceMode FCLoadID
 `);
 
 /** Built-in data types, as first listed by hand. */
@@ -95,8 +85,6 @@ const HAND_TYPES = set(`
   opnum execmode symnum event_type handler_type datapos btnres listitem icondata socketdev socketstatus
   rmqslot rmqheader rmqmessage pathrecid tpnum corrdescr tunetype paridnum
   spotdata gunnum forcedata simdata
-  egmident egmstate egmstopmode egm_minmax egmframetype cssframe
-  fcboxvol fccondstatus fccylindervol fcforcevector fcframe fcplane fcprocessdata fcspdchgtunetype fcspherevol fcxyznum
 `);
 
 /**
@@ -121,7 +109,7 @@ function known(kind: RapidRefEntry['kind'], hand: string[]): string[] {
 const spelled = { instructions: known('instruction', names[0]), functions: known('function', names[1]), types: known('type', names[2]) };
 const upper = (list: string[]) => new Set(list.map(x => x.toUpperCase()));
 
-/** Built-in and option instructions (called as `Name args;`): RobotWare 6 and 8, their options, SpotWare, EGM, SoftMove, Force Control. */
+/** Built-in and option instructions (called as `Name args;`): RobotWare 6 and 8, their options, EGM, SoftMove, Force Control, SpotWare. */
 export const RAPID_INSTRUCTIONS: ReadonlySet<string> = upper(spelled.instructions);
 /** Built-in functions (called as `Name(...)` in an expression). */
 export const RAPID_FUNCTIONS: ReadonlySet<string> = upper(spelled.functions);

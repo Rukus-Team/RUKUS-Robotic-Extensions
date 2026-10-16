@@ -1,0 +1,4099 @@
+{
+  "source": "ABB application manuals: 3HAC073319 / 3HAC073318 Externally Guided Motion (RobotWare 6 / OmniCore RobotWare 7), 3HAC050977 / 3HAC066560 SoftMove (RobotWare 6 / OmniCore), 3HAC050377 / 3HAC090251 / 3HAC083267 Force Control (RobotWare 6 / OmniCore Standard / Standard for GoFa, RobotWare 7). Names, argument names, types and option names from the manuals; summaries and argument descriptions in our own words.",
+  "generated": "2026-10-15",
+  "manuals": {
+    "css6": {
+      "source": "3HAC050977 Application manual - SoftMove, RobotWare 6 (IRC5)",
+      "rw": "6",
+      "entries": [
+        ["instruction", "CSSAct", "SoftMove (Cartesian Soft Servo)"],
+        ["instruction", "CSSDeact", "SoftMove (Cartesian Soft Servo)"],
+        ["instruction", "CSSDeactMoveL", "SoftMove (Cartesian Soft Servo)"],
+        ["instruction", "CSSForceOffsetAct", "SoftMove (Cartesian Soft Servo)"],
+        ["instruction", "CSSForceOffsetDeact", "SoftMove (Cartesian Soft Servo)"],
+        ["instruction", "CSSOffsetTune", "SoftMove (Cartesian Soft Servo)"],
+        ["type", "css_offset_dir", "SoftMove (Cartesian Soft Servo)"],
+        ["type", "css_soft_dir", "SoftMove (Cartesian Soft Servo)"],
+        ["type", "cssframe", "SoftMove (Cartesian Soft Servo)"]
+      ]
+    },
+    "css7": {
+      "source": "3HAC066560 Application manual - SoftMove, OmniCore",
+      "rw": "omnicore",
+      "entries": [
+        ["function", "IsCSSAct", ""],
+        ["instruction", "CSSAct", "SoftMove (Cartesian Soft Servo)"],
+        ["instruction", "CSSDeact", "SoftMove (Cartesian Soft Servo)"],
+        ["instruction", "CSSDeactMoveL", "SoftMove (Cartesian Soft Servo)"],
+        ["instruction", "CSSForceOffsetAct", "SoftMove (Cartesian Soft Servo)"],
+        ["instruction", "CSSForceOffsetDeact", "SoftMove (Cartesian Soft Servo)"],
+        ["instruction", "CSSOffsetTune", "SoftMove (Cartesian Soft Servo)"],
+        ["type", "css_offset_dir", "SoftMove (Cartesian Soft Servo)"],
+        ["type", "css_soft_dir", "SoftMove (Cartesian Soft Servo)"],
+        ["type", "cssframe", "SoftMove (Cartesian Soft Servo)"]
+      ]
+    },
+    "egm6": {
+      "source": "3HAC073319 Application manual - Externally Guided Motion, RobotWare 6 (IRC5)",
+      "rw": "6",
+      "entries": [
+        ["function", "EGMGetState", "Externally Guided Motion"],
+        ["instruction", "EGMActJoint", "Externally Guided Motion"],
+        ["instruction", "EGMActMove", "Externally Guided Motion"],
+        ["instruction", "EGMActPose", "Externally Guided Motion"],
+        ["instruction", "EGMGetId", "Externally Guided Motion"],
+        ["instruction", "EGMMoveC", "Externally Guided Motion"],
+        ["instruction", "EGMMoveL", "Externally Guided Motion"],
+        ["instruction", "EGMReset", "Externally Guided Motion"],
+        ["instruction", "EGMRunJoint", "Externally Guided Motion"],
+        ["instruction", "EGMRunPose", "Externally Guided Motion"],
+        ["instruction", "EGMSetupAI", "Externally Guided Motion"],
+        ["instruction", "EGMSetupAO", "Externally Guided Motion"],
+        ["instruction", "EGMSetupGI", "Externally Guided Motion"],
+        ["instruction", "EGMSetupLTAPP", "Externally Guided Motion"],
+        ["instruction", "EGMSetupUC", "Externally Guided Motion"],
+        ["instruction", "EGMStop", "Externally Guided Motion"],
+        ["instruction", "EGMStreamStart", "Externally Guided Motion"],
+        ["instruction", "EGMStreamStop", "Externally Guided Motion"],
+        ["instruction", "EGMWaitCond", "Externally Guided Motion"],
+        ["type", "EGM_MAX_RAPID_DNUM", ""],
+        ["type", "egm_minmax", "Externally Guided Motion"],
+        ["type", "egmframetype", "Externally Guided Motion"],
+        ["type", "egmident", "Externally Guided Motion"],
+        ["type", "egmstate", "Externally Guided Motion"],
+        ["type", "egmstopmode", "Externally Guided Motion"]
+      ]
+    },
+    "egm7": {
+      "source": "3HAC073318 Application manual - Externally Guided Motion, RobotWare 7 (OmniCore)",
+      "rw": "omnicore",
+      "entries": [
+        ["function", "EGMGetState", "Externally Guided Motion"],
+        ["instruction", "EGMActJoint", "Externally Guided Motion"],
+        ["instruction", "EGMActMove", "Externally Guided Motion"],
+        ["instruction", "EGMActPose", "Externally Guided Motion"],
+        ["instruction", "EGMGetId", "Externally Guided Motion"],
+        ["instruction", "EGMMoveC", "Externally Guided Motion"],
+        ["instruction", "EGMMoveL", "Externally Guided Motion"],
+        ["instruction", "EGMReset", "Externally Guided Motion"],
+        ["instruction", "EGMRunJoint", "Externally Guided Motion"],
+        ["instruction", "EGMRunPose", "Externally Guided Motion"],
+        ["instruction", "EGMSetupAI", "Externally Guided Motion"],
+        ["instruction", "EGMSetupAO", "Externally Guided Motion"],
+        ["instruction", "EGMSetupGI", "Externally Guided Motion"],
+        ["instruction", "EGMSetupLTAPP", "Externally Guided Motion"],
+        ["instruction", "EGMSetupUC", "Externally Guided Motion"],
+        ["instruction", "EGMStop", "Externally Guided Motion"],
+        ["instruction", "EGMStreamStart", "Externally Guided Motion"],
+        ["instruction", "EGMStreamStop", "Externally Guided Motion"],
+        ["instruction", "EGMWaitCond", "Externally Guided Motion"],
+        ["type", "egm_minmax", "Externally Guided Motion"],
+        ["type", "egmframetype", "Externally Guided Motion"],
+        ["type", "egmident", "Externally Guided Motion"],
+        ["type", "egmstate", "Externally Guided Motion"],
+        ["type", "egmstopmode", "Externally Guided Motion"]
+      ]
+    },
+    "fc6": {
+      "source": "3HAC050377 Application manual - Force Control, RobotWare 6 (IRC5)",
+      "rw": "6",
+      "entries": [
+        ["function", "FCGetForce", "Force Control"],
+        ["function", "FCGetProcessData", "Force Control"],
+        ["function", "FCIsForceMode", "Force Control"],
+        ["function", "FCLoadID", "Force Control"],
+        ["instruction", "FCAct", "Force Control"],
+        ["instruction", "FCCalib", "Force Control"],
+        ["instruction", "FCCondForce", "Force Control"],
+        ["instruction", "FCCondOrient", "Force Control"],
+        ["instruction", "FCCondPos", "Force Control"],
+        ["instruction", "FCCondReoriSpeed", "Force Control"],
+        ["instruction", "FCCondTCPSpeed", "Force Control"],
+        ["instruction", "FCCondTorque", "Force Control"],
+        ["instruction", "FCCondWaitWhile", "Force Control"],
+        ["instruction", "FCDeact", "Force Control"],
+        ["instruction", "FCPress1LStart", "Force Control"],
+        ["instruction", "FCPressC", "Force Control"],
+        ["instruction", "FCPressEnd", "Force Control"],
+        ["instruction", "FCPressL", "Force Control"],
+        ["instruction", "FCRefCircle", "Force Control"],
+        ["instruction", "FCRefForce", "Force Control"],
+        ["instruction", "FCRefLine", "Force Control"],
+        ["instruction", "FCRefMoveFrame", "Force Control"],
+        ["instruction", "FCRefRot", "Force Control"],
+        ["instruction", "FCRefSpiral", "Force Control"],
+        ["instruction", "FCRefSprForceCart", "Force Control"],
+        ["instruction", "FCRefStart", "Force Control"],
+        ["instruction", "FCRefStop", "Force Control"],
+        ["instruction", "FCRefTorque", "Force Control"],
+        ["instruction", "FCResetDampingTune", "Force Control"],
+        ["instruction", "FCResetLPFilterTune", "Force Control"],
+        ["instruction", "FCResetMaxForceChangeTune", "Force Control"],
+        ["instruction", "FCSetDampingTune", "Force Control"],
+        ["instruction", "FCSetLPFilterTune", "Force Control"],
+        ["instruction", "FCSetMaxForceChangeTune", "Force Control"],
+        ["instruction", "FCSpdChgAct", "Force Control"],
+        ["instruction", "FCSpdChgDeact", "Force Control"],
+        ["instruction", "FCSpdChgTunReset", "Force Control"],
+        ["instruction", "FCSpdChgTunSet", "Force Control"],
+        ["instruction", "FCSupvForce", "Force Control"],
+        ["instruction", "FCSupvOrient", "Force Control"],
+        ["instruction", "FCSupvPos", "Force Control"],
+        ["instruction", "FCSupvReoriSpeed", "Force Control"],
+        ["instruction", "FCSupvTCPSpeed", "Force Control"],
+        ["instruction", "FCSupvTorque", "Force Control"],
+        ["type", "fcboxvol", "Force Control"],
+        ["type", "fccondstatus", "Force Control"],
+        ["type", "fccylindervol", "Force Control"],
+        ["type", "fcdamping", "Force Control"],
+        ["type", "fcforcevector", "Force Control"],
+        ["type", "fcframe", "Force Control"],
+        ["type", "fclindir", "Force Control"],
+        ["type", "fcplane", "Force Control"],
+        ["type", "fcprocessdata", "Force Control"],
+        ["type", "fcrotdir", "Force Control"],
+        ["type", "fcspdchgtunetype", "Force Control"],
+        ["type", "fcspeedvector", "Force Control"],
+        ["type", "fcspherevol", "Force Control"],
+        ["type", "fcxyznum", "Force Control"]
+      ]
+    },
+    "fc7": {
+      "source": "3HAC090251 Application manual - Force Control Standard, OmniCore",
+      "rw": "omnicore",
+      "entries": [
+        ["function", "FCGetForce", "Force Control"],
+        ["function", "FCGetProcessData", "Force Control"],
+        ["function", "FCIsForceMode", "Force Control"],
+        ["function", "FCLoadID", "Force Control"],
+        ["instruction", "FCAct", "Force Control"],
+        ["instruction", "FCCalib", "Force Control"],
+        ["instruction", "FCCondCombine", "Force Control"],
+        ["instruction", "FCCondForce", "Force Control"],
+        ["instruction", "FCCondOrient", "Force Control"],
+        ["instruction", "FCCondPos", "Force Control"],
+        ["instruction", "FCCondReoriSpeed", "Force Control"],
+        ["instruction", "FCCondTCPSpeed", "Force Control"],
+        ["instruction", "FCCondTorque", "Force Control"],
+        ["instruction", "FCCondWaitWhile", "Force Control"],
+        ["instruction", "FCDeact", "Force Control"],
+        ["instruction", "FCPress1LStart", "Force Control"],
+        ["instruction", "FCPressC", "Force Control"],
+        ["instruction", "FCPressEnd", "Force Control"],
+        ["instruction", "FCPressL", "Force Control"],
+        ["instruction", "FCRefCircle", "Force Control"],
+        ["instruction", "FCRefForce", "Force Control"],
+        ["instruction", "FCRefLine", "Force Control"],
+        ["instruction", "FCRefMoveFrame", "Force Control"],
+        ["instruction", "FCRefRot", "Force Control"],
+        ["instruction", "FCRefSpiral", "Force Control"],
+        ["instruction", "FCRefSprForceCart", "Force Control"],
+        ["instruction", "FCRefStart", "Force Control"],
+        ["instruction", "FCRefStop", "Force Control"],
+        ["instruction", "FCRefTorque", "Force Control"],
+        ["instruction", "FCResetDampingTune", "Force Control"],
+        ["instruction", "FCResetLPFilterTune", "Force Control"],
+        ["instruction", "FCResetMaxForceChangeTune", "Force Control"],
+        ["instruction", "FCSetDampingTune", "Force Control"],
+        ["instruction", "FCSetLPFilterTune", "Force Control"],
+        ["instruction", "FCSetMaxForceChangeTune", "Force Control"],
+        ["instruction", "FCSpdChgAct", "Force Control"],
+        ["instruction", "FCSpdChgDeact", "Force Control"],
+        ["instruction", "FCSpdChgTunReset", "Force Control"],
+        ["instruction", "FCSpdChgTunSet", "Force Control"],
+        ["instruction", "FCSupvForce", "Force Control"],
+        ["instruction", "FCSupvOrient", "Force Control"],
+        ["instruction", "FCSupvPos", "Force Control"],
+        ["instruction", "FCSupvReoriSpeed", "Force Control"],
+        ["instruction", "FCSupvTCPSpeed", "Force Control"],
+        ["instruction", "FCSupvTorque", "Force Control"],
+        ["type", "fcboxvol", "Force Control"],
+        ["type", "fccondstatus", "Force Control"],
+        ["type", "fccylindervol", "Force Control"],
+        ["type", "fcdamping", "Force Control"],
+        ["type", "fcforcevector", "Force Control"],
+        ["type", "fcframe", "Force Control"],
+        ["type", "fclindir", "Force Control"],
+        ["type", "fcplane", "Force Control"],
+        ["type", "fcprocessdata", "Force Control"],
+        ["type", "fcrotdir", "Force Control"],
+        ["type", "fcspdchgtunetype", "Force Control"],
+        ["type", "fcspeedvector", "Force Control"],
+        ["type", "fcspherevol", "Force Control"],
+        ["type", "fcxyznum", "Force Control"]
+      ]
+    },
+    "fcgofa": {
+      "source": "3HAC083267 Application manual - Force Control Standard for GoFa, RobotWare 7",
+      "rw": "omnicore",
+      "entries": [
+        ["function", "FCGetForce", "Force Control"],
+        ["function", "FCGetProcessData", "Force Control"],
+        ["function", "FCIsForceMode", "Force Control"],
+        ["function", "FCLoadID", "Force Control"],
+        ["instruction", "FCAct", "Force Control"],
+        ["instruction", "FCCalib", "Force Control"],
+        ["instruction", "FCCondCombine", "Force Control"],
+        ["instruction", "FCCondForce", "Force Control"],
+        ["instruction", "FCCondOrient", "Force Control"],
+        ["instruction", "FCCondPos", "Force Control"],
+        ["instruction", "FCCondReoriSpeed", "Force Control"],
+        ["instruction", "FCCondTCPSpeed", "Force Control"],
+        ["instruction", "FCCondTorque", "Force Control"],
+        ["instruction", "FCCondWaitWhile", "Force Control"],
+        ["instruction", "FCDeact", "Force Control"],
+        ["instruction", "FCPress1LStart", "Force Control"],
+        ["instruction", "FCPressC", "Force Control"],
+        ["instruction", "FCPressEnd", "Force Control"],
+        ["instruction", "FCPressL", "Force Control"],
+        ["instruction", "FCRefCircle", "Force Control"],
+        ["instruction", "FCRefForce", "Force Control"],
+        ["instruction", "FCRefLine", "Force Control"],
+        ["instruction", "FCRefMoveFrame", "Force Control"],
+        ["instruction", "FCRefRot", "Force Control"],
+        ["instruction", "FCRefSpiral", "Force Control"],
+        ["instruction", "FCRefSprForceCart", "Force Control"],
+        ["instruction", "FCRefStart", "Force Control"],
+        ["instruction", "FCRefStop", "Force Control"],
+        ["instruction", "FCRefTorque", "Force Control"],
+        ["instruction", "FCResetDampingTune", "Force Control"],
+        ["instruction", "FCResetLPFilterTune", "Force Control"],
+        ["instruction", "FCResetMaxForceChangeTune", "Force Control"],
+        ["instruction", "FCSetDampingTune", "Force Control"],
+        ["instruction", "FCSetLPFilterTune", "Force Control"],
+        ["instruction", "FCSetMaxForceChangeTune", "Force Control"],
+        ["instruction", "FCSpdChgAct", "Force Control"],
+        ["instruction", "FCSpdChgDeact", "Force Control"],
+        ["instruction", "FCSpdChgTunReset", "Force Control"],
+        ["instruction", "FCSpdChgTunSet", "Force Control"],
+        ["instruction", "FCSupvForce", "Force Control"],
+        ["instruction", "FCSupvOrient", "Force Control"],
+        ["instruction", "FCSupvPos", "Force Control"],
+        ["instruction", "FCSupvReoriSpeed", "Force Control"],
+        ["instruction", "FCSupvTCPSpeed", "Force Control"],
+        ["instruction", "FCSupvTorque", "Force Control"],
+        ["type", "fcboxvol", "Force Control"],
+        ["type", "fccondstatus", "Force Control"],
+        ["type", "fccylindervol", "Force Control"],
+        ["type", "fcdamping", "Force Control"],
+        ["type", "fcforcevector", "Force Control"],
+        ["type", "fcframe", "Force Control"],
+        ["type", "fclindir", "Force Control"],
+        ["type", "fcplane", "Force Control"],
+        ["type", "fcprocessdata", "Force Control"],
+        ["type", "fcrotdir", "Force Control"],
+        ["type", "fcspdchgtunetype", "Force Control"],
+        ["type", "fcspeedvector", "Force Control"],
+        ["type", "fcspherevol", "Force Control"],
+        ["type", "fcxyznum", "Force Control"]
+      ]
+    }
+  },
+  "entries": [
+    {
+      "name": "css_offset_dir",
+      "kind": "type",
+      "summary": "Alias of num: the direction (+/- x, y or z) of a SoftMove force offset or friction test.",
+      "syntax": "css_offset_dir",
+      "predefined": [
+        "CSS_POSX",
+        "CSS_NEGX",
+        "CSS_POSY",
+        "CSS_NEGY",
+        "CSS_POSZ",
+        "CSS_NEGZ"
+      ],
+      "option": "SoftMove (Cartesian Soft Servo)"
+    },
+    {
+      "name": "css_soft_dir",
+      "kind": "type",
+      "summary": "Alias of num: the direction(s) CSSAct makes soft (an axis, a plane, all linear directions, XY plus rotation about Z, or the arm angle of a 7-axis robot).",
+      "syntax": "css_soft_dir",
+      "predefined": [
+        "CSS_X",
+        "CSS_Y",
+        "CSS_Z",
+        "CSS_XY",
+        "CSS_XZ",
+        "CSS_YZ",
+        "CSS_XYZ",
+        "CSS_XYRZ",
+        "CSS_ARM_ANGLE"
+      ],
+      "option": "SoftMove (Cartesian Soft Servo)"
+    },
+    {
+      "name": "CSSAct",
+      "kind": "instruction",
+      "summary": "Makes the robot soft (compliant) in the given Cartesian direction(s); a move must have run before it.",
+      "syntax": "CSSAct [\\RefFrame] [\\RefOrient] SoftDir [\\StiffnessNonSoftDir] | [\\Stiffness] [\\AllowMove] [\\Ramp]",
+      "args": [
+        {
+          "name": "RefFrame",
+          "type": "cssframe",
+          "optional": true,
+          "switch": false,
+          "desc": "The frame the direction is given in (default: the tool)."
+        },
+        {
+          "name": "RefOrient",
+          "type": "orient",
+          "optional": true,
+          "switch": false,
+          "desc": "A rotation of that frame (default none)."
+        },
+        {
+          "name": "SoftDir",
+          "type": "css_soft_dir",
+          "optional": false,
+          "switch": false,
+          "desc": "The direction(s) in which the robot becomes soft."
+        },
+        {
+          "name": "StiffnessNonSoftDir",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "alt": 1,
+          "desc": "Stiffness of the other directions, in % of the configured value (default 50)."
+        },
+        {
+          "name": "Stiffness",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "alt": 1,
+          "desc": "How strongly the robot springs back to its reference point, in % (default 50)."
+        },
+        {
+          "name": "AllowMove",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Allow movement instructions while soft (raises the stiffness)."
+        },
+        {
+          "name": "Ramp",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "How fast the softness comes in, in % of the activation smoothness time (1-500, default 100)."
+        }
+      ],
+      "option": "SoftMove (Cartesian Soft Servo)"
+    },
+    {
+      "name": "CSSDeact",
+      "kind": "instruction",
+      "summary": "Makes the robot stiff again (and drops any force offset); only in a stop point.",
+      "syntax": "CSSDeact",
+      "option": "SoftMove (Cartesian Soft Servo)"
+    },
+    {
+      "name": "CSSDeactMoveL",
+      "kind": "instruction",
+      "summary": "Linear move to a stop point (TCP at most 500 mm/s) that makes the robot stiff again on the way, dropping any force offset.",
+      "syntax": "CSSDeactMoveL ToPoint Speed Tool [\\WObj] [\\TLoad]",
+      "args": [
+        {
+          "name": "ToPoint",
+          "type": "robtarget",
+          "optional": false,
+          "switch": false,
+          "desc": "The end point (a stop point)."
+        },
+        {
+          "name": "Speed",
+          "type": "speeddata",
+          "optional": false,
+          "switch": false,
+          "desc": "Speed of the move, at most 500 mm/s."
+        },
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": false,
+          "switch": false,
+          "desc": "The tool whose TCP is moved."
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false,
+          "desc": "Work object the target is given in (default: world)."
+        },
+        {
+          "name": "TLoad",
+          "type": "loaddata",
+          "optional": true,
+          "switch": false,
+          "desc": "Total load (tool plus payload) for this movement; needs ModalPayLoadMode 0."
+        }
+      ],
+      "option": "SoftMove (Cartesian Soft Servo)"
+    },
+    {
+      "name": "CSSForceOffsetAct",
+      "kind": "instruction",
+      "summary": "Adds a force offset in one direction to overcome static friction while soft (CSSOffsetTune finds a starting value).",
+      "syntax": "CSSForceOffsetAct OffsetDir Force [\\ForceRamp]",
+      "args": [
+        {
+          "name": "OffsetDir",
+          "type": "css_offset_dir",
+          "optional": false,
+          "switch": false,
+          "desc": "The direction of the force offset."
+        },
+        {
+          "name": "Force",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "The force offset in newtons (approximate)."
+        },
+        {
+          "name": "ForceRamp",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "How fast the force builds up, in % of the configured ramp (default 50)."
+        }
+      ],
+      "option": "SoftMove (Cartesian Soft Servo)"
+    },
+    {
+      "name": "CSSForceOffsetDeact",
+      "kind": "instruction",
+      "summary": "Removes the force offset set by CSSForceOffsetAct.",
+      "syntax": "CSSForceOffsetDeact",
+      "option": "SoftMove (Cartesian Soft Servo)"
+    },
+    {
+      "name": "cssframe",
+      "kind": "type",
+      "summary": "Alias of num: whether a SoftMove direction is relative to the tool or the work object.",
+      "syntax": "cssframe",
+      "predefined": [
+        "CSS_REFFRAME_TOOL",
+        "CSS_REFFRAME_WOBJ"
+      ],
+      "option": "SoftMove (Cartesian Soft Servo)"
+    },
+    {
+      "name": "CSSOffsetTune",
+      "kind": "instruction",
+      "summary": "Measures the static friction in one direction by raising a force step by step until the robot moves, and returns that force.",
+      "syntax": "CSSOffsetTune [\\RefFrame] [\\RefOrient] OffsetDir ForceOffset [\\StiffnessNonSoftDir] [\\MoveDetected] [\\ForceRamp] [\\DeltaAbsForce] [\\MaxTestForce]",
+      "args": [
+        {
+          "name": "RefFrame",
+          "type": "cssframe",
+          "optional": true,
+          "switch": false,
+          "desc": "The frame the direction is given in (default: the tool)."
+        },
+        {
+          "name": "RefOrient",
+          "type": "orient",
+          "optional": true,
+          "switch": false,
+          "desc": "A rotation of that frame (default none)."
+        },
+        {
+          "name": "OffsetDir",
+          "type": "css_offset_dir",
+          "optional": false,
+          "switch": false,
+          "desc": "The direction to test."
+        },
+        {
+          "name": "ForceOffset",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Receives the measured friction force in newtons (VAR or PERS)."
+        },
+        {
+          "name": "StiffnessNonSoftDir",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Stiffness of the other directions, in % (default 50)."
+        },
+        {
+          "name": "MoveDetected",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Distance in mm that counts as movement (default 0.1)."
+        },
+        {
+          "name": "ForceRamp",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "How fast the force rises between steps, in % of the configured ramp (default 100)."
+        },
+        {
+          "name": "DeltaAbsForce",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Size of each force step in newtons."
+        },
+        {
+          "name": "MaxTestForce",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest force to try, in newtons (default 500)."
+        }
+      ],
+      "option": "SoftMove (Cartesian Soft Servo)"
+    },
+    {
+      "name": "EGM_MAX_RAPID_DNUM",
+      "kind": "type",
+      "summary": "Predefined num constant (40): the largest number of dnum values exchanged with the sensor (\\DataToSensor, \\DataFromSensor). The RW6 EGM manual files it under data types.",
+      "syntax": "EGM_MAX_RAPID_DNUM"
+    },
+    {
+      "name": "egm_minmax",
+      "kind": "type",
+      "summary": "Convergence limits for EGMActJoint / EGMActPose: the deviation range (mm or degrees) within which an axis counts as arrived.",
+      "syntax": "egm_minmax",
+      "components": [
+        {
+          "name": "min",
+          "type": "num",
+          "desc": "Lower limit of the deviation."
+        },
+        {
+          "name": "max",
+          "type": "num",
+          "desc": "Upper limit of the deviation."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMActJoint",
+      "kind": "instruction",
+      "summary": "Activates an EGM process for joint-mode position guidance and sets the data that stays the same between EGMRunJoint calls (tool, load, convergence limits, filter).",
+      "syntax": "EGMActJoint EGMid [\\StreamStart] [\\Tool] [\\WObj] [\\TLoad] [\\DOToSensor] [\\DataToSensor] [\\DIFromSensor] [\\DataFromSensor] [\\J1] [\\J2] [\\J3] [\\J4] [\\J5] [\\J6] [\\J7] [\\LpFilter] [\\SampleRate] [\\MaxPosDeviation] [\\MaxSpeedDeviation]",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "StreamStart",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Also start streaming robot positions to the sensor (UdpUc setups only)."
+        },
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": true,
+          "switch": false,
+          "desc": "Tool used by the following EGMRunJoint movements (default tool0)."
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false,
+          "desc": "Work object used by the following EGMRunJoint movements (default: world)."
+        },
+        {
+          "name": "TLoad",
+          "type": "loaddata",
+          "optional": true,
+          "switch": false,
+          "desc": "Total load (tool plus payload) for the following EGMRunJoint movements; needs ModalPayLoadMode 0."
+        },
+        {
+          "name": "DOToSensor",
+          "type": "signaldo",
+          "optional": true,
+          "switch": false,
+          "desc": "Digital signal streamed to the sensor (UdpUc setups only)."
+        },
+        {
+          "name": "DataToSensor",
+          "type": "dnum",
+          "optional": true,
+          "switch": false,
+          "desc": "Array of up to 40 dnum values streamed to the sensor (UdpUc setups only)."
+        },
+        {
+          "name": "DIFromSensor",
+          "type": "signaldi",
+          "optional": true,
+          "switch": false,
+          "desc": "Digital signal received from the sensor (UdpUc setups only)."
+        },
+        {
+          "name": "DataFromSensor",
+          "type": "dnum",
+          "optional": true,
+          "switch": false,
+          "desc": "Array of up to 40 dnum values received from the sensor (UdpUc setups only)."
+        },
+        {
+          "name": "J1",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When joint 1 counts as arrived, in degrees (default ±0.5)."
+        },
+        {
+          "name": "J2",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When joint 2 counts as arrived, in degrees (default ±0.5)."
+        },
+        {
+          "name": "J3",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When joint 3 counts as arrived, in degrees (default ±0.5)."
+        },
+        {
+          "name": "J4",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When joint 4 counts as arrived, in degrees (default ±0.5)."
+        },
+        {
+          "name": "J5",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When joint 5 counts as arrived, in degrees (default ±0.5)."
+        },
+        {
+          "name": "J6",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When joint 6 counts as arrived, in degrees (default ±0.5)."
+        },
+        {
+          "name": "J7",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When joint 7 counts as arrived, in degrees (default ±0.5)."
+        },
+        {
+          "name": "LpFilter",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Low-pass filter bandwidth in Hz against sensor noise."
+        },
+        {
+          "name": "SampleRate",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "How often sensor data is read, in ms; a multiple of 4 (default 4)."
+        },
+        {
+          "name": "MaxPosDeviation",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest allowed joint deviation from the start fine point, in degrees."
+        },
+        {
+          "name": "MaxSpeedDeviation",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest allowed joint speed change, in degrees per second."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMActMove",
+      "kind": "instruction",
+      "summary": "Activates an EGM process for path correction during EGMMoveL / EGMMoveC: the sensor frame and how often corrections are read.",
+      "syntax": "EGMActMove EGMid SensorFrame [\\SampleRate]",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "SensorFrame",
+          "type": "pose",
+          "optional": false,
+          "switch": false,
+          "desc": "Where the sensor sits, relative to the tool."
+        },
+        {
+          "name": "SampleRate",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "How often corrections are read, in ms; a multiple of 24."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMActPose",
+      "kind": "instruction",
+      "summary": "Activates an EGM process for pose-mode (Cartesian) position guidance and sets the frames and convergence limits used by EGMRunPose.",
+      "syntax": "EGMActPose EGMid [\\StreamStart] [\\Tool] [\\WObj] [\\TLoad] [\\DOToSensor] [\\DataToSensor] [\\DIFromSensor] [\\DataFromSensor] CorrFrame CorrFrType SensorFrame SensorFrType [\\x] [\\y] [\\z] [\\rx] [\\ry] [\\rz] [\\LpFilter] [\\SampleRate] [\\MaxPosDeviation] [\\MaxSpeedDeviation]",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "StreamStart",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Also start streaming robot positions to the sensor (UdpUc setups only)."
+        },
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": true,
+          "switch": false,
+          "desc": "Tool used by the following EGMRunPose movements (default tool0)."
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false,
+          "desc": "Work object used by the following EGMRunPose movements (default: world)."
+        },
+        {
+          "name": "TLoad",
+          "type": "loaddata",
+          "optional": true,
+          "switch": false,
+          "desc": "Total load (tool plus payload) for the following EGMRunPose movements; needs ModalPayLoadMode 0."
+        },
+        {
+          "name": "DOToSensor",
+          "type": "signaldo",
+          "optional": true,
+          "switch": false,
+          "desc": "Digital signal streamed to the sensor (UdpUc setups only)."
+        },
+        {
+          "name": "DataToSensor",
+          "type": "dnum",
+          "optional": true,
+          "switch": false,
+          "desc": "Array of up to 40 dnum values streamed to the sensor (UdpUc setups only)."
+        },
+        {
+          "name": "DIFromSensor",
+          "type": "signaldi",
+          "optional": true,
+          "switch": false,
+          "desc": "Digital signal received from the sensor (UdpUc setups only)."
+        },
+        {
+          "name": "DataFromSensor",
+          "type": "dnum",
+          "optional": true,
+          "switch": false,
+          "desc": "Array of up to 40 dnum values received from the sensor (UdpUc setups only)."
+        },
+        {
+          "name": "CorrFrame",
+          "type": "pose",
+          "optional": false,
+          "switch": false,
+          "desc": "The frame the corrections are given in."
+        },
+        {
+          "name": "CorrFrType",
+          "type": "egmframetype",
+          "optional": false,
+          "switch": false,
+          "desc": "What CorrFrame is relative to."
+        },
+        {
+          "name": "SensorFrame",
+          "type": "pose",
+          "optional": false,
+          "switch": false,
+          "desc": "The frame the sensor measures in."
+        },
+        {
+          "name": "SensorFrType",
+          "type": "egmframetype",
+          "optional": false,
+          "switch": false,
+          "desc": "What SensorFrame is relative to."
+        },
+        {
+          "name": "x",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When x counts as arrived (default ±1 mm)."
+        },
+        {
+          "name": "y",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When y counts as arrived (default ±1 mm)."
+        },
+        {
+          "name": "z",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When z counts as arrived (default ±1 mm)."
+        },
+        {
+          "name": "rx",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When rotation about x counts as arrived (default ±0.5°)."
+        },
+        {
+          "name": "ry",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When rotation about y counts as arrived (default ±0.5°)."
+        },
+        {
+          "name": "rz",
+          "type": "egm_minmax",
+          "optional": true,
+          "switch": false,
+          "desc": "When rotation about z counts as arrived (default ±0.5°)."
+        },
+        {
+          "name": "LpFilter",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Low-pass filter bandwidth in Hz against sensor noise."
+        },
+        {
+          "name": "SampleRate",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "How often sensor data is read, in ms; a multiple of 4 (default 4)."
+        },
+        {
+          "name": "MaxPosDeviation",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest allowed joint deviation from the start fine point, in degrees."
+        },
+        {
+          "name": "MaxSpeedDeviation",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest allowed joint speed change, in degrees per second."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "egmframetype",
+      "kind": "type",
+      "summary": "Alias of num: what an EGM correction or sensor frame is relative to (base, tool, work object, world, or joint values).",
+      "syntax": "egmframetype",
+      "predefined": [
+        "EGM_FRAME_BASE",
+        "EGM_FRAME_TOOL",
+        "EGM_FRAME_WOBJ",
+        "EGM_FRAME_WORLD",
+        "EGM_FRAME_JOINT"
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMGetId",
+      "kind": "instruction",
+      "summary": "Reserves an EGM process for this motion task (up to 4 at a time); calling it again with the same egmident keeps the one it has. EGMReset releases it.",
+      "syntax": "EGMGetId EGMid",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMGetState",
+      "kind": "function",
+      "summary": "The state of an EGM process: disconnected, connected (set up, not moving) or running.",
+      "syntax": "EGMGetState (EGMid)",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        }
+      ],
+      "returns": "egmstate",
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "egmident",
+      "kind": "type",
+      "summary": "Non-value type naming one EGM process; EGMGetId reserves it, EGMReset releases it.",
+      "syntax": "egmident",
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMMoveC",
+      "kind": "instruction",
+      "summary": "Circular move, like MoveC, with the sensor's path corrections added (set up with EGMActMove).",
+      "syntax": "EGMMoveC EGMid CirPoint ToPoint Speed Zone Tool [\\WObj] [\\TLoad] [\\NoCorr]",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "CirPoint",
+          "type": "robtarget",
+          "optional": false,
+          "switch": false,
+          "desc": "A point on the arc, best about halfway."
+        },
+        {
+          "name": "ToPoint",
+          "type": "robtarget",
+          "optional": false,
+          "switch": false,
+          "desc": "The end point."
+        },
+        {
+          "name": "Speed",
+          "type": "speeddata",
+          "optional": false,
+          "switch": false,
+          "desc": "Speed of the move."
+        },
+        {
+          "name": "Zone",
+          "type": "zonedata",
+          "optional": false,
+          "switch": false,
+          "desc": "Corner zone at the end point."
+        },
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": false,
+          "switch": false,
+          "desc": "The tool whose TCP is moved."
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false,
+          "desc": "Work object the target is given in (default: world)."
+        },
+        {
+          "name": "TLoad",
+          "type": "loaddata",
+          "optional": true,
+          "switch": false,
+          "desc": "Total load (tool plus payload) for this movement; needs ModalPayLoadMode 0."
+        },
+        {
+          "name": "NoCorr",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Run the programmed path without sensor corrections."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMMoveL",
+      "kind": "instruction",
+      "summary": "Linear move, like MoveL, with the sensor's path corrections added (set up with EGMActMove).",
+      "syntax": "EGMMoveL EGMid ToPoint Speed Zone Tool [\\WObj] [\\TLoad] [\\NoCorr]",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "ToPoint",
+          "type": "robtarget",
+          "optional": false,
+          "switch": false,
+          "desc": "The end point."
+        },
+        {
+          "name": "Speed",
+          "type": "speeddata",
+          "optional": false,
+          "switch": false,
+          "desc": "Speed of the move."
+        },
+        {
+          "name": "Zone",
+          "type": "zonedata",
+          "optional": false,
+          "switch": false,
+          "desc": "Corner zone at the end point."
+        },
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": false,
+          "switch": false,
+          "desc": "The tool whose TCP is moved."
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false,
+          "desc": "Work object the target is given in (default: world)."
+        },
+        {
+          "name": "TLoad",
+          "type": "loaddata",
+          "optional": true,
+          "switch": false,
+          "desc": "Total load (tool plus payload) for this movement; needs ModalPayLoadMode 0."
+        },
+        {
+          "name": "NoCorr",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Run the programmed path without sensor corrections."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMReset",
+      "kind": "instruction",
+      "summary": "Releases an EGM process reserved by EGMGetId, with its setup and activation data.",
+      "syntax": "EGMReset EGMid",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMRunJoint",
+      "kind": "instruction",
+      "summary": "Starts a sensor-guided joint-mode movement from a fine point (activated with EGMActJoint); the switches choose the joints that move.",
+      "syntax": "EGMRunJoint EGMid Mode [\\NoWaitCond] [\\J1] [\\J2] [\\J3] [\\J4] [\\J5] [\\J6] [\\J7] [\\CondTime] [\\RampInTime] [\\RampOutTime] [\\PosCorrGain]",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "Mode",
+          "type": "egmstopmode",
+          "optional": false,
+          "switch": false,
+          "desc": "What happens at the end: hold the end position or ramp back to the start."
+        },
+        {
+          "name": "NoWaitCond",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Continue the program at once; EGMWaitCond then waits for the movement."
+        },
+        {
+          "name": "J1",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Move joint 1."
+        },
+        {
+          "name": "J2",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Move joint 2."
+        },
+        {
+          "name": "J3",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Move joint 3."
+        },
+        {
+          "name": "J4",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Move joint 4."
+        },
+        {
+          "name": "J5",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Move joint 5."
+        },
+        {
+          "name": "J6",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Move joint 6."
+        },
+        {
+          "name": "J7",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Move joint 7."
+        },
+        {
+          "name": "CondTime",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "How long, in s, the convergence limits must hold before the move counts as done (default 1)."
+        },
+        {
+          "name": "RampInTime",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Time in s to ramp in from the start position to full tracking."
+        },
+        {
+          "name": "RampOutTime",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Time in s to ramp back to the start position when Mode is EGM_STOP_RAMP_DOWN."
+        },
+        {
+          "name": "PosCorrGain",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Position correction gain, 0 to 1 (default 1)."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMRunPose",
+      "kind": "instruction",
+      "summary": "Starts a sensor-guided pose-mode movement from a fine point (activated with EGMActPose); the switches choose the directions and rotations that may change.",
+      "syntax": "EGMRunPose EGMid Mode [\\NoWaitCond] [\\x] [\\y] [\\z] [\\rx] [\\ry] [\\rz] [\\CondTime] [\\RampInTime] [\\RampOutTime] [\\Offset] [\\PosCorrGain]",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "Mode",
+          "type": "egmstopmode",
+          "optional": false,
+          "switch": false,
+          "desc": "What happens at the end: hold the end position or ramp back to the start."
+        },
+        {
+          "name": "NoWaitCond",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Continue the program at once; EGMWaitCond then waits for the movement."
+        },
+        {
+          "name": "x",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Move along x."
+        },
+        {
+          "name": "y",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Move along y."
+        },
+        {
+          "name": "z",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Move along z."
+        },
+        {
+          "name": "rx",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Rotate about x."
+        },
+        {
+          "name": "ry",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Rotate about y."
+        },
+        {
+          "name": "rz",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Rotate about z."
+        },
+        {
+          "name": "CondTime",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "How long, in s, the convergence limits must hold before the move counts as done (default 1)."
+        },
+        {
+          "name": "RampInTime",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Time in s to ramp in from the start position to full tracking."
+        },
+        {
+          "name": "RampOutTime",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Time in s to ramp back to the start position when Mode is EGM_STOP_RAMP_DOWN."
+        },
+        {
+          "name": "Offset",
+          "type": "pose",
+          "optional": true,
+          "switch": false,
+          "desc": "A fixed offset added to the sensor's value."
+        },
+        {
+          "name": "PosCorrGain",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Position correction gain, 0 to 1 (default 1)."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMSetupAI",
+      "kind": "instruction",
+      "summary": "Uses analog input signals as the source of the positions EGM guides the robot (and up to 6 additional axes) to.",
+      "syntax": "EGMSetupAI MecUnit EGMid ExtConfigName [\\Joint] | [\\Pose] | [\\PathCorr] [\\APTR] [\\aiR1x] [\\aiR2y] [\\aiR3z] [\\aiR4rx] [\\aiR5ry] [\\aiR6rz] [\\aiE1] [\\aiE2] [\\aiE3] [\\aiE4] [\\aiE5] [\\aiE6]",
+      "args": [
+        {
+          "name": "MecUnit",
+          "type": "mecunit",
+          "optional": false,
+          "switch": false,
+          "desc": "The robot (a TCP robot) to guide."
+        },
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "ExtConfigName",
+          "type": "string",
+          "optional": false,
+          "switch": false,
+          "desc": "Name of the External Motion Interface Data instance in the system parameters."
+        },
+        {
+          "name": "Joint",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Guide in joint mode."
+        },
+        {
+          "name": "Pose",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Guide in pose (Cartesian) mode."
+        },
+        {
+          "name": "PathCorr",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Use the source for path correction."
+        },
+        {
+          "name": "APTR",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "The sensor is an at-point tracker (required with \\PathCorr)."
+        },
+        {
+          "name": "aiR1x",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving x (pose) or joint 1 (joint)."
+        },
+        {
+          "name": "aiR2y",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving y (pose) or joint 2."
+        },
+        {
+          "name": "aiR3z",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving z (pose) or joint 3."
+        },
+        {
+          "name": "aiR4rx",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving rotation about x (pose) or joint 4."
+        },
+        {
+          "name": "aiR5ry",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving rotation about y (pose) or joint 5."
+        },
+        {
+          "name": "aiR6rz",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving rotation about z (pose) or joint 6."
+        },
+        {
+          "name": "aiE1",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving additional axis 1 (the 7th robot axis on a 7-axis robot)."
+        },
+        {
+          "name": "aiE2",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving additional axis 2."
+        },
+        {
+          "name": "aiE3",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving additional axis 3."
+        },
+        {
+          "name": "aiE4",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving additional axis 4."
+        },
+        {
+          "name": "aiE5",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving additional axis 5."
+        },
+        {
+          "name": "aiE6",
+          "type": "signalai",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog input giving additional axis 6."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMSetupAO",
+      "kind": "instruction",
+      "summary": "Uses analog output signals as the source of the positions EGM guides the robot (and up to 6 additional axes) to.",
+      "syntax": "EGMSetupAO MecUnit EGMid ExtConfigName [\\Joint] | [\\Pose] | [\\PathCorr] [\\APTR] [\\aoR1x] [\\aoR2y] [\\aoR3z] [\\aoR4rx] [\\aoR5ry] [\\aoR6rz] [\\aoE1] [\\aoE2] [\\aoE3] [\\aoE4] [\\aoE5] [\\aoE6]",
+      "args": [
+        {
+          "name": "MecUnit",
+          "type": "mecunit",
+          "optional": false,
+          "switch": false,
+          "desc": "The robot (a TCP robot) to guide."
+        },
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "ExtConfigName",
+          "type": "string",
+          "optional": false,
+          "switch": false,
+          "desc": "Name of the External Motion Interface Data instance in the system parameters."
+        },
+        {
+          "name": "Joint",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Guide in joint mode."
+        },
+        {
+          "name": "Pose",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Guide in pose (Cartesian) mode."
+        },
+        {
+          "name": "PathCorr",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Use the source for path correction."
+        },
+        {
+          "name": "APTR",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "The sensor is an at-point tracker (required with \\PathCorr)."
+        },
+        {
+          "name": "aoR1x",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving x (pose) or joint 1 (joint)."
+        },
+        {
+          "name": "aoR2y",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving y (pose) or joint 2."
+        },
+        {
+          "name": "aoR3z",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving z (pose) or joint 3."
+        },
+        {
+          "name": "aoR4rx",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving rotation about x (pose) or joint 4."
+        },
+        {
+          "name": "aoR5ry",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving rotation about y (pose) or joint 5."
+        },
+        {
+          "name": "aoR6rz",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving rotation about z (pose) or joint 6."
+        },
+        {
+          "name": "aoE1",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving additional axis 1 (the 7th robot axis on a 7-axis robot)."
+        },
+        {
+          "name": "aoE2",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving additional axis 2."
+        },
+        {
+          "name": "aoE3",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving additional axis 3."
+        },
+        {
+          "name": "aoE4",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving additional axis 4."
+        },
+        {
+          "name": "aoE5",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving additional axis 5."
+        },
+        {
+          "name": "aoE6",
+          "type": "signalao",
+          "optional": true,
+          "switch": false,
+          "desc": "Analog output giving additional axis 6."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMSetupGI",
+      "kind": "instruction",
+      "summary": "Uses group input signals as the source of the positions EGM guides the robot to; group signals carry positive values only.",
+      "syntax": "EGMSetupGI MecUnit EGMid ExtConfigName [\\Joint] | [\\Pose] | [\\PathCorr] [\\APTR] [\\giR1x] [\\giR2y] [\\giR3z] [\\giR4rx] [\\giR5ry] [\\giR6rz] [\\giE1] [\\giE2] [\\giE3] [\\giE4] [\\giE5] [\\giE6]",
+      "args": [
+        {
+          "name": "MecUnit",
+          "type": "mecunit",
+          "optional": false,
+          "switch": false,
+          "desc": "The robot (a TCP robot) to guide."
+        },
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "ExtConfigName",
+          "type": "string",
+          "optional": false,
+          "switch": false,
+          "desc": "Name of the External Motion Interface Data instance in the system parameters."
+        },
+        {
+          "name": "Joint",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Guide in joint mode."
+        },
+        {
+          "name": "Pose",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Guide in pose (Cartesian) mode."
+        },
+        {
+          "name": "PathCorr",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Use the source for path correction."
+        },
+        {
+          "name": "APTR",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "The sensor is an at-point tracker (required with \\PathCorr)."
+        },
+        {
+          "name": "giR1x",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving x (pose) or joint 1 (joint)."
+        },
+        {
+          "name": "giR2y",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving y (pose) or joint 2."
+        },
+        {
+          "name": "giR3z",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving z (pose) or joint 3."
+        },
+        {
+          "name": "giR4rx",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving rotation about x (pose) or joint 4."
+        },
+        {
+          "name": "giR5ry",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving rotation about y (pose) or joint 5."
+        },
+        {
+          "name": "giR6rz",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving rotation about z (pose) or joint 6."
+        },
+        {
+          "name": "giE1",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving additional axis 1 (the 7th robot axis on a 7-axis robot)."
+        },
+        {
+          "name": "giE2",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving additional axis 2."
+        },
+        {
+          "name": "giE3",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving additional axis 3."
+        },
+        {
+          "name": "giE4",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving additional axis 4."
+        },
+        {
+          "name": "giE5",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving additional axis 5."
+        },
+        {
+          "name": "giE6",
+          "type": "signalgi",
+          "optional": true,
+          "switch": false,
+          "desc": "Group input giving additional axis 6."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMSetupLTAPP",
+      "kind": "instruction",
+      "summary": "Uses a sensor speaking the LTAPP protocol (e.g. a seam tracker) as the source of path corrections for an EGM process.",
+      "syntax": "EGMSetupLTAPP MecUnit EGMid ExtConfigName Device JointType [\\APTR] | [\\LATR]",
+      "args": [
+        {
+          "name": "MecUnit",
+          "type": "mecunit",
+          "optional": false,
+          "switch": false,
+          "desc": "The robot to correct."
+        },
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "ExtConfigName",
+          "type": "string",
+          "optional": false,
+          "switch": false,
+          "desc": "Name of the External Motion Interface Data instance in the system parameters."
+        },
+        {
+          "name": "Device",
+          "type": "string",
+          "optional": false,
+          "switch": false,
+          "desc": "The LTAPP device name."
+        },
+        {
+          "name": "JointType",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "The joint type number the sensor tracks."
+        },
+        {
+          "name": "APTR",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "The sensor is an at-point tracker."
+        },
+        {
+          "name": "LATR",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "The sensor is a look-ahead tracker."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMSetupUC",
+      "kind": "instruction",
+      "summary": "Uses a UdpUc device (a UDP sensor talking egm.proto) as the source of positions or path corrections for an EGM process, and as the target of position streaming.",
+      "syntax": "EGMSetupUC MecUnit EGMid ExtConfigName UCDevice [\\Joint] | [\\Pose] | [\\PathCorr] [\\APTR] | [\\LATR] [\\CommTimeout]",
+      "args": [
+        {
+          "name": "MecUnit",
+          "type": "mecunit",
+          "optional": false,
+          "switch": false,
+          "desc": "The robot to guide."
+        },
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "ExtConfigName",
+          "type": "string",
+          "optional": false,
+          "switch": false,
+          "desc": "Name of the External Motion Interface Data instance in the system parameters."
+        },
+        {
+          "name": "UCDevice",
+          "type": "string",
+          "optional": false,
+          "switch": false,
+          "desc": "The UdpUc device name."
+        },
+        {
+          "name": "Joint",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Guide in joint mode."
+        },
+        {
+          "name": "Pose",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Guide in pose (Cartesian) mode."
+        },
+        {
+          "name": "PathCorr",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Use the device for path correction."
+        },
+        {
+          "name": "APTR",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 2,
+          "desc": "Path correction from an at-point tracker."
+        },
+        {
+          "name": "LATR",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 2,
+          "desc": "Path correction from a look-ahead tracker."
+        },
+        {
+          "name": "CommTimeout",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Communication time-out in s."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "egmstate",
+      "kind": "type",
+      "summary": "Alias of num: the state EGMGetState returns.",
+      "syntax": "egmstate",
+      "predefined": [
+        "EGM_STATE_DISCONNECTED",
+        "EGM_STATE_CONNECTED",
+        "EGM_STATE_RUNNING"
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMStop",
+      "kind": "instruction",
+      "summary": "Stops a running EGM movement, e.g. from a TRAP or another task.",
+      "syntax": "EGMStop EGMid Mode [\\RampOutTime]",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "Mode",
+          "type": "egmstopmode",
+          "optional": false,
+          "switch": false,
+          "desc": "Hold the reached position or ramp back to the start."
+        },
+        {
+          "name": "RampOutTime",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Time in s to ramp back when Mode is EGM_STOP_RAMP_DOWN."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "egmstopmode",
+      "kind": "type",
+      "summary": "Alias of num: how an EGM movement ends, keeping the end position or ramping back to the start.",
+      "syntax": "egmstopmode",
+      "predefined": [
+        "EGM_STOP_HOLD",
+        "EGM_STOP_RAMP_DOWN"
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMStreamStart",
+      "kind": "instruction",
+      "summary": "Starts streaming the robot's positions to the UdpUc device of an EGM process.",
+      "syntax": "EGMStreamStart EGMid [\\SampleRate]",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        },
+        {
+          "name": "SampleRate",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Streaming period in ms; a multiple of 4 (default 4)."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMStreamStop",
+      "kind": "instruction",
+      "summary": "Stops the position streaming started by EGMStreamStart or \\StreamStart.",
+      "syntax": "EGMStreamStop EGMid",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "EGMWaitCond",
+      "kind": "instruction",
+      "summary": "Waits until an EGMRunJoint / EGMRunPose started with \\NoWaitCond has finished; no other movement may come in between.",
+      "syntax": "EGMWaitCond EGMid",
+      "args": [
+        {
+          "name": "EGMid",
+          "type": "egmident",
+          "optional": false,
+          "switch": false,
+          "desc": "The EGM process, as reserved by EGMGetId."
+        }
+      ],
+      "option": "Externally Guided Motion"
+    },
+    {
+      "name": "FCAct",
+      "kind": "instruction",
+      "summary": "Switches the robot to force control with the given tool (and work object), sets the force control frame and damping, and activates the supervisions set up before.",
+      "syntax": "FCAct Tool [\\WObj] [\\ForceFrameRef] [\\ForceFrameOrient] [\\DampingTune]",
+      "args": [
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": false,
+          "switch": false,
+          "desc": "The tool; its TCP is the origin of the force control frame (include sensor and plates)."
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false,
+          "desc": "Work object most force control definitions refer to (default wobj0)."
+        },
+        {
+          "name": "ForceFrameRef",
+          "type": "fcframe",
+          "optional": true,
+          "switch": false,
+          "desc": "Whether the force control frame follows the work object (default) or the tool."
+        },
+        {
+          "name": "ForceFrameOrient",
+          "type": "orient",
+          "optional": true,
+          "switch": false,
+          "desc": "Rotation of the force control frame from that reference (default none)."
+        },
+        {
+          "name": "DampingTune",
+          "type": "fcdamping",
+          "optional": true,
+          "switch": false,
+          "desc": "Damping per direction in % of the configured values (default 100; 50 or more)."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "fcboxvol",
+      "kind": "type",
+      "summary": "A box volume (min/max per axis, mm) for FCCondPos and FCSupvPos.",
+      "syntax": "fcboxvol",
+      "components": [
+        {
+          "name": "xmin",
+          "type": "num",
+          "desc": "Lowest x, mm."
+        },
+        {
+          "name": "xmax",
+          "type": "num",
+          "desc": "Highest x, mm."
+        },
+        {
+          "name": "ymin",
+          "type": "num",
+          "desc": "Lowest y, mm."
+        },
+        {
+          "name": "ymax",
+          "type": "num",
+          "desc": "Highest y, mm."
+        },
+        {
+          "name": "zmin",
+          "type": "num",
+          "desc": "Lowest z, mm."
+        },
+        {
+          "name": "zmax",
+          "type": "num",
+          "desc": "Highest z, mm."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCCalib",
+      "kind": "instruction",
+      "summary": "Calibrates the force sensor for the load it carries (from FCLoadID); needed before FCAct and after every load change, without contact.",
+      "syntax": "FCCalib Load [\\Recovery] [\\IgnoreStandStillCheck]",
+      "args": [
+        {
+          "name": "Load",
+          "type": "loaddata",
+          "optional": false,
+          "switch": false,
+          "desc": "The load the sensor feels (mass and centre of gravity are used)."
+        },
+        {
+          "name": "Recovery",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Calibrate even with contact forces present, e.g. to recover after an emergency stop."
+        },
+        {
+          "name": "IgnoreStandStillCheck",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Skip the check that the robot stands still."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCCondCombine",
+      "kind": "instruction",
+      "summary": "Combines the end conditions set up before (position, speed, force, time) for the next FCCondWaitWhile.",
+      "syntax": "FCCondCombine fccombcond",
+      "args": [
+        {
+          "name": "fccombcond",
+          "type": "string",
+          "optional": false,
+          "switch": false,
+          "desc": "The combination: FC_POSITION_OR_TIME, FC_SPEED_OR_TIME, FC_FORCE_OR_TIME, FC_POSITION_OR_FORCE_OR_TIME, FC_POSITION_AND_FORCE_AND_TIME or FC_POSITION_AND_FORCE_OR_TIME."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCCondForce",
+      "kind": "instruction",
+      "summary": "Sets up an end condition for FCCondWaitWhile: the program waits while the measured force (force control frame) stays within the limits.",
+      "syntax": "FCCondForce [\\XMin] [\\XMax] [\\YMin] [\\YMax] [\\ZMin] [\\ZMax] [\\Outside] TimeOut",
+      "args": [
+        {
+          "name": "XMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed force in x (N)."
+        },
+        {
+          "name": "XMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed force in x (N)."
+        },
+        {
+          "name": "YMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed force in y (N)."
+        },
+        {
+          "name": "YMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed force in y (N)."
+        },
+        {
+          "name": "ZMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed force in z (N)."
+        },
+        {
+          "name": "ZMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed force in z (N)."
+        },
+        {
+          "name": "Outside",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "The condition holds while the value is outside the limits instead of inside."
+        },
+        {
+          "name": "TimeOut",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Seconds after which FCCondWaitWhile stops waiting anyway."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCCondOrient",
+      "kind": "instruction",
+      "summary": "Sets up an end condition for FCCondWaitWhile: the program waits while the tool orientation stays within an angle of a reference orientation.",
+      "syntax": "FCCondOrient [\\OrientCondFrame] [\\MaxAngle] [\\MaxRot] [\\Outside] TimeOut",
+      "args": [
+        {
+          "name": "OrientCondFrame",
+          "type": "orient",
+          "optional": true,
+          "switch": false,
+          "desc": "The reference orientation (default: the current one)."
+        },
+        {
+          "name": "MaxAngle",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest allowed tilt of the z axis from the reference, in degrees."
+        },
+        {
+          "name": "MaxRot",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest allowed rotation about the z axis, in degrees."
+        },
+        {
+          "name": "Outside",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "The condition holds while the value is outside the limits instead of inside."
+        },
+        {
+          "name": "TimeOut",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Seconds after which FCCondWaitWhile stops waiting anyway."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCCondPos",
+      "kind": "instruction",
+      "summary": "Sets up an end condition for FCCondWaitWhile: the program waits while the TCP stays inside (or outside) a box, cylinder or sphere.",
+      "syntax": "FCCondPos [\\PosCondFrame] [\\Box] | [\\Cylinder] | [\\Sphere] [\\Outside] TimeOut",
+      "args": [
+        {
+          "name": "PosCondFrame",
+          "type": "pose",
+          "optional": true,
+          "switch": false,
+          "desc": "Frame the volume is given in (default: the work object)."
+        },
+        {
+          "name": "Box",
+          "type": "fcboxvol",
+          "optional": true,
+          "switch": false,
+          "alt": 1,
+          "desc": "A box volume."
+        },
+        {
+          "name": "Cylinder",
+          "type": "fccylindervol",
+          "optional": true,
+          "switch": false,
+          "alt": 1,
+          "desc": "A cylinder volume."
+        },
+        {
+          "name": "Sphere",
+          "type": "fcspherevol",
+          "optional": true,
+          "switch": false,
+          "alt": 1,
+          "desc": "A sphere volume."
+        },
+        {
+          "name": "Outside",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "The condition holds while the value is outside the limits instead of inside."
+        },
+        {
+          "name": "TimeOut",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Seconds after which FCCondWaitWhile stops waiting anyway."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCCondReoriSpeed",
+      "kind": "instruction",
+      "summary": "Sets up an end condition for FCCondWaitWhile: the program waits while the reorientation speed stays within the limits.",
+      "syntax": "FCCondReoriSpeed [\\XMin] [\\XMax] [\\YMin] [\\YMax] [\\ZMin] [\\ZMax] [\\Outside] TimeOut",
+      "args": [
+        {
+          "name": "XMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed reorientation speed in x (deg/s)."
+        },
+        {
+          "name": "XMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed reorientation speed in x (deg/s)."
+        },
+        {
+          "name": "YMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed reorientation speed in y (deg/s)."
+        },
+        {
+          "name": "YMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed reorientation speed in y (deg/s)."
+        },
+        {
+          "name": "ZMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed reorientation speed in z (deg/s)."
+        },
+        {
+          "name": "ZMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed reorientation speed in z (deg/s)."
+        },
+        {
+          "name": "Outside",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "The condition holds while the value is outside the limits instead of inside."
+        },
+        {
+          "name": "TimeOut",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Seconds after which FCCondWaitWhile stops waiting anyway."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "fccondstatus",
+      "kind": "type",
+      "summary": "Which end conditions were met (part of fcprocessdata).",
+      "syntax": "fccondstatus",
+      "components": [
+        {
+          "name": "position",
+          "type": "bool",
+          "desc": "The position condition."
+        },
+        {
+          "name": "speed",
+          "type": "bool",
+          "desc": "The speed condition."
+        },
+        {
+          "name": "force",
+          "type": "bool",
+          "desc": "The force condition."
+        },
+        {
+          "name": "time",
+          "type": "bool",
+          "desc": "The time-out."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCCondTCPSpeed",
+      "kind": "instruction",
+      "summary": "Sets up an end condition for FCCondWaitWhile: the program waits while the TCP speed stays within the limits.",
+      "syntax": "FCCondTCPSpeed [\\XMin] [\\XMax] [\\YMin] [\\YMax] [\\ZMin] [\\ZMax] [\\Outside] TimeOut",
+      "args": [
+        {
+          "name": "XMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed TCP speed in x (mm/s)."
+        },
+        {
+          "name": "XMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed TCP speed in x (mm/s)."
+        },
+        {
+          "name": "YMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed TCP speed in y (mm/s)."
+        },
+        {
+          "name": "YMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed TCP speed in y (mm/s)."
+        },
+        {
+          "name": "ZMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed TCP speed in z (mm/s)."
+        },
+        {
+          "name": "ZMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed TCP speed in z (mm/s)."
+        },
+        {
+          "name": "Outside",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "The condition holds while the value is outside the limits instead of inside."
+        },
+        {
+          "name": "TimeOut",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Seconds after which FCCondWaitWhile stops waiting anyway."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCCondTorque",
+      "kind": "instruction",
+      "summary": "Sets up an end condition for FCCondWaitWhile: the program waits while the measured torque stays within the limits.",
+      "syntax": "FCCondTorque [\\XMin] [\\XMax] [\\YMin] [\\YMax] [\\ZMin] [\\ZMax] [\\Outside] TimeOut",
+      "args": [
+        {
+          "name": "XMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed torque in x (Nm)."
+        },
+        {
+          "name": "XMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed torque in x (Nm)."
+        },
+        {
+          "name": "YMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed torque in y (Nm)."
+        },
+        {
+          "name": "YMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed torque in y (Nm)."
+        },
+        {
+          "name": "ZMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed torque in z (Nm)."
+        },
+        {
+          "name": "ZMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed torque in z (Nm)."
+        },
+        {
+          "name": "Outside",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "The condition holds while the value is outside the limits instead of inside."
+        },
+        {
+          "name": "TimeOut",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Seconds after which FCCondWaitWhile stops waiting anyway."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCCondWaitWhile",
+      "kind": "instruction",
+      "summary": "Starts the end conditions set up before and waits while they hold, the force references running meanwhile.",
+      "syntax": "FCCondWaitWhile [\\ZeroRefAtEnd]",
+      "args": [
+        {
+          "name": "ZeroRefAtEnd",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Switch all references off when the wait ends."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "fccylindervol",
+      "kind": "type",
+      "summary": "A cylinder volume (bottom centre, height, radius, mm) for FCCondPos and FCSupvPos.",
+      "syntax": "fccylindervol",
+      "components": [
+        {
+          "name": "xcbottom",
+          "type": "num",
+          "desc": "Bottom centre x."
+        },
+        {
+          "name": "ycbottom",
+          "type": "num",
+          "desc": "Bottom centre y."
+        },
+        {
+          "name": "zcbottom",
+          "type": "num",
+          "desc": "Bottom centre z."
+        },
+        {
+          "name": "height",
+          "type": "num",
+          "desc": "Height."
+        },
+        {
+          "name": "radius",
+          "type": "num",
+          "desc": "Radius."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "fcdamping",
+      "kind": "type",
+      "summary": "Damping per direction in % of the configured values (FCAct \\DampingTune).",
+      "syntax": "fcdamping",
+      "components": [
+        {
+          "name": "xdamp",
+          "type": "num",
+          "desc": "Damping in x, %."
+        },
+        {
+          "name": "ydamp",
+          "type": "num",
+          "desc": "Damping in y, %."
+        },
+        {
+          "name": "zdamp",
+          "type": "num",
+          "desc": "Damping in z, %."
+        },
+        {
+          "name": "rxdamp",
+          "type": "num",
+          "desc": "Damping about x, %."
+        },
+        {
+          "name": "rydamp",
+          "type": "num",
+          "desc": "Damping about y, %."
+        },
+        {
+          "name": "rzdamp",
+          "type": "num",
+          "desc": "Damping about z, %."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCDeact",
+      "kind": "instruction",
+      "summary": "Leaves force control and returns to position control.",
+      "syntax": "FCDeact",
+      "option": "Force Control"
+    },
+    {
+      "name": "fcforcevector",
+      "kind": "type",
+      "summary": "Force (N) and torque (Nm) in x, y and z, as FCGetForce returns them.",
+      "syntax": "fcforcevector",
+      "components": [
+        {
+          "name": "xforce",
+          "type": "num",
+          "desc": "Force in x."
+        },
+        {
+          "name": "yforce",
+          "type": "num",
+          "desc": "Force in y."
+        },
+        {
+          "name": "zforce",
+          "type": "num",
+          "desc": "Force in z."
+        },
+        {
+          "name": "xtorque",
+          "type": "num",
+          "desc": "Torque about x."
+        },
+        {
+          "name": "ytorque",
+          "type": "num",
+          "desc": "Torque about y."
+        },
+        {
+          "name": "ztorque",
+          "type": "num",
+          "desc": "Torque about z."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "fcframe",
+      "kind": "type",
+      "summary": "Alias of num: whether a force control frame follows the tool or the work object.",
+      "syntax": "fcframe",
+      "predefined": [
+        "FC_REFFRAME_TOOL",
+        "FC_REFFRAME_WOBJ"
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCGetForce",
+      "kind": "function",
+      "summary": "The force and torque the sensor measures now, in the tool / work object frame or as the contact force.",
+      "syntax": "FCGetForce ([\\Tool] [\\WObj] | [\\ContactForce])",
+      "args": [
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": true,
+          "switch": false,
+          "desc": "Tool frame to express the values in."
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false,
+          "alt": 1,
+          "desc": "Work object frame to express the values in."
+        },
+        {
+          "name": "ContactForce",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Return the contact force (gravity of the load removed)."
+        }
+      ],
+      "returns": "fcforcevector",
+      "option": "Force Control"
+    },
+    {
+      "name": "FCGetProcessData",
+      "kind": "function",
+      "summary": "Force control process data: condition status, time, pose, speed, forces, whether force control is active.",
+      "syntax": "FCGetProcessData ([\\DataAtTrigTime])",
+      "args": [
+        {
+          "name": "DataAtTrigTime",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Return the data from the moment the end condition was met."
+        }
+      ],
+      "returns": "fcprocessdata",
+      "option": "Force Control"
+    },
+    {
+      "name": "FCIsForceMode",
+      "kind": "function",
+      "summary": "TRUE while the robot is in force control.",
+      "syntax": "FCIsForceMode ()",
+      "returns": "bool",
+      "option": "Force Control"
+    },
+    {
+      "name": "fclindir",
+      "kind": "type",
+      "summary": "Alias of num: the axis of an FCRefLine movement.",
+      "syntax": "fclindir",
+      "predefined": [
+        "FC_LIN_X",
+        "FC_LIN_Y",
+        "FC_LIN_Z"
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCLoadID",
+      "kind": "function",
+      "summary": "Identifies the load the force sensor carries by moving axes 5 and 6; use the result with FCCalib.",
+      "syntax": "FCLoadID ([\\MaxMoveAx5] [\\MaxMoveAx6] [\\ReadingsPerPoint] [\\PointsPerAxis] [\\LoadIdErr] [\\WarningsOff])",
+      "args": [
+        {
+          "name": "MaxMoveAx5",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest movement of axis 5 each way, degrees (default 180)."
+        },
+        {
+          "name": "MaxMoveAx6",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest movement of axis 6 each way, degrees."
+        },
+        {
+          "name": "ReadingsPerPoint",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Sensor readings per measuring point."
+        },
+        {
+          "name": "PointsPerAxis",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Measuring points per axis."
+        },
+        {
+          "name": "LoadIdErr",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Receives the status of the identification (INOUT)."
+        },
+        {
+          "name": "WarningsOff",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Do not show warnings."
+        }
+      ],
+      "returns": "loaddata",
+      "option": "Force Control"
+    },
+    {
+      "name": "fcplane",
+      "kind": "type",
+      "summary": "Alias of num: the plane of an FCRefCircle or FCRefSpiral movement.",
+      "syntax": "fcplane",
+      "predefined": [
+        "FCPLANE_XY",
+        "FCPLANE_XZ",
+        "FCPLANE_YZ"
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCPress1LStart",
+      "kind": "instruction",
+      "summary": "Starts a pressing sequence: a linear move toward the surface that switches to force control when contact reaches the threshold; FCPressL / FCPressC continue it, FCPressEnd ends it.",
+      "syntax": "FCPress1LStart ToPoint [\\ToNextPoint] Speed [\\Fx] [\\Fy] [\\Fz] ForceThreshold [\\ForceFrameRef] [\\ForceChange] [\\DampingTune] [\\TimeOut] [\\UseSpdFFW] [\\DeflectionCompGain] [\\PosSupvDist] Zone Tool [\\WObj]",
+      "args": [
+        {
+          "name": "ToPoint",
+          "type": "robtarget",
+          "optional": false,
+          "switch": false,
+          "desc": "The end point of the move."
+        },
+        {
+          "name": "ToNextPoint",
+          "type": "robtarget",
+          "optional": true,
+          "switch": false,
+          "desc": "The following point, when ToPoint is too close for a corner path."
+        },
+        {
+          "name": "Speed",
+          "type": "speeddata",
+          "optional": false,
+          "switch": false,
+          "desc": "Speed of the move."
+        },
+        {
+          "name": "Fx",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Contact force to build up in x, N."
+        },
+        {
+          "name": "Fy",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Contact force to build up in y, N."
+        },
+        {
+          "name": "Fz",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Contact force to build up in z, N."
+        },
+        {
+          "name": "ForceThreshold",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Contact force in N at which force control takes over."
+        },
+        {
+          "name": "ForceFrameRef",
+          "type": "fcframe",
+          "optional": true,
+          "switch": false,
+          "desc": "Whether the force frame follows the work object or the tool."
+        },
+        {
+          "name": "ForceChange",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "How fast the force may change, N/s."
+        },
+        {
+          "name": "DampingTune",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Damping in % of the configured value."
+        },
+        {
+          "name": "TimeOut",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Seconds allowed to reach the contact force."
+        },
+        {
+          "name": "UseSpdFFW",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Use speed feed-forward."
+        },
+        {
+          "name": "DeflectionCompGain",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Gain of the deflection compensation (OmniCore Force Control Standard; not in the RW6 or GoFa manuals).",
+          "rw": "omnicore"
+        },
+        {
+          "name": "PosSupvDist",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Position supervision distance, mm."
+        },
+        {
+          "name": "Zone",
+          "type": "zonedata",
+          "optional": false,
+          "switch": false,
+          "desc": "Corner zone at the end point."
+        },
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": false,
+          "switch": false,
+          "desc": "The tool whose TCP is moved."
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false,
+          "desc": "Work object the target is given in."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCPressC",
+      "kind": "instruction",
+      "summary": "Circular move that keeps pressing with the given force, inside a sequence started by FCPress1LStart.",
+      "syntax": "FCPressC CirPoint ToPoint Speed Force Zone Tool [\\WObj]",
+      "args": [
+        {
+          "name": "CirPoint",
+          "type": "robtarget",
+          "optional": false,
+          "switch": false,
+          "desc": "A point on the arc."
+        },
+        {
+          "name": "ToPoint",
+          "type": "robtarget",
+          "optional": false,
+          "switch": false,
+          "desc": "The end point."
+        },
+        {
+          "name": "Speed",
+          "type": "speeddata",
+          "optional": false,
+          "switch": false,
+          "desc": "Speed of the move."
+        },
+        {
+          "name": "Force",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Contact force to keep, N."
+        },
+        {
+          "name": "Zone",
+          "type": "zonedata",
+          "optional": false,
+          "switch": false,
+          "desc": "Corner zone at the end point."
+        },
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": false,
+          "switch": false,
+          "desc": "The tool whose TCP is moved."
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false,
+          "desc": "Work object the targets are given in."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCPressEnd",
+      "kind": "instruction",
+      "summary": "Ends a pressing sequence: lowers the force, moves off the surface and leaves force control.",
+      "syntax": "FCPressEnd ToPoint Speed [\\ForceChange] [\\ZeroContactValue] | [\\DeactOnly] Tool [\\WObj]",
+      "args": [
+        {
+          "name": "ToPoint",
+          "type": "robtarget",
+          "optional": false,
+          "switch": false,
+          "desc": "Where to move after the contact is released."
+        },
+        {
+          "name": "Speed",
+          "type": "speeddata",
+          "optional": false,
+          "switch": false,
+          "desc": "Speed of the move."
+        },
+        {
+          "name": "ForceChange",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "How fast the force is lowered, N/s."
+        },
+        {
+          "name": "ZeroContactValue",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "alt": 1,
+          "desc": "Force in N that counts as no contact."
+        },
+        {
+          "name": "DeactOnly",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "alt": 1,
+          "desc": "Only leave force control, without the move-off."
+        },
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": false,
+          "switch": false,
+          "desc": "The tool whose TCP is moved."
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false,
+          "desc": "Work object the target is given in."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCPressL",
+      "kind": "instruction",
+      "summary": "Linear move that keeps pressing with the given force, inside a sequence started by FCPress1LStart.",
+      "syntax": "FCPressL ToPoint Speed Force Zone Tool [\\WObj]",
+      "args": [
+        {
+          "name": "ToPoint",
+          "type": "robtarget",
+          "optional": false,
+          "switch": false,
+          "desc": "The end point."
+        },
+        {
+          "name": "Speed",
+          "type": "speeddata",
+          "optional": false,
+          "switch": false,
+          "desc": "Speed of the move."
+        },
+        {
+          "name": "Force",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Contact force to keep, N."
+        },
+        {
+          "name": "Zone",
+          "type": "zonedata",
+          "optional": false,
+          "switch": false,
+          "desc": "Corner zone at the end point."
+        },
+        {
+          "name": "Tool",
+          "type": "tooldata",
+          "optional": false,
+          "switch": false,
+          "desc": "The tool whose TCP is moved."
+        },
+        {
+          "name": "WObj",
+          "type": "wobjdata",
+          "optional": true,
+          "switch": false,
+          "desc": "Work object the target is given in."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "fcprocessdata",
+      "kind": "type",
+      "summary": "Force control process data, as FCGetProcessData returns it.",
+      "syntax": "fcprocessdata",
+      "components": [
+        {
+          "name": "conditionstatus",
+          "type": "fccondstatus",
+          "desc": "Which end conditions were met."
+        },
+        {
+          "name": "time",
+          "type": "num",
+          "desc": "Time."
+        },
+        {
+          "name": "poseinrefcs",
+          "type": "pose",
+          "desc": "TCP pose in the reference frame."
+        },
+        {
+          "name": "speedinwobjframe",
+          "type": "fcspeedvector",
+          "desc": "Speed in the work object frame."
+        },
+        {
+          "name": "sensorforce",
+          "type": "fcforcevector",
+          "desc": "Force the sensor measures."
+        },
+        {
+          "name": "forceframeforce",
+          "type": "fcforcevector",
+          "desc": "Force in the force control frame."
+        },
+        {
+          "name": "force_control_active",
+          "type": "bool",
+          "desc": "TRUE in force control."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCRefCircle",
+      "kind": "instruction",
+      "summary": "Sets up a circular reference movement in a plane of the force control frame (started by FCRefStart).",
+      "syntax": "FCRefCircle Plane Speed Radius",
+      "args": [
+        {
+          "name": "Plane",
+          "type": "fcplane",
+          "optional": false,
+          "switch": false,
+          "desc": "The plane of the circle."
+        },
+        {
+          "name": "Speed",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Speed along the circle, mm/s."
+        },
+        {
+          "name": "Radius",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Radius, mm."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCRefForce",
+      "kind": "instruction",
+      "summary": "Sets up the reference force, optionally with a superimposed oscillation (started by FCRefStart).",
+      "syntax": "FCRefForce [\\Fx] [\\Fy] [\\Fz] [\\Amp] [\\Period]",
+      "args": [
+        {
+          "name": "Fx",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Force in x, N."
+        },
+        {
+          "name": "Fy",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Force in y, N."
+        },
+        {
+          "name": "Fz",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Force in z, N."
+        },
+        {
+          "name": "Amp",
+          "type": "fcxyznum",
+          "optional": true,
+          "switch": false,
+          "desc": "Oscillation amplitude per direction, N."
+        },
+        {
+          "name": "Period",
+          "type": "fcxyznum",
+          "optional": true,
+          "switch": false,
+          "desc": "Oscillation period per direction, s."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCRefLine",
+      "kind": "instruction",
+      "summary": "Sets up a back-and-forth linear reference movement along one axis of the force control frame.",
+      "syntax": "FCRefLine Direction MaxSpeed Distance [\\OneSideOfStartPos]",
+      "args": [
+        {
+          "name": "Direction",
+          "type": "fclindir",
+          "optional": false,
+          "switch": false,
+          "desc": "The axis to move along."
+        },
+        {
+          "name": "MaxSpeed",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Highest speed, mm/s."
+        },
+        {
+          "name": "Distance",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Distance, mm."
+        },
+        {
+          "name": "OneSideOfStartPos",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Move to one side of the start position only."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCRefMoveFrame",
+      "kind": "instruction",
+      "summary": "Sets the frame the reference movements (line, rotation, circle, spiral) are given in.",
+      "syntax": "FCRefMoveFrame [\\RefMoveFrameRef] [\\RefMoveFrameOri]",
+      "args": [
+        {
+          "name": "RefMoveFrameRef",
+          "type": "fcframe",
+          "optional": true,
+          "switch": false,
+          "desc": "Whether the frame follows the work object or the tool."
+        },
+        {
+          "name": "RefMoveFrameOri",
+          "type": "orient",
+          "optional": true,
+          "switch": false,
+          "desc": "Rotation of the frame from that reference."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCRefRot",
+      "kind": "instruction",
+      "summary": "Sets up a back-and-forth rotational reference movement about one axis of the force control frame.",
+      "syntax": "FCRefRot Direction MaxSpeed Distance [\\OneSideOfStartPos]",
+      "args": [
+        {
+          "name": "Direction",
+          "type": "fcrotdir",
+          "optional": false,
+          "switch": false,
+          "desc": "The axis to rotate about."
+        },
+        {
+          "name": "MaxSpeed",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Highest speed, deg/s."
+        },
+        {
+          "name": "Distance",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Angle, degrees."
+        },
+        {
+          "name": "OneSideOfStartPos",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Rotate to one side of the start position only."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCRefSpiral",
+      "kind": "instruction",
+      "summary": "Sets up a spiral reference movement in a plane of the force control frame.",
+      "syntax": "FCRefSpiral Plane Speed Radius Turns",
+      "args": [
+        {
+          "name": "Plane",
+          "type": "fcplane",
+          "optional": false,
+          "switch": false,
+          "desc": "The plane of the spiral."
+        },
+        {
+          "name": "Speed",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Speed along the spiral, mm/s."
+        },
+        {
+          "name": "Radius",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Outer radius, mm."
+        },
+        {
+          "name": "Turns",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Number of turns."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCRefSprForceCart",
+      "kind": "instruction",
+      "summary": "Sets up a spring-like reference force pulling the TCP toward an attractor point.",
+      "syntax": "FCRefSprForceCart [\\StiffnessX] [\\StiffnessY] [\\StiffnessZ] [\\MaxForceX] [\\MaxForceY] [\\MaxForceZ] [\\PosAttractor]",
+      "args": [
+        {
+          "name": "StiffnessX",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Spring stiffness in x, N/mm."
+        },
+        {
+          "name": "StiffnessY",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Spring stiffness in y, N/mm."
+        },
+        {
+          "name": "StiffnessZ",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Spring stiffness in z, N/mm."
+        },
+        {
+          "name": "MaxForceX",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest spring force in x, N."
+        },
+        {
+          "name": "MaxForceY",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest spring force in y, N."
+        },
+        {
+          "name": "MaxForceZ",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest spring force in z, N."
+        },
+        {
+          "name": "PosAttractor",
+          "type": "pos",
+          "optional": true,
+          "switch": false,
+          "desc": "The attractor point (default: the current position)."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCRefStart",
+      "kind": "instruction",
+      "summary": "Starts the force, torque and movement references set up before.",
+      "syntax": "FCRefStart",
+      "option": "Force Control"
+    },
+    {
+      "name": "FCRefStop",
+      "kind": "instruction",
+      "summary": "Stops all references; the robot then keeps zero contact force.",
+      "syntax": "FCRefStop",
+      "option": "Force Control"
+    },
+    {
+      "name": "FCRefTorque",
+      "kind": "instruction",
+      "summary": "Sets up the reference torque, optionally with a superimposed oscillation (started by FCRefStart).",
+      "syntax": "FCRefTorque [\\Tx] [\\Ty] [\\Tz] [\\Amp] [\\Period]",
+      "args": [
+        {
+          "name": "Tx",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Torque about x, Nm."
+        },
+        {
+          "name": "Ty",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Torque about y, Nm."
+        },
+        {
+          "name": "Tz",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Torque about z, Nm."
+        },
+        {
+          "name": "Amp",
+          "type": "fcxyznum",
+          "optional": true,
+          "switch": false,
+          "desc": "Oscillation amplitude per direction, Nm."
+        },
+        {
+          "name": "Period",
+          "type": "fcxyznum",
+          "optional": true,
+          "switch": false,
+          "desc": "Oscillation period per direction, s."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCResetDampingTune",
+      "kind": "instruction",
+      "summary": "Puts the damping changed by FCSetDampingTune back to the FCAct values.",
+      "syntax": "FCResetDampingTune",
+      "option": "Force Control"
+    },
+    {
+      "name": "FCResetLPFilterTune",
+      "kind": "instruction",
+      "summary": "Puts the force signal low-pass filter back to its configured value.",
+      "syntax": "FCResetLPFilterTune",
+      "option": "Force Control"
+    },
+    {
+      "name": "FCResetMaxForceChangeTune",
+      "kind": "instruction",
+      "summary": "Puts the largest allowed force change back to its configured value.",
+      "syntax": "FCResetMaxForceChangeTune",
+      "option": "Force Control"
+    },
+    {
+      "name": "fcrotdir",
+      "kind": "type",
+      "summary": "Alias of num: the axis of an FCRefRot movement.",
+      "syntax": "fcrotdir",
+      "predefined": [
+        "FC_ROT_X",
+        "FC_ROT_Y",
+        "FC_ROT_Z"
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSetDampingTune",
+      "kind": "instruction",
+      "summary": "Changes the damping per direction while in force control, in % of the configured values.",
+      "syntax": "FCSetDampingTune xdamp ydamp zdamp rxdamp rydamp rzdamp [\\RampTime]",
+      "args": [
+        {
+          "name": "xdamp",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Damping in x, %."
+        },
+        {
+          "name": "ydamp",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Damping in y, %."
+        },
+        {
+          "name": "zdamp",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Damping in z, %."
+        },
+        {
+          "name": "rxdamp",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Damping about x, %."
+        },
+        {
+          "name": "rydamp",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Damping about y, %."
+        },
+        {
+          "name": "rzdamp",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Damping about z, %."
+        },
+        {
+          "name": "RampTime",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Seconds over which the damping changes (default 0.15)."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSetLPFilterTune",
+      "kind": "instruction",
+      "summary": "Changes the cut-off frequency of the force signal low-pass filter.",
+      "syntax": "FCSetLPFilterTune CutOffFreq",
+      "args": [
+        {
+          "name": "CutOffFreq",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Cut-off frequency, Hz."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSetMaxForceChangeTune",
+      "kind": "instruction",
+      "summary": "Changes the largest allowed rate of change of the reference force.",
+      "syntax": "FCSetMaxForceChangeTune ForceChange",
+      "args": [
+        {
+          "name": "ForceChange",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "Largest force change, N/s."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSpdChgAct",
+      "kind": "instruction",
+      "summary": "Activates FC SpeedChange: the programmed speed is lowered when the process force exceeds the reference, with an optional recovery routine.",
+      "syntax": "FCSpdChgAct Reference [\\RecoverFunName] [\\NonStopAllTime] [\\MultipleRecover]",
+      "args": [
+        {
+          "name": "Reference",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "The force reference, N."
+        },
+        {
+          "name": "RecoverFunName",
+          "type": "string",
+          "optional": true,
+          "switch": false,
+          "desc": "Name of a routine to run when the recovery condition is met."
+        },
+        {
+          "name": "NonStopAllTime",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Do not stop the robot while recovering."
+        },
+        {
+          "name": "MultipleRecover",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Run the recovery routine each time, not only once."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSpdChgDeact",
+      "kind": "instruction",
+      "summary": "Deactivates FC SpeedChange.",
+      "syntax": "FCSpdChgDeact",
+      "option": "Force Control"
+    },
+    {
+      "name": "fcspdchgtunetype",
+      "kind": "type",
+      "summary": "Alias of num: which FC SpeedChange parameter FCSpdChgTunSet / FCSpdChgTunReset change.",
+      "syntax": "fcspdchgtunetype",
+      "predefined": [
+        "FC_SPEED_RATIO_MIN",
+        "FC_NO_OF_SPEED_LEVELS"
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSpdChgTunReset",
+      "kind": "instruction",
+      "summary": "Puts an FC SpeedChange system parameter back to its configured value.",
+      "syntax": "FCSpdChgTunReset type",
+      "args": [
+        {
+          "name": "type",
+          "type": "fcspdchgtunetype",
+          "optional": false,
+          "switch": false,
+          "desc": "Which parameter."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSpdChgTunSet",
+      "kind": "instruction",
+      "summary": "Changes an FC SpeedChange system parameter at run time.",
+      "syntax": "FCSpdChgTunSet value type",
+      "args": [
+        {
+          "name": "value",
+          "type": "num",
+          "optional": false,
+          "switch": false,
+          "desc": "The new value."
+        },
+        {
+          "name": "type",
+          "type": "fcspdchgtunetype",
+          "optional": false,
+          "switch": false,
+          "desc": "Which parameter."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "fcspeedvector",
+      "kind": "type",
+      "summary": "Linear (mm/s) and angular (deg/s) speed in x, y and z.",
+      "syntax": "fcspeedvector",
+      "components": [
+        {
+          "name": "vx",
+          "type": "num",
+          "desc": "Speed in x."
+        },
+        {
+          "name": "vy",
+          "type": "num",
+          "desc": "Speed in y."
+        },
+        {
+          "name": "vz",
+          "type": "num",
+          "desc": "Speed in z."
+        },
+        {
+          "name": "wx",
+          "type": "num",
+          "desc": "Angular speed about x."
+        },
+        {
+          "name": "wy",
+          "type": "num",
+          "desc": "Angular speed about y."
+        },
+        {
+          "name": "wz",
+          "type": "num",
+          "desc": "Angular speed about z."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "fcspherevol",
+      "kind": "type",
+      "summary": "A sphere volume (centre, radius, mm) for FCCondPos and FCSupvPos.",
+      "syntax": "fcspherevol",
+      "components": [
+        {
+          "name": "xc",
+          "type": "num",
+          "desc": "Centre x."
+        },
+        {
+          "name": "yc",
+          "type": "num",
+          "desc": "Centre y."
+        },
+        {
+          "name": "zc",
+          "type": "num",
+          "desc": "Centre z."
+        },
+        {
+          "name": "radius",
+          "type": "num",
+          "desc": "Radius."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSupvForce",
+      "kind": "instruction",
+      "summary": "Sets up a Force Control supervision, active from the next FCAct: the robot stops with an error when the measured force leaves the limits.",
+      "syntax": "FCSupvForce [\\XMin] [\\XMax] [\\YMin] [\\YMax] [\\ZMin] [\\ZMax]",
+      "args": [
+        {
+          "name": "XMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed force in x (N)."
+        },
+        {
+          "name": "XMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed force in x (N)."
+        },
+        {
+          "name": "YMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed force in y (N)."
+        },
+        {
+          "name": "YMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed force in y (N)."
+        },
+        {
+          "name": "ZMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed force in z (N)."
+        },
+        {
+          "name": "ZMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed force in z (N)."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSupvOrient",
+      "kind": "instruction",
+      "summary": "Sets up a Force Control supervision, active from the next FCAct: the robot stops with an error when the tool orientation leaves an angle of a reference orientation.",
+      "syntax": "FCSupvOrient [\\OrientSupvFrame] [\\MaxAngle] [\\MaxRot] [\\Outside]",
+      "args": [
+        {
+          "name": "OrientSupvFrame",
+          "type": "orient",
+          "optional": true,
+          "switch": false,
+          "desc": "The reference orientation."
+        },
+        {
+          "name": "MaxAngle",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest allowed tilt of the z axis, degrees."
+        },
+        {
+          "name": "MaxRot",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Largest allowed rotation about z, degrees."
+        },
+        {
+          "name": "Outside",
+          "type": "switch",
+          "optional": true,
+          "switch": true,
+          "desc": "Supervise that the orientation stays outside instead."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSupvPos",
+      "kind": "instruction",
+      "summary": "Sets up a Force Control supervision, active from the next FCAct: the robot stops with an error when the TCP leaves a box, cylinder or sphere.",
+      "syntax": "FCSupvPos [\\PosSupvFrame] [\\Box] | [\\Cylinder] | [\\Sphere]",
+      "args": [
+        {
+          "name": "PosSupvFrame",
+          "type": "pose",
+          "optional": true,
+          "switch": false,
+          "desc": "Frame the volume is given in."
+        },
+        {
+          "name": "Box",
+          "type": "fcboxvol",
+          "optional": true,
+          "switch": false,
+          "alt": 1,
+          "desc": "A box volume."
+        },
+        {
+          "name": "Cylinder",
+          "type": "fccylindervol",
+          "optional": true,
+          "switch": false,
+          "alt": 1,
+          "desc": "A cylinder volume."
+        },
+        {
+          "name": "Sphere",
+          "type": "fcspherevol",
+          "optional": true,
+          "switch": false,
+          "alt": 1,
+          "desc": "A sphere volume."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSupvReoriSpeed",
+      "kind": "instruction",
+      "summary": "Sets up a Force Control supervision, active from the next FCAct: the robot stops with an error when the reorientation speed leaves the limits.",
+      "syntax": "FCSupvReoriSpeed [\\XMin] [\\XMax] [\\YMin] [\\YMax] [\\ZMin] [\\ZMax]",
+      "args": [
+        {
+          "name": "XMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed reorientation speed in x (deg/s)."
+        },
+        {
+          "name": "XMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed reorientation speed in x (deg/s)."
+        },
+        {
+          "name": "YMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed reorientation speed in y (deg/s)."
+        },
+        {
+          "name": "YMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed reorientation speed in y (deg/s)."
+        },
+        {
+          "name": "ZMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed reorientation speed in z (deg/s)."
+        },
+        {
+          "name": "ZMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed reorientation speed in z (deg/s)."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSupvTCPSpeed",
+      "kind": "instruction",
+      "summary": "Sets up a Force Control supervision, active from the next FCAct: the robot stops with an error when the TCP speed leaves the limits.",
+      "syntax": "FCSupvTCPSpeed [\\XMin] [\\XMax] [\\YMin] [\\YMax] [\\ZMin] [\\ZMax]",
+      "args": [
+        {
+          "name": "XMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed TCP speed in x (mm/s)."
+        },
+        {
+          "name": "XMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed TCP speed in x (mm/s)."
+        },
+        {
+          "name": "YMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed TCP speed in y (mm/s)."
+        },
+        {
+          "name": "YMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed TCP speed in y (mm/s)."
+        },
+        {
+          "name": "ZMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed TCP speed in z (mm/s)."
+        },
+        {
+          "name": "ZMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed TCP speed in z (mm/s)."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "FCSupvTorque",
+      "kind": "instruction",
+      "summary": "Sets up a Force Control supervision, active from the next FCAct: the robot stops with an error when the measured torque leaves the limits.",
+      "syntax": "FCSupvTorque [\\XMin] [\\XMax] [\\YMin] [\\YMax] [\\ZMin] [\\ZMax]",
+      "args": [
+        {
+          "name": "XMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed torque in x (Nm)."
+        },
+        {
+          "name": "XMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed torque in x (Nm)."
+        },
+        {
+          "name": "YMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed torque in y (Nm)."
+        },
+        {
+          "name": "YMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed torque in y (Nm)."
+        },
+        {
+          "name": "ZMin",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Lowest allowed torque in z (Nm)."
+        },
+        {
+          "name": "ZMax",
+          "type": "num",
+          "optional": true,
+          "switch": false,
+          "desc": "Highest allowed torque in z (Nm)."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "fcxyznum",
+      "kind": "type",
+      "summary": "Three numbers, one per direction (FCRefForce / FCRefTorque oscillation).",
+      "syntax": "fcxyznum",
+      "components": [
+        {
+          "name": "x",
+          "type": "num",
+          "desc": "Value in x."
+        },
+        {
+          "name": "y",
+          "type": "num",
+          "desc": "Value in y."
+        },
+        {
+          "name": "z",
+          "type": "num",
+          "desc": "Value in z."
+        }
+      ],
+      "option": "Force Control"
+    },
+    {
+      "name": "IsCSSAct",
+      "kind": "function",
+      "summary": "TRUE while Cartesian Soft Servo (SoftMove) is active.",
+      "syntax": "IsCSSAct ()",
+      "returns": "bool"
+    }
+  ]
+}

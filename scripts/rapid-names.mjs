@@ -1,6 +1,7 @@
 // The RAPID built-in names for the generators (scripts/sync-rapid-grammar.mjs, scripts/make-notepadpp.mjs), the same
 // set packages/abb/src/rapid/builtins.ts exports: its hand lists (instructions, functions, types, in that order), then
-// every name of reference.json, reference-rw8.json and manual-names.json, as RobotWare spells it. Read as text and
+// every name of reference.json, reference-rw8.json, reference-options.json (EGM, SoftMove, Force Control) and
+// manual-names.json, as RobotWare spells it. Read as text and
 // JSON: the scripts run without a TypeScript build.
 import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
@@ -20,6 +21,7 @@ export function rapidNames(root, grammar = false) {
   const ref = [
     ...json('reference.json').entries.filter(e => !fixed.has(e.name.toUpperCase())),
     ...rw8.filter(e => e.summary !== undefined),
+    ...json('reference-options.json').entries,
   ];
   const manual = json('manual-names.json');
   const known = (kind, list) => {

@@ -412,6 +412,8 @@
         <KeyWord name="CSSForceOffsetDeact" />
         <KeyWord name="cssframe" />
         <KeyWord name="CSSOffsetTune" />
+        <KeyWord name="css_offset_dir" />
+        <KeyWord name="css_soft_dir" />
         <KeyWord name="CTime" func="yes">
             <Overload retVal="string" descr="CTime is used to read the current system time.">
 
@@ -541,6 +543,8 @@
         <KeyWord name="egmstopmode" />
         <KeyWord name="EGMStreamStart" />
         <KeyWord name="EGMStreamStop" />
+        <KeyWord name="EGMWaitCond" />
+        <KeyWord name="EGM_MAX_RAPID_DNUM" />
         <KeyWord name="egm_minmax" />
         <KeyWord name="ELSE" />
         <KeyWord name="ELSEIF" />
@@ -604,6 +608,7 @@
         <KeyWord name="FCAct" />
         <KeyWord name="fcboxvol" />
         <KeyWord name="FCCalib" />
+        <KeyWord name="FCCondCombine" />
         <KeyWord name="FCCondForce" />
         <KeyWord name="FCCondOrient" />
         <KeyWord name="FCCondPos" />
@@ -613,12 +618,14 @@
         <KeyWord name="FCCondTorque" />
         <KeyWord name="FCCondWaitWhile" />
         <KeyWord name="fccylindervol" />
+        <KeyWord name="fcdamping" />
         <KeyWord name="FCDeact" />
         <KeyWord name="fcforcevector" />
         <KeyWord name="fcframe" />
         <KeyWord name="FCGetForce" />
         <KeyWord name="FCGetProcessData" />
         <KeyWord name="FCIsForceMode" />
+        <KeyWord name="fclindir" />
         <KeyWord name="FCLoadID" />
         <KeyWord name="fcplane" />
         <KeyWord name="FCPress1LStart" />
@@ -638,6 +645,8 @@
         <KeyWord name="FCRefTorque" />
         <KeyWord name="FCResetDampingTune" />
         <KeyWord name="FCResetLPFilterTune" />
+        <KeyWord name="FCResetMaxForceChangeTune" />
+        <KeyWord name="fcrotdir" />
         <KeyWord name="FCSetDampingTune" />
         <KeyWord name="FCSetLPFilterTune" />
         <KeyWord name="FCSetMaxForceChangeTune" />
@@ -646,6 +655,7 @@
         <KeyWord name="fcspdchgtunetype" />
         <KeyWord name="FCSpdChgTunReset" />
         <KeyWord name="FCSpdChgTunSet" />
+        <KeyWord name="fcspeedvector" />
         <KeyWord name="fcspherevol" />
         <KeyWord name="FCSupvForce" />
         <KeyWord name="FCSupvOrient" />
@@ -941,6 +951,7 @@
                 <Param name="[\Rob4Pos jointtarget]" />
             </Overload>
         </KeyWord>
+        <KeyWord name="IsCSSAct" />
         <KeyWord name="IsCyclicBool" func="yes">
             <Overload retVal="bool" descr="IsCyclicBool is used to test if a persistent boolean is a Cyclic bool or not, i.e. if a logical condition has been connected to the persistent boolean variable with the instruction SetupCyclicBool.">
                 <Param name="[\Flag bool]" />

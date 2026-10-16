@@ -4,12 +4,13 @@
  * packages/abb/src/rapid/manual-names.json, from scripts/import-rapid-rw8.mjs - is known to the
  * language support: a reference entry (hover, argument hints, typed completion), the built-in
  * sets (no "unknown routine" warning, plain completion) and the grammar (colouring).
- * Plus the RobotWare 8 merge (new arguments, RW6 / RW8 only notes) and the option-manual names.
+ * Plus the RobotWare 8 merge (new arguments, RW6 / RW8 only notes) and the options documented in their own
+ * application manuals (EGM, SoftMove, Force Control: reference-options.json, scripts/import-rapid-options.mjs).
  * Wired in by test/run.ts.
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { rapidRef, rapidRefEntries, rapidRefMarkdown, rapidManualNames, rapidManualRw } from '@abb/rapid/reference';
+import { rapidRef, rapidRefEntries, rapidRefMarkdown, rapidManualNames, rapidManualRw, rapidOptionManualNames, RAPID_OPTION_MANUALS, PREDEFINED, positionalArgs, callContext } from '@abb/rapid/reference';
 import { RAPID_INSTRUCTIONS, RAPID_FUNCTIONS, RAPID_TYPES, RAPID_RESERVED } from '@abb/rapid/builtins';
 import { parseRapid } from '@abb/rapid/parser';
 import { diagnoseTask } from '@abb/rapid/diagnostics';
@@ -68,8 +69,39 @@ export function run(check: Check): void {
   check(empty.length === 0, `every reference entry has a summary (empty: ${empty.join(', ')})`);
   check(rapidRefEntries().every((e, i, a) => i === 0 || a[i - 1].name.localeCompare(e.name, 'en', { sensitivity: 'base' }) <= 0), 'merged reference sorted by name');
 
-  // options documented only in their own manuals (EGM, SoftMove, Force Control): known names, no warning
-  for (const n of ['EGMRunJoint', 'EGMActPose', 'CSSAct', 'CSSDeactMoveL', 'FCAct', 'FCPressL', 'SocketCreate', 'TriggL', 'SyncMoveOn', 'MToolRotCalib'])
+  // options documented only in their own application manuals (EGM, SoftMove, Force Control): every name each manual
+  // lists has a reference entry of that kind, is a known built-in and is coloured
+  check(RAPID_OPTION_MANUALS.join() === 'css6,css7,egm6,egm7,fc6,fc7,fcgofa', `option manuals: ${RAPID_OPTION_MANUALS.join()}`);
+  const counts: string[] = [];
+  for (const key of RAPID_OPTION_MANUALS) {
+    for (const kind of ['instruction', 'function', 'type'] as const) {
+      const names = rapidOptionManualNames(kind, key);
+      counts.push(`${key} ${kind} ${names.length}`);
+      const noRef = names.filter(n => !rapidRef(n, kind));
+      const noSet = names.filter(n => !sets[kind].has(n.toUpperCase()));
+      const noColour = names.filter(n => !g[kind].test(sample[kind](n)));
+      check(noRef.length === 0, `option manual ${key} ${kind}s: every one has a reference entry (missing: ${noRef.join(', ')})`);
+      check(noSet.length === 0, `option manual ${key} ${kind}s: every one is a known built-in (missing: ${noSet.join(', ')})`);
+      check(noColour.length === 0, `option manual ${key} ${kind}s: the grammar colours every one (missing: ${noColour.join(', ')})`);
+    }
+  }
+  const count = (key: string) => (['instruction', 'function', 'type'] as const).map(k => rapidOptionManualNames(k, key).length).join('/');
+  check(count('egm6') === '18/1/6' && count('egm7') === '18/1/5' && count('css6') === '6/0/3' && count('css7') === '6/1/3'
+    && count('fc6') === '40/4/14' && count('fc7') === '41/4/14' && count('fcgofa') === '41/4/14', `option manual name counts (${counts.join('; ')})`);
+  const egmRun = rapidRef('EGMRunJoint', 'instruction');
+  check(egmRun?.option === 'Externally Guided Motion' && positionalArgs(egmRun).map(a => `${a.name}:${a.type}`).join() === 'EGMid:egmident,Mode:egmstopmode'
+    && egmRun.args?.some(a => a.name === 'NoWaitCond' && a.switch) && egmRun.rw === undefined, 'EGMRunJoint: EGMid, Mode, \\NoWaitCond, in both EGM manuals');
+  check((PREDEFINED.egmstopmode ?? []).join() === 'EGM_STOP_HOLD,EGM_STOP_RAMP_DOWN' && (PREDEFINED.css_soft_dir ?? []).includes('CSS_XYZ') && (PREDEFINED.fcplane ?? []).join() === 'FCPLANE_XY,FCPLANE_XZ,FCPLANE_YZ', 'option alias types offer their predefined constants');
+  const cssAct = rapidRef('CSSAct', 'instruction');
+  check(positionalArgs(cssAct!).map(a => a.type).join() === 'css_soft_dir' && callContext('CSSAct \\RefFrame:=CSS_REFFRAME_TOOL, CSS_')?.index === 0, 'CSSAct: SoftDir after the optional \\RefFrame');
+  check(rapidRef('EGM_MAX_RAPID_DNUM')?.rw === '6' && /RobotWare 6 \(IRC5\) only/.test(rapidRefMarkdown(rapidRef('EGM_MAX_RAPID_DNUM')!)), 'EGM_MAX_RAPID_DNUM: RobotWare 6 only');
+  for (const n of ['IsCSSAct', 'FCCondCombine']) check(rapidRef(n)?.rw === 'omnicore' && /OmniCore only/.test(rapidRefMarkdown(rapidRef(n)!)), `${n}: OmniCore only`);
+  check(rapidRef('IsCSSAct', 'function')?.returns === 'bool' && rapidRef('FCLoadID', 'function')?.returns === 'loaddata' && rapidRef('FCGetForce', 'function')?.returns === 'fcforcevector', 'option functions return their types');
+  const dcg = rapidRef('FCPress1LStart', 'instruction')?.args?.find(a => a.name === 'DeflectionCompGain');
+  check(dcg?.rw === 'omnicore' && /\(OmniCore\)/.test(rapidRefMarkdown(rapidRef('FCPress1LStart')!)), 'FCPress1LStart \\DeflectionCompGain is marked OmniCore');
+  check(rapidRef('CSSAct')?.rw === undefined && rapidRef('FCAct')?.rw === undefined && rapidRef('FCAct')?.option === 'Force Control', 'CSSAct and FCAct are in both RobotWare 6 and OmniCore manuals');
+  // known names, no warning
+  for (const n of ['EGMRunJoint', 'EGMActPose', 'EGMWaitCond', 'CSSAct', 'CSSDeactMoveL', 'FCAct', 'FCPressL', 'FCCondCombine', 'FCResetMaxForceChangeTune', 'SocketCreate', 'TriggL', 'SyncMoveOn', 'MToolRotCalib'])
     check(RAPID_INSTRUCTIONS.has(n.toUpperCase()) && g.instruction.test(sample.instruction(n)), `${n} is a known, coloured instruction`);
   check(RAPID_FUNCTIONS.has('EGMGETSTATE') && RAPID_TYPES.has('EGMIDENT') && RAPID_FUNCTIONS.has('FILETIMEDNUM'), 'EGMGetState, egmident, FileTimeDnum are known');
   const m = parseRapid('MODULE M\r\nPROC main()\r\n  EGMRunJoint egmID1, EGM_STOP_HOLD;\r\n  CSSAct \\Y;\r\n  MoveAbsL j1, v100, fine, tool0;\r\n  NoSuchThing;\r\nENDPROC\r\nENDMODULE');
