@@ -1,5 +1,17 @@
 # Changelog
 
+## 26.109.12 - 2026-10-15 - EGM, SoftMove and Force Control
+
+### Added
+- **ABB RAPID: EGM (Externally Guided Motion), SoftMove and Force Control are complete**, from their application
+  manuals for RobotWare 6 (IRC5) and OmniCore (and GoFa for Force Control): 94 instructions, functions and data types
+  with argument hints, typed completion (for example the EGM stop modes and the Force Control planes) and hover help.
+- Hover marks what exists only on RobotWare 6 or only on OmniCore (for example `IsCSSAct`, `FCCondCombine`).
+
+### Fixed
+- Names that were missing from these options are known now (`EGMWaitCond`, `IsCSSAct`, `FCCondCombine`,
+  `FCResetMaxForceChangeTune` and their data types).
+
 ## 26.109.11 - 2026-10-15 - All of RAPID for RobotWare 6 and 8
 
 ### Added
