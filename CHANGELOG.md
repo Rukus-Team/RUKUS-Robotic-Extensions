@@ -1,5 +1,18 @@
 # Changelog
 
+## 26.109.13 - 2026-10-19 - Hovers without the file header
+
+### Fixed
+- **ABB RAPID and FANUC KAREL hovers no longer show the file's header comment.** A module header (copyright,
+  project info, change history, routine list, the "use MS Word" note) sitting right above the first declaration
+  was shown as that robtarget's, variable's or routine's description. Header blocks are skipped now; a note of the
+  declaration's own under the header's last rule line still shows.
+
+### Changed
+- A RAPID data hover with no note of its own says what its data type is (for a robtarget: the position of the
+  robot and additional axes) above the X/Y/Z, quaternion and configuration table; for a record declared in the
+  task it lists the record's fields.
+
 ## 26.109.12 - 2026-10-15 - EGM, SoftMove and Force Control
 
 ### Added
