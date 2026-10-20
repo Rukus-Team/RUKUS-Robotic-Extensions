@@ -187,7 +187,12 @@ export function registerRapidProviders(ctx: vscode.ExtensionContext, _s: Service
       const data = [...(r?.data ?? []), ...all.flatMap(m => m.data)].find(d => U(d.name) === name);
       if (data) {
         const md = new vscode.MarkdownString().appendCodeblock(data.detail, 'rapid');
+        // its own note; without one, what its data type is
+        const type = rapidRef(data.type, 'type');
+        const record = type ? undefined : all.flatMap(m => m.records).find(x => U(x.name) === U(data.type));
         if (data.doc) md.appendMarkdown(`\n\n${data.doc}`);
+        else if (type) md.appendMarkdown(`\n\n*${type.name}* - ${type.summary}`);
+        else if (record) md.appendMarkdown(`\n\n*${record.name}* - record declared in this task${record.fields.length ? `: ${record.fields.map(f => `\`${f.name}\` *${f.type}*`).join(', ')}` : ''}`);
         const rt = robTargetsOf(data);
         if (rt?.length === 1) {
           const p = rt[0];

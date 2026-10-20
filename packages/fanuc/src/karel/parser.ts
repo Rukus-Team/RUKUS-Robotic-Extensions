@@ -3,7 +3,17 @@
  * identifier references. Pure TypeScript. KAREL is case-insensitive; all symbol
  * lookups here are done on upper-cased names.
  */
+import { isHeaderComment, isDivider } from '@core/headerComment';
 import { KAREL_EV_FILES } from './evNames';
+
+/** The comment block above a declaration as its doc - not when it is the file's header
+ *  (copyright, change history ...), but then the note under the header's last divider. */
+function docOf(lines: string[], atTop: boolean): string | undefined {
+  if (!lines.length) return undefined;
+  if (!isHeaderComment(lines, atTop)) return lines.join('\n');
+  const own = lines.slice(lines.map(isDivider).lastIndexOf(true) + 1);
+  return own.length && own.length < lines.length && !isHeaderComment(own, false) ? own.join('\n') : undefined;
+}
 
 export interface KSpan { line: number; col: number; len: number }
 
@@ -129,7 +139,7 @@ export function parseKarel(text: string): KProgram {
     const cm = /^\s*--\s?(.*)$/.exec(raw);
     if (cm && trimmed === '') { pendingDoc.push(cm[1]); continue; }
     if (trimmed === '') { pendingDoc = []; continue; }
-    const takeDoc = () => { const d = pendingDoc.length ? pendingDoc.join('\n') : undefined; pendingDoc = []; return d; };
+    const takeDoc = () => { const d = docOf(pendingDoc, prog.symbols.length === 1 && prog.symbols[0].kind === 'program'); pendingDoc = []; return d; };
 
     // directives
     const dm = /^\s*%([A-Z0-9_]+)\b\s*(.*)$/i.exec(line);
