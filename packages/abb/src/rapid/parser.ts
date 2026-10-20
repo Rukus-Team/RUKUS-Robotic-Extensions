@@ -20,6 +20,7 @@
  */
 
 import type { Span } from '@core/span';
+import { isHeaderComment, isDivider } from '@core/headerComment';
 import { lexRapid, looksEncrypted, RAPID_RESERVED, type Token, type RapidComment } from './lexer';
 export type { Span, RapidComment };
 export { looksEncrypted, RAPID_RESERVED };
@@ -361,15 +362,23 @@ export function parseRapid(text: string, opts: RapidParseOptions = {}): RapidMod
     const kept = lines.map(s => s.replace(/^[#*\s]+/, '').replace(/\s+$/, '')).filter(s => s && !/^[=*#\-_~+\s]+$/.test(s));
     return kept.length ? kept.join('\n') : undefined;
   };
+  // the module's own header (copyright, change history, routine list ...) often sits right on
+  // top of the first declaration; it describes the module, not that declaration
+  const moduleTok = T.find(t => t.kind === 'ident' && /^MODULE$/i.test(t.text));
+  const firstCode = T.find(t => !moduleTok || t.line > moduleTok.line);
+  const atModuleTop = (line: number) => !firstCode || firstCode.line >= line;
   const docAbove = (line: number) => {
     const out: string[] = [];
     for (let l = line - 1; l >= 0 && fullLineComment.has(l); l--) out.unshift(fullLineComment.get(l)!);
-    return tidyDoc(out);
+    if (!isHeaderComment(out, atModuleTop(line - out.length))) return tidyDoc(out);
+    // a header with the declaration's own note under its last divider: keep that note
+    const own = out.slice(out.map(isDivider).lastIndexOf(true) + 1);
+    return own.length < out.length && !isHeaderComment(own, false) ? tidyDoc(own) : undefined;
   };
   const docBelow = (line: number) => {
     const out: string[] = [];
     for (let l = line + 1; l < lex.lines.length && fullLineComment.has(l); l++) out.push(fullLineComment.get(l)!);
-    return tidyDoc(out);
+    return isHeaderComment(out, false) ? undefined : tidyDoc(out);
   };
 
   // ---- context stack ----
