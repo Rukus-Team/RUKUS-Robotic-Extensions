@@ -4,8 +4,10 @@
  *
  *   1. hover text: a file or module header (copyright, change history, routine list, the
  *      "use MS Word" note) is not the description of the declaration under it - RAPID and KAREL
+ *   1b. (2026-10-20) `!!!! ROBOT POINTS !!!!` section titles and group labels are not a
+ *      declaration's note either; a same-line comment is; stray `)` / `]` keep commas splitting
  */
-import { isHeaderComment, isDivider } from '@core/headerComment';
+import { isHeaderComment, isDivider, isBanner } from '@core/headerComment';
 import { parseRapid } from '@abb/rapid/parser';
 import { parseKarel } from '@fanuc/karel/parser';
 
@@ -62,6 +64,53 @@ export function run(check: Check): void {
     'ENDMODULE',
   ].join('\n'));
   check(tail.data[0]?.doc === 'Home position', `RAPID: the note under the header's last rule stays: ${JSON.stringify(tail.data[0]?.doc)}`);
+
+  // ---- 1b: section titles, group labels, same-line comments ----
+  check(isDivider('!!!!!!!!!!!') && isDivider(' !!!!!!!'), '!!!! lines are dividers');
+  check(isBanner('!!!!!!! ROBOT POINTS !!!!!!!') && isBanner(' *** Pick ***') && isBanner('-----') && !isBanner(' Safe position above the conveyor') && !isBanner(' a-b'), 'section titles');
+  const pts = '[[1,2,3],[1,0,0,0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]]';
+  const hover = parseRapid([
+    'MODULE HoverTest',
+    '  !!!!!!!!!!!!!!!!!!!! ROBOT POINTS !!!!!!!!!!!!!!!!!!!!',
+    `  CONST robtarget pApp:=${pts};`,
+    `  CONST robtarget pPick:=${pts};`,
+    '',
+    '  ! Safe position above the conveyor',
+    `  CONST robtarget pSafe:=${pts};`,
+    '  PERS num nCount:=0; ! parts picked this cycle',
+    '',
+    '  ! Pick positions',
+    `  CONST robtarget pPick1:=${pts};`,
+    `  CONST robtarget pPick2:=${pts};`,
+    '',
+    '  !!!!!!!!!!!!!!!!!!!! ROUTINES !!!!!!!!!!!!!!!!!!!!',
+    '  PROC MOV_Pick()',
+    '  ENDPROC',
+    '',
+    '  !!!!!! ROUTINES !!!!!!',
+    '  ! Places the part',
+    '  ! on the conveyor',
+    '  PROC MOV_Place()',
+    '  ENDPROC',
+    '',
+    '  ! Drops part on conveyor',
+    '  PROC MOV_Drop(num a], num b)',
+    '  ENDPROC',
+    '',
+    '  VAR num nGrid{3), 4};',
+    'ENDMODULE',
+  ].join('\n'));
+  const hd = (n: string) => hover.data.find(d => d.name === n)?.doc;
+  const hr = (n: string) => hover.routines.find(r => r.name === n);
+  check(hd('pApp') === undefined && hd('pPick') === undefined, `RAPID: no section title on the points under it: ${JSON.stringify([hd('pApp'), hd('pPick')])}`);
+  check(hd('pSafe') === 'Safe position above the conveyor', `RAPID: a point keeps its own note: ${JSON.stringify(hd('pSafe'))}`);
+  check(hd('nCount') === 'parts picked this cycle', `RAPID: the same-line comment is the note: ${JSON.stringify(hd('nCount'))}`);
+  check(hd('pPick1') === undefined && hd('pPick2') === undefined, `RAPID: a group label is nobody's note: ${JSON.stringify([hd('pPick1'), hd('pPick2')])}`);
+  check(hr('MOV_Pick')?.doc === undefined, `RAPID: no section title on a routine: ${JSON.stringify(hr('MOV_Pick')?.doc)}`);
+  check(hr('MOV_Place')?.doc === 'Places the part\non the conveyor', `RAPID: the routine note under a section title stays: ${JSON.stringify(hr('MOV_Place')?.doc)}`);
+  check(hr('MOV_Drop')?.doc === 'Drops part on conveyor', `RAPID: a routine keeps its note: ${JSON.stringify(hr('MOV_Drop')?.doc)}`);
+  check(hr('MOV_Drop')?.params.length === 2, `RAPID: a stray ] does not merge parameters: ${hr('MOV_Drop')?.params.map(p => p.name).join(',')}`);
+  check(hd('nGrid') === undefined && hover.data.find(d => d.name === 'nGrid')?.dims?.length === 2, `RAPID: a stray ) does not merge dimensions: ${JSON.stringify(hover.data.find(d => d.name === 'nGrid')?.dims)}`);
 
   // ---- KAREL: same for the first declaration under the program header ----
   const karel = parseKarel([

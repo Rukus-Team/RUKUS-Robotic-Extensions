@@ -20,7 +20,7 @@
  */
 
 import type { Span } from '@core/span';
-import { isHeaderComment, isDivider } from '@core/headerComment';
+import { isHeaderComment, isDivider, isBanner } from '@core/headerComment';
 import { lexRapid, looksEncrypted, RAPID_RESERVED, type Token, type RapidComment } from './lexer';
 export type { Span, RapidComment };
 export { looksEncrypted, RAPID_RESERVED };
@@ -357,9 +357,10 @@ export function parseRapid(text: string, opts: RapidParseOptions = {}): RapidMod
 
   // ---- comment lookup for doc text ----
   const fullLineComment = new Map<number, string>();
-  for (const c of lex.comments) if (c.fullLine) fullLineComment.set(c.span.line, c.text);
+  const trailingComment = new Map<number, string>();
+  for (const c of lex.comments) (c.fullLine ? fullLineComment : trailingComment).set(c.span.line, c.text);
   const tidyDoc = (lines: string[]) => {
-    const kept = lines.map(s => s.replace(/^[#*\s]+/, '').replace(/\s+$/, '')).filter(s => s && !/^[=*#\-_~+\s]+$/.test(s));
+    const kept = lines.map(s => s.replace(/^[#*!\s]+/, '').replace(/\s+$/, '')).filter(s => s && !/^[=*#\-_~+!\s]+$/.test(s));
     return kept.length ? kept.join('\n') : undefined;
   };
   // the module's own header (copyright, change history, routine list ...) often sits right on
@@ -367,13 +368,40 @@ export function parseRapid(text: string, opts: RapidParseOptions = {}): RapidMod
   const moduleTok = T.find(t => t.kind === 'ident' && /^MODULE$/i.test(t.text));
   const firstCode = T.find(t => !moduleTok || t.line > moduleTok.line);
   const atModuleTop = (line: number) => !firstCode || firstCode.line >= line;
-  const docAbove = (line: number) => {
-    const out: string[] = [];
+  /** the comment lines right above `line`, without a file header or a section title on top */
+  const notesAbove = (line: number): string[] | undefined => {
+    let out: string[] = [];
     for (let l = line - 1; l >= 0 && fullLineComment.has(l); l--) out.unshift(fullLineComment.get(l)!);
-    if (!isHeaderComment(out, atModuleTop(line - out.length))) return tidyDoc(out);
-    // a header with the declaration's own note under its last divider: keep that note
-    const own = out.slice(out.map(isDivider).lastIndexOf(true) + 1);
-    return own.length < out.length && !isHeaderComment(own, false) ? tidyDoc(own) : undefined;
+    if (isHeaderComment(out, atModuleTop(line - out.length))) {
+      // a header with the declaration's own note under its last divider: keep that note
+      const own = out.slice(out.map(isDivider).lastIndexOf(true) + 1);
+      if (own.length === out.length || isHeaderComment(own, false)) return undefined;
+      out = own;
+    }
+    // `!!!! ROUTINES !!!!` names the section; only what comes after it is this declaration's
+    // (a plain rule stays: `!*****` / note / `!*****` is a ruled note)
+    return out.slice(out.map(s => isBanner(s) && !isDivider(s)).lastIndexOf(true) + 1);
+  };
+  const docAbove = (line: number) => {
+    const out = notesAbove(line);
+    return out ? tidyDoc(out) : undefined;
+  };
+  /**
+   * A data declaration's note: its own same-line comment (`PERS num n := 0; ! parts picked`),
+   * else at most 3 comment lines right above - unless the next line declares the same kind of
+   * data, which makes those lines a label for the group, not this one's note.
+   */
+  const dataDoc = (first: number, last: number, kind: string) => {
+    const same = trailingComment.get(last) ?? trailingComment.get(first);
+    if (same !== undefined && !isBanner(same)) return tidyDoc([same]);
+    const out = notesAbove(first);
+    if (!out || out.filter(s => !isDivider(s)).length > 3) return undefined;
+    let n = T.findIndex(t => t.line > last);
+    if (n >= 0 && T[n].line === last + 1) {
+      if (/^(LOCAL|TASK)$/i.test(T[n].text)) n++;
+      if (/^(VAR|PERS|CONST)$/i.test(T[n]?.text ?? '') && `${upper(T[n])} ${upper(T[n + 1])}` === kind) return undefined;
+    }
+    return tidyDoc(out);
   };
   const docBelow = (line: number) => {
     const out: string[] = [];
@@ -440,13 +468,20 @@ export function parseRapid(text: string, opts: RapidParseOptions = {}): RapidMod
       first = false;
     }
   };
+  const PAIR: Record<string, string> = { '(': ')', '[': ']', '{': '}' };
   const matchClose = (openIdx: number) => {
-    let depth = 0;
+    const open: string[] = [];
     for (let k = openIdx; k < T.length; k++) {
       const t = T[k];
-      if (t.kind === 'op' && OPEN_BR.has(t.text)) depth++;
-      else if (t.kind === 'op' && CLOSE_BR.has(t.text)) { depth--; if (depth === 0) return k; }
-      else if (isOp(t, ';')) return k;
+      if (t.kind === 'op' && OPEN_BR.has(t.text)) open.push(PAIR[t.text]);
+      else if (t.kind === 'op' && CLOSE_BR.has(t.text)) {
+        // a stray `]` in `(num a], num b)` while typing: skip it when the real `)` follows on the line
+        if (!open.length) continue;
+        const want = open[open.length - 1];
+        if (t.text !== want && T.slice(k + 1).find(x => x.line !== t.line || isOp(x, ';') || isOp(x, want))?.text === want) continue;
+        open.pop();
+        if (!open.length) return k;
+      } else if (isOp(t, ';')) return k;
     }
     return T.length;
   };
@@ -528,7 +563,7 @@ export function parseRapid(text: string, opts: RapidParseOptions = {}): RapidMod
       for (let q = j + 1; q < c; q++) {
         const t = T[q];
         if (t.kind === 'op' && OPEN_BR.has(t.text)) d++;
-        else if (t.kind === 'op' && CLOSE_BR.has(t.text)) d--;
+        else if (t.kind === 'op' && CLOSE_BR.has(t.text)) { if (d > 0) d--; }
         else if (d === 0 && isOp(t, ',')) { dims.push(argOf(s, q)?.text ?? ''); s = q + 1; }
       }
       dims.push(argOf(s, c)?.text ?? '');
@@ -541,7 +576,7 @@ export function parseRapid(text: string, opts: RapidParseOptions = {}): RapidMod
       name: nameTok.text, nameSpan: tokSpan(nameTok), storage, type: typeTok.text, typeSpan: tokSpan(typeTok), scope,
       dims, init, routine: routine?.name, line: nameTok.line,
       detail: collapse(text.slice(lineStartTok.off, (T[end.at] && !end.hard ? T[end.at].end : T[end.at - 1].end))),
-      doc: docAbove(lineStartTok.line),
+      doc: dataDoc(lineStartTok.line, (T[end.at] && !end.hard ? T[end.at] : T[end.at - 1]).line, `${storage} ${typeTok.text.toUpperCase()}`),
     };
     if (routine) routine.data.push(d); else mod.data.push(d);
     if (end.hard) problem('rapid.missingSemicolon', `Missing ";" after the declaration of ${nameTok.text}.`, tokSpan(T[end.at - 1]), 'warning');
@@ -558,7 +593,7 @@ export function parseRapid(text: string, opts: RapidParseOptions = {}): RapidMod
     for (let k = a; k < b; k++) {
       const t = T[k];
       if (t.kind === 'op' && OPEN_BR.has(t.text)) d++;
-      else if (t.kind === 'op' && CLOSE_BR.has(t.text)) d--;
+      else if (t.kind === 'op' && CLOSE_BR.has(t.text)) { if (d > 0) d--; }
       else if (d === 0 && isOp(t, ',')) { pieces.push([s, k]); s = k + 1; }
     }
     if (b > a) pieces.push([s, b]);
@@ -820,7 +855,7 @@ export function parseRapid(text: string, opts: RapidParseOptions = {}): RapidMod
       for (let k = p; k < end.at; k++) {
         const x = T[k];
         if (x.kind === 'op' && OPEN_BR.has(x.text)) d++;
-        else if (x.kind === 'op' && CLOSE_BR.has(x.text)) d--;
+        else if (x.kind === 'op' && CLOSE_BR.has(x.text)) { if (d > 0) d--; }
         else if (d === 0 && isOp(x, ':=') && !isOp(T[k - 2], '\\')) return k;
       }
       return -1;

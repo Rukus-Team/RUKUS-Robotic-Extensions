@@ -1,5 +1,20 @@
 # Changelog
 
+## 26.109.14 - 2026-10-20 - RAPID hovers without section titles
+
+### Fixed
+- **RAPID hovers no longer show section titles.** An ABB-style `!!!! ROBOT POINTS !!!!` or `!!!! ROUTINES !!!!`
+  line above the first robtarget or PROC was shown as its description. `!!!!` lines now count as rule lines, and a
+  section title is never a declaration's note; a routine's own note under the title still shows.
+- A comment above a group of declarations of the same type (`! Pick positions` over several robtargets) is a label
+  for the group, not the first one's description.
+- A stray `)` or `]` while typing (`PROC MOV_Drop(num a], num b)`) no longer merges a routine's parameters or an
+  array's dimensions into one.
+
+### Changed
+- A RAPID data hover shows a same-line comment as its note (`PERS num nCount:=0; ! parts picked`), and always
+  shows what its data type is, under its own note.
+
 ## 26.109.13 - 2026-10-19 - Hovers without the file header
 
 ### Fixed
