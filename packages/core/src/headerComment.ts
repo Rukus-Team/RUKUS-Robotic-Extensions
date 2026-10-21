@@ -6,10 +6,22 @@
  * Pure, so the tests can use it.
  */
 
-/** `!*****`, `-- =====`, `! ---------` - a comment line made only of rule characters */
+/** `!*****`, `-- =====`, `! ---------`, `!!!!!!!!` - a comment line made only of rule characters */
 export function isDivider(line: string): boolean {
   const s = line.replace(/^\s*(?:!|--)?/, '');
-  return /^[\s=*#\-_~+/\\|]*$/.test(s) && /[=*#\-_~+]{3,}/.test(s);
+  return /^[\s=*#\-_~+/\\|!]*$/.test(s) && /[=*#\-_~+!]{3,}/.test(s);
+}
+
+/**
+ * `!!!! ROBOT POINTS !!!!`, `*** Pick ***`, `---- routines` - a section title: it starts or
+ * ends with 3+ rule characters, or is less than half real text. It names the part of the
+ * file below it, not the one declaration right under it. A plain divider is one too.
+ */
+export function isBanner(line: string): boolean {
+  const s = line.replace(/^\s*(?:!|--)?\s*/, '').trim();
+  if (!s) return false;
+  if (/^[!=*#\-_~+]{3,}/.test(s) || /[!=*#\-_~+]{3,}$/.test(s)) return true;
+  return s.replace(/[!=*#\-_~+/\\|\s]/g, '').length / s.length < 0.5;
 }
 
 /** Words that only a file or module header uses. */
