@@ -5,7 +5,7 @@
  * 1.0) or 443 (OmniCore, RWS 2.0) of a real controller; each open port is asked `/rw` with no
  * login, and each RWS one who it is.
  */
-import { scan, planScan, type Adapter, type ScanTarget, type ScanSource } from '@core/live/netScan';
+import { scan, planScan, SLOW_PASS, type Adapter, type ScanMiss, type ScanTarget, type ScanSource } from '@core/live/netScan';
 import { RwsClient } from '../rws/client';
 import { probeRws, discoverVirtualControllers } from './vcDiscovery';
 import { SERVICE_PORT_IP } from './network';
@@ -30,6 +30,10 @@ export interface AbbFound {
 export interface AbbSearchOptions {
   adapters: readonly Adapter[];
   wifi: boolean;
+  /** addresses the user typed */
+  hosts?: readonly string[];
+  /** told of an open port that does not speak RWS */
+  missed?: (m: ScanMiss) => void;
   user?: string;
   password?: string;
   signal?: { readonly isCancellationRequested: boolean };
@@ -63,18 +67,18 @@ async function virtualOnes(user?: string, password?: string): Promise<AbbFound[]
 }
 
 /** The network part of the search: what to try. Loopback is the virtual controllers' (by process, not by address). */
-export function abbTargets(adapters: readonly Adapter[], wifi: boolean): ScanTarget[] {
-  return planScan({ local: [], defaults: ABB_DEFAULT_HOSTS, adapters, wifi, ports: ABB_RWS_PORTS });
+export function abbTargets(adapters: readonly Adapter[], wifi: boolean, hosts?: readonly string[]): ScanTarget[] {
+  return planScan({ local: [], defaults: ABB_DEFAULT_HOSTS, hosts, adapters, wifi, ports: ABB_RWS_PORTS });
 }
 
 /** Every ABB controller found: virtual ones first, then the network, each host:port once. */
 export async function searchAbbControllers(o: AbbSearchOptions): Promise<AbbFound[]> {
   const local = await (o.findVirtual ?? (() => virtualOnes(o.user, o.password)))();
-  const remote = await scan(abbTargets(o.adapters, o.wifi), {
-    signal: o.signal, progress: o.progress, open: o.open,
+  const remote = await scan(abbTargets(o.adapters, o.wifi, o.hosts), {
+    signal: o.signal, progress: o.progress, open: o.open, slowPass: SLOW_PASS, missed: o.missed,
     probe: async t => {
-      const rws = await probeRws(t.host, t.port, 1500);
-      if (!rws) return undefined;
+      const rws = await probeRws(t.host, t.port, 3000);
+      if (!rws) throw new Error('no Robot Web Services answer on /rw');
       return { host: t.host, port: t.port, ...rws, source: t.source, ...(await identifyRws(t.host, t.port, rws, o.user, o.password)) };
     },
   });

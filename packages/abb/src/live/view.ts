@@ -34,7 +34,8 @@ import { searchAbbControllers, sourceLabel, type AbbFound } from './search';
 import { abbRobotType, groupAbbOptions } from './optionDocs';
 import { sortData, formatRapidData, oneLine, type RapidDatum } from './rapidData';
 import { SERVICE_PORT_IP } from './network';
-import { chooseScanScope, scopeSummary, withScanProgress } from '@core/live/scanPrompt';
+import { chooseScanScope, scopeSummary, withScanProgress, logScanResult, askScanRange, type ScanScope } from '@core/live/scanPrompt';
+import type { ScanMiss } from '@core/live/netScan';
 import { eventMarkdown, parseEventCode } from './eventCatalog';
 import { AbbControllers, ago, type AbbConnection, type AbbProfile } from './controllers';
 import type { RwsPointer, RwsModuleInfo, RwsEvent, RwsSignal } from '../rws/client';
@@ -444,33 +445,47 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
    * address 192.168.125.1, wired networks, and WiFi when the user says yes. Pick one to add it,
    * or to point the profile that is for it at its address.
    */
+  const IRC5_WAN_HINT = 'A real IRC5 answers on its WAN port only with the PC Interface option (616-1); on the service port it always answers.';
   reg('robotCode.abb.searchControllers', async () => {
     const scope = await chooseScanScope('ABB'); if (!scope) return;
-    const found = await withScanProgress('Searching for ABB controllers…', (token, progress) =>
-      searchAbbControllers({ adapters: scope.adapters, wifi: scope.wifi, signal: token, progress }));
-    if (!found.length) {
-      vscode.window.showInformationMessage(`No ABB controller answered Robot Web Services on ${scopeSummary(scope)} or ${SERVICE_PORT_IP}.`,
-        { detail: 'A real IRC5 answers on its WAN port only with the PC Interface option (616-1); on the service port it always answers. A RobotStudio virtual controller has to be running.' });
-      return;
-    }
+    await searchAbb(scope);
+  });
+  /** One search, then what it found; "Search a range" comes back here with that range. */
+  const searchAbb = async (scope: ScanScope): Promise<void> => {
+    const missed: ScanMiss[] = [];
+    const found = await withScanProgress('Searching for ABB controllers\u2026', (token, progress) =>
+      searchAbbControllers({ adapters: scope.adapters, wifi: scope.wifi, hosts: scope.hosts, signal: token, progress, missed: m => missed.push(m) }));
+    logScanResult('ABB', scope, found.map(f => `${f.host}:${f.port} ${f.family} ${f.ctrlName ?? f.systemName ?? ''}`.trim()), missed);
     const label = (f: AbbFound) => f.ctrlName ?? f.systemName ?? f.host;
     const known = (f: AbbFound) => ctrls.list().find(x => x.profile.host === f.host && (x.profile.port ?? (x.profile.https ? 443 : 80)) === f.port)
       ?? ctrls.list().find(x => !!matchEndpoint([{ ...f, pid: 0, image: '' }], ctrls.expected(x) ?? { name: x.profile.name }));
-    const pick = await vscode.window.showQuickPick(found.map(f => {
+    const items: Array<vscode.QuickPickItem & { f?: AbbFound; owner?: ReturnType<typeof known>; range?: boolean }> = found.map(f => {
       const owner = known(f);
       return {
         label: label(f),
-        description: `${f.host}:${f.port} · ${f.family === 'omnicore' ? 'OmniCore' : 'IRC5'}${f.virtual ? ' · virtual' : ''} · ${sourceLabel(f.source)}`,
+        description: `${f.host}:${f.port} \u00b7 ${f.family === 'omnicore' ? 'OmniCore' : 'IRC5'}${f.virtual ? ' \u00b7 virtual' : ''} \u00b7 ${sourceLabel(f.source)}`,
         detail: owner ? `already added as ${owner.profile.name}` : f.error ? `could not log in with the factory login: ${f.error}` : undefined,
+        picked: !owner,
         f, owner,
       };
-    }), { title: `${found.length} ABB controller${found.length === 1 ? '' : 's'} found - pick one to add it` });
-    if (!pick) return;
-    const f = pick.f;
+    });
+    const others = missed.filter(m => !found.some(f => f.host === m.target.host));
+    if (others.length) items.push({ label: 'Answered, but not as Robot Web Services', kind: vscode.QuickPickItemKind.Separator });
+    for (const m of others) items.push({ label: `$(circle-slash) ${m.target.host}`, description: `port ${m.target.port}: ${m.why}`, detail: IRC5_WAN_HINT });
+    items.push({ label: 'More', kind: vscode.QuickPickItemKind.Separator }, { label: '$(search) Search a range\u2026', description: 'another subnet, or addresses this search did not cover', range: true });
+    const title = `${found.length} ABB controller${found.length === 1 ? '' : 's'} found on ${scopeSummary(scope)} or ${SERVICE_PORT_IP} - tick the ones to add`;
+    const picks = await vscode.window.showQuickPick(items, { title, canPickMany: true, ignoreFocusOut: true });
+    if (!picks?.length) return;
+    if (picks.some(p => p.range)) { const next = await askScanRange('ABB'); if (next) await searchAbb(next); return; }
+    for (const { f, owner } of picks) if (f) await addFoundController(f, owner?.profile.name);
+  };
+  /** A found controller: a profile that is for it takes its address, else a new profile. */
+  const addFoundController = async (f: AbbFound, owner: string | undefined): Promise<void> => {
+    const label = f.ctrlName ?? f.systemName ?? f.host;
     const patch = { host: f.host, port: f.port, family: f.family, https: f.https };
     const cfg = vscode.workspace.getConfiguration('robotCode');
-    if (pick.owner) {
-      const name = pick.owner.profile.name;
+    if (owner) {
+      const name = owner;
       if (ctrls.clusterOf(name)) { vscode.window.showInformationMessage(`${name} comes from RUKUS: change its address there (${f.host}:${f.port}).`); return; }
       const inspect = cfg.inspect<AbbProfile[]>('abb.controllers');
       for (const [where, value] of [[vscode.ConfigurationTarget.Workspace, inspect?.workspaceValue], [vscode.ConfigurationTarget.Global, inspect?.globalValue]] as const) {
@@ -482,8 +497,8 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
       return;
     }
     const taken = new Set(ctrls.list().map(x => x.profile.name));
-    let name = label(f);
-    for (let i = 2; taken.has(name); i++) name = `${label(f)} (${i})`;
+    let name = label;
+    for (let i = 2; taken.has(name); i++) name = `${label} (${i})`;
     const profile: AbbProfile = {
       name, host: f.host,
       ...(f.port !== (f.https ? 443 : 80) ? { port: f.port } : {}),
@@ -492,7 +507,7 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
     };
     await cfg.update('abb.controllers', [...cfg.get<AbbProfile[]>('abb.controllers', []), profile], vscode.workspace.workspaceFolders ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
     vscode.window.showInformationMessage(`Added ${name} (${f.host}:${f.port}).${f.error ? ' Set its login with Edit Connection before connecting.' : ''}`, 'Connect').then(go => { if (go) void vscode.commands.executeCommand('robotCode.abb.connect', name); });
-  });
+  };
   reg('robotCode.abb.refresh', async (node?: any) => {
     const name = await nameOf(node, c => c.state === 'connected'); if (!name) return;
     try { await ctrls.refresh(name); } catch (e) { show(e); }

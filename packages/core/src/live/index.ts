@@ -13,8 +13,9 @@ import { RobotFileSystem, FANUC_SCHEME, robotUri } from './fs';
 import { globToRegExp } from './ftp';
 import { RobotsTree, ageTicked } from './views';
 import { openRobotForm } from './robotForm';
-import { searchFanucControllers } from './fanucSearch';
-import { chooseScanScope, scopeSummary, withScanProgress } from './scanPrompt';
+import { searchFanucControllers, FANUC_HTTP_PORT, type FanucFound } from './fanucSearch';
+import type { ScanMiss } from './netScan';
+import { chooseScanScope, scopeSummary, withScanProgress, logScanResult, askScanRange, type ScanScope } from './scanPrompt';
 import { connectionHint } from './connectionHints';
 import { openDashboard } from './dashboard';
 import { openInRukus } from '../rukus/launch';
@@ -164,33 +165,48 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
    */
   reg('robotCode.live.searchRobots', async () => {
     const scope = await chooseScanScope('FANUC'); if (!scope) return;
-    const found = await withScanProgress('Searching for FANUC controllers…', (token, progress) =>
-      searchFanucControllers({ adapters: scope.adapters, wifi: scope.wifi, signal: token, progress }));
-    if (!found.length) {
-      vscode.window.showInformationMessage(`No FANUC controller web server answered on ${scopeSummary(scope)}.`,
-        { detail: 'Searched port 80 for the controller\'s ROBOT Homepage. ROBOGUIDE has to be running with its robots started.' });
-      return;
-    }
+    await searchFanuc(scope);
+  });
+  /** One search, then what it found; "Search a range" comes back here with that range. */
+  const searchFanuc = async (scope: ScanScope): Promise<void> => {
+    const missed: ScanMiss[] = [];
+    const found = await withScanProgress('Searching for FANUC controllers\u2026', (token, progress) =>
+      searchFanucControllers({ adapters: scope.adapters, wifi: scope.wifi, hosts: scope.hosts, local: scope.hosts ? [] : undefined, signal: token, progress, missed: m => missed.push(m) }));
+    logScanResult('FANUC', scope, found.map(f => `${f.host}:${f.port} ${f.hostname ?? ''} ${f.robotNo ?? ''}`.trim()), missed);
     const owner = (host: string) => robots.list().find(c => c.profile.host === host);
-    const pick = await vscode.window.showQuickPick(found.map(f => ({
+    const items: Array<vscode.QuickPickItem & { f?: FanucFound; range?: boolean }> = found.map(f => ({
       label: f.hostname ?? f.host,
-      description: `${f.host}${f.robotNo ? ` · ${f.robotNo}` : ''} · ${f.source === 'local' ? 'this PC' : f.source === 'wifi' ? 'WiFi' : 'wired'}`,
+      description: `${f.host}${f.robotNo ? ` \u00b7 ${f.robotNo}` : ''} \u00b7 ${f.ftpOnly ? 'FTP only' : f.source === 'local' ? 'this PC' : f.source === 'wifi' ? 'WiFi' : 'wired'}`,
       detail: owner(f.host) ? `already added as ${owner(f.host)!.profile.name}` : undefined,
+      picked: !owner(f.host),
       f,
-    })), { title: `${found.length} FANUC controller${found.length === 1 ? '' : 's'} found - pick one to add it` });
-    if (!pick) return;
-    const f = pick.f;
-    const have = owner(f.host);
-    if (have) { void vscode.commands.executeCommand('robotCode.live.connect', have.profile.name); return; }
+    }));
+    // an open port that did not say FANUC is shown, not dropped: a controller with its web server locked looks like this
+    const others = missed.filter(m => !found.some(f => f.host === m.target.host));
+    if (others.length) items.push({ label: 'Answered, but not as a FANUC controller', kind: vscode.QuickPickItemKind.Separator });
+    for (const m of others) items.push({ label: m.target.host, description: `port ${m.target.port}: ${m.why}`, f: { host: m.target.host, port: FANUC_HTTP_PORT, source: m.target.source } });
+    items.push({ label: 'More', kind: vscode.QuickPickItemKind.Separator }, { label: '$(search) Search a range\u2026', description: 'another subnet, or addresses this search did not cover', range: true });
+    const title = `${found.length} FANUC controller${found.length === 1 ? '' : 's'} found on ${scopeSummary(scope)} - tick the ones to add`;
+    const picks = await vscode.window.showQuickPick(items, { title, canPickMany: true, ignoreFocusOut: true });
+    if (!picks?.length) return;
+    if (picks.some(p => p.range)) { const next = await askScanRange('FANUC'); if (next) await searchFanuc(next); return; }
+    const added: string[] = [];
+    for (const { f } of picks) if (f) { const name = await addFound(f); if (name) added.push(name); }
+    if (added.length === 1) vscode.window.showInformationMessage(`Added ${added[0]}.`, 'Connect').then(go => { if (go) void vscode.commands.executeCommand('robotCode.live.connect', added[0]); });
+    else if (added.length) vscode.window.showInformationMessage(`Added ${added.length} robots: ${added.join(', ')}.`);
+  };
+  /** A found controller as a robot profile; undefined when one already has its address (that one connects). */
+  const addFound = async (f: FanucFound): Promise<string | undefined> => {
+    const have = robots.list().find(c => c.profile.host === f.host);
+    if (have) { void vscode.commands.executeCommand('robotCode.live.connect', have.profile.name); return undefined; }
     const taken = new Set(robots.list().map(c => c.profile.name));
     const base = f.hostname && f.hostname.toUpperCase() !== 'ROBOT' ? f.hostname : `${f.hostname ?? 'Robot'} ${f.host}`;
     let name = base;
     for (let i = 2; taken.has(name); i++) name = `${base} (${i})`;
-    await robots.addProfile({ name, host: f.host, httpPort: f.port, ftpPort: 21, ftpUser: '', device: 'MD:', useFtp: false, pollIntervalMs: 5000, autoConnect: false, autoRefresh: false });
+    await robots.addProfile({ name, host: f.host, httpPort: f.port, ftpPort: 21, ftpUser: '', device: 'MD:', useFtp: !!f.ftpOnly, pollIntervalMs: 5000, autoConnect: false, autoRefresh: false });
     robots.log(name, `profile added by search (${f.host}${f.robotNo ? `, ${f.robotNo}` : ''})`);
-    vscode.window.showInformationMessage(`Added ${name} (${f.host}).`, 'Connect').then(go => { if (go) void vscode.commands.executeCommand('robotCode.live.connect', name); });
-  });
-
+    return name;
+  };
   reg('robotCode.live.removeRobot', async (node?: any) => {
     const name = await pickRobot(nameOf(node));
     if (!name) return;

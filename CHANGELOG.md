@@ -1,5 +1,23 @@
 # Changelog
 
+## 26.109.15 - 2026-10-30 - Find Robots finds more, and says what it saw
+
+### Fixed
+- **Find robots looks harder.** Addresses that did not answer get a second, slower try, FANUC web pages get 8 s and
+  ABB's /rw 3 s, so a busy controller is not missed. FANUC web requests no longer go through VS Code's proxy setting.
+- **A FANUC controller with its web server locked or stuck is still found**, by its FTP greeting on port 21, and
+  ROBOGUIDE is tried on port 3080 as well.
+- **The result always opens and stays open.** It no longer closes on a click elsewhere, and it opens even when nothing
+  was found.
+
+### Added
+- **Add several at once:** tick the robots to add, instead of searching once per robot.
+- **Answered, but not recognised:** a device with the port open is listed with what it said (`HTTP 401`, a timeout, a
+  printer's page) instead of being dropped. A FANUC one can be added anyway.
+- **Search a range:** an address, a range (`10.1.2.50-60`) or a subnet up to a /22, for robots outside the PC's own /24.
+- **The "Robot Code: Find Robots" output** logs each search: every adapter and what it covered or why it was skipped,
+  what was found, and what answered but was not recognised.
+
 ## 26.109.14 - 2026-10-20 - RAPID hovers without section titles
 
 ### Fixed
