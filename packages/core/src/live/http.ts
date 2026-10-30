@@ -20,7 +20,8 @@ export function httpGet(opts: HttpOptions, path: string, signal?: AbortSignal): 
     let settled = false;
     let timer: NodeJS.Timeout | undefined;
     const settle = (fn: () => void) => { if (settled) return; settled = true; if (timer) clearTimeout(timer); signal?.removeEventListener('abort', onAbort); fn(); };
-    const req = http.request({ host: opts.host, port: opts.port, path: encodeURI(path), method: 'GET', headers: { Connection: 'close', Accept: '*/*' } }, res => {
+    // ClientRequest, not http.request: VS Code patches that one to go through the user's proxy, and a robot is on the LAN
+    const req = new http.ClientRequest({ host: opts.host, port: opts.port, path: encodeURI(path), method: 'GET', headers: { Connection: 'close', Accept: '*/*' } }, res => {
       const chunks: Buffer[] = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => settle(() => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks), contentType: res.headers['content-type'] })));

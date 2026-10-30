@@ -11,6 +11,10 @@
  *
  * A host is probed only after a plain TCP connect to the port succeeds, so dead addresses cost one
  * short timeout and closed ports one reset. Parsers and planners are pure, so tests drive them.
+ *
+ * What is not found has to be explainable (Sam: "I had 6 robots today and it said it couldn't find
+ * one of them"): what was closed gets a second, slower try, and an open port that a brand does not
+ * recognise is reported with why, not dropped.
  */
 import * as net from 'node:net';
 import * as os from 'node:os';
@@ -89,6 +93,69 @@ export function subnetHosts(address: string, netmask: string): string[] {
   return out;
 }
 
+/** The most addresses one range may name: a /22, about ten minutes' worth of a slow network at worst. */
+export const MAX_RANGE_HOSTS = 1022;
+
+const ipOk = (ip: string) => /^\d{1,3}(\.\d{1,3}){3}$/.test(ip) && ip.split('.').every(o => Number(o) <= 255);
+
+/**
+ * What a user typed as a range: `192.168.1.0/24`, `10.1.2.50-60`, `10.1.2.50-10.1.3.20` or one address.
+ * The addresses, or a sentence saying what is wrong.
+ */
+export function parseScanRange(text: string): string[] | string {
+  const t = text.trim();
+  const cidr = /^([\d.]+)\/(\d{1,2})$/.exec(t);
+  const span = /^([\d.]+)\s*-\s*([\d.]+)$/.exec(t);
+  const first = cidr?.[1] ?? span?.[1] ?? t;
+  if (!ipOk(first)) return 'Type an address, a range such as 10.1.2.50-60, or a subnet such as 192.168.1.0/24.';
+  if (cidr) {
+    const bits = Number(cidr[2]);
+    if (bits > 32) return 'A subnet has at most 32 bits.';
+    if (2 ** (32 - bits) > MAX_RANGE_HOSTS + 2) return `That is too many addresses: ${MAX_RANGE_HOSTS} at most (a /22).`;
+    if (bits >= 31) return [first];
+    const size = 2 ** (32 - bits);
+    const base = (toInt(first) & ((0xffffffff << (32 - bits)) >>> 0)) >>> 0;
+    return Array.from({ length: size - 2 }, (_, i) => toIp(base + i + 1));
+  }
+  if (!span) return [first];
+  const last = span[2].includes('.') ? span[2] : `${first.slice(0, first.lastIndexOf('.'))}.${span[2]}`;
+  if (!ipOk(last)) return `${span[2]} is not an address.`;
+  const from = toInt(first), to = toInt(last);
+  if (to < from) return 'The range ends before it starts.';
+  if (to - from + 1 > MAX_RANGE_HOSTS) return `That is too many addresses: ${MAX_RANGE_HOSTS} at most (a /22).`;
+  return Array.from({ length: to - from + 1 }, (_, i) => toIp(from + i));
+}
+
+/**
+ * Every IPv4 address of this PC and what the search does with it, for the log: why an adapter was
+ * left out is half of why a robot was not found.
+ */
+export function describeAdapters(interfaces: NodeJS.Dict<os.NetworkInterfaceInfo[]>, used: readonly Adapter[], wifi: boolean): string[] {
+  const out: string[] = [];
+  for (const [name, infos] of Object.entries(interfaces)) {
+    for (const i of infos ?? []) {
+      if (i.family !== 'IPv4' || i.internal) continue;
+      const a = used.find(u => u.name === name && u.address === i.address);
+      const hosts = subnetHosts(i.address, i.netmask);
+      const covers = hosts.length ? `${hosts[0]} to ${hosts[hosts.length - 1]}` : 'nothing';
+      const state = a ? (a.kind === 'wifi' && !wifi ? 'skipped: WiFi' : `searched ${covers}`) : /^169\.254\./.test(i.address) ? 'skipped: no address from the network' : 'skipped: a virtual adapter';
+      out.push(`${name}: ${i.address} mask ${i.netmask} - ${state}`);
+    }
+  }
+  return out;
+}
+
+/** What a server says first on connecting (an FTP greeting), or undefined when it says nothing in time. */
+export function readGreeting(host: string, port: number, timeoutMs = 4000): Promise<string | undefined> {
+  return new Promise(resolve => {
+    const s = net.connect({ host, port });
+    const done = (text?: string) => { s.removeAllListeners(); s.destroy(); resolve(text); };
+    s.setTimeout(timeoutMs, () => done());
+    s.once('data', d => done(d.toString('latin1').split(/\r?\n/)[0]));
+    s.once('error', () => done());
+  });
+}
+
 /** Does `host` accept a TCP connection on `port` within `timeoutMs`? */
 export function tcpOpen(host: string, port: number, timeoutMs = 600): Promise<boolean> {
   return new Promise(resolve => {
@@ -103,11 +170,16 @@ export function tcpOpen(host: string, port: number, timeoutMs = 600): Promise<bo
 export interface ScanTarget { host: string; port: number; source: ScanSource }
 export type ScanSource = 'local' | 'default' | 'wired' | 'wifi';
 
+/** A port that took the connection, but was not one of the brand's controllers, and why. */
+export interface ScanMiss { target: ScanTarget; why: string }
+
 export interface ScanPlan {
   /** loopback hosts, e.g. ROBOGUIDE's 127.0.0.2..; '127.0.0.1' at least */
   local?: readonly string[];
   /** a brand's fixed addresses, e.g. ABB's 192.168.125.1 */
   defaults?: readonly string[];
+  /** addresses the user typed: a range of their own */
+  hosts?: readonly string[];
   adapters?: readonly Adapter[];
   /** scan WiFi adapters too (the user said yes) */
   wifi?: boolean;
@@ -127,6 +199,7 @@ export function planScan(p: ScanPlan): ScanTarget[] {
   };
   for (const h of p.local ?? ['127.0.0.1']) add(h, 'local');
   for (const h of p.defaults ?? []) add(h, 'default');
+  for (const h of p.hosts ?? []) add(h, 'wired');
   for (const a of p.adapters ?? []) {
     if (a.kind === 'wifi' && !p.wifi) continue;
     for (const h of subnetHosts(a.address, a.netmask)) add(h, a.kind);
@@ -140,6 +213,10 @@ export interface ScanOptions<T> {
   connectTimeoutMs?: number;
   /** connects in flight at once */
   concurrency?: number;
+  /** a second try at everything that did not connect: a loaded controller or a dropped ARP misses the first */
+  slowPass?: { connectTimeoutMs: number; concurrency: number };
+  /** told of an open port the probe turned down or failed on */
+  missed?: (m: ScanMiss) => void;
   signal?: { readonly isCancellationRequested: boolean };
   progress?: (done: number, total: number) => void;
   /** for tests: replaces the TCP connect */
@@ -150,23 +227,38 @@ export interface ScanOptions<T> {
 export async function scan<T>(targets: readonly ScanTarget[], o: ScanOptions<T>): Promise<Array<T & { target: ScanTarget }>> {
   const open = o.open ?? tcpOpen;
   const results: Array<(T & { target: ScanTarget }) | undefined> = new Array(targets.length);
-  let next = 0, done = 0;
-  const worker = async () => {
-    while (next < targets.length && !o.signal?.isCancellationRequested) {
-      const i = next++;
-      const t = targets[i];
-      try {
-        if (await open(t.host, t.port, o.connectTimeoutMs ?? 600)) {
-          const hit = await o.probe(t);
-          if (hit) results[i] = { ...hit, target: t };
-        }
-      } catch { /* one host's failure is that host's */ }
-      o.progress?.(++done, targets.length);
-    }
+  const closed: number[] = [];
+  let done = 0, total = targets.length;
+  const look = async (i: number, timeoutMs: number) => {
+    const t = targets[i];
+    if (!await open(t.host, t.port, timeoutMs)) { closed.push(i); return; }
+    try {
+      const hit = await o.probe(t);
+      if (hit) results[i] = { ...hit, target: t };
+      else o.missed?.({ target: t, why: 'not recognised' });
+    } catch (e: any) { o.missed?.({ target: t, why: e?.message ?? String(e) }); }
   };
-  await Promise.all(Array.from({ length: Math.min(o.concurrency ?? 64, targets.length) }, worker));
+  const pass = async (list: readonly number[], timeoutMs: number, concurrency: number) => {
+    let next = 0;
+    const worker = async () => {
+      while (next < list.length && !o.signal?.isCancellationRequested) {
+        await look(list[next++], timeoutMs).catch(() => undefined);
+        o.progress?.(++done, total);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(concurrency, list.length) }, worker));
+  };
+  await pass(targets.map((_, i) => i), o.connectTimeoutMs ?? 600, o.concurrency ?? 64);
+  if (o.slowPass && closed.length) {
+    const again = closed.splice(0);
+    total += again.length;
+    await pass(again, o.slowPass.connectTimeoutMs, o.slowPass.concurrency);
+  }
   return results.filter((r): r is T & { target: ScanTarget } => r !== undefined);
 }
+
+/** The second pass of a search: about 10 s more per port on a /24, which is what finding the sixth robot costs. */
+export const SLOW_PASS = { connectTimeoutMs: 1200, concurrency: 32 };
 
 /** Adapter summary for a prompt: "Wi-Fi (10.0.0.23)". */
 export const adapterLabel = (a: Adapter) => `${a.name} (${a.address})`;
