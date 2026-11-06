@@ -34,7 +34,11 @@ import {
   mergeControllersIntoCluster, templateToRegExp, clusterOfFolder, placeBackup, realFs, RUKUS_LATEST, RUKUS_MANIFEST,
   type RukusAppSettings, type RukusCluster, type RukusDataRoot, type RukusRobot,
 } from './store';
-import { CELL_DIR, CELL_JSON, parseCellJson, type CellControllerSpec, type CellMarker } from '../robotContainers';
+import {
+  CELL_DIR, CELL_JSON, parseCellJson, writeCellMarker, setCellRukusLink, writeRobotJson, underPath,
+  ROBOT_DIR, ROBOT_JSON, type CellControllerSpec, type CellMarker,
+} from '../robotContainers';
+import { planClusterLink, linkFor, describeRobotPlan, aggregateBrand, type RobotLinkPlan } from '../clusterLink';
 import { ROBOT_FOLDER_PATTERNS, robotNameFromFolder } from '@core/backupFolders';
 import { commandRegistrar } from '../commandBoundary';
 
@@ -139,6 +143,124 @@ export class RukusClusters implements vscode.Disposable {
     return cluster ? { cluster, folder: wf.uri.fsPath } : undefined;
   }
 
+  /** the clusters the open cell container(s) are linked to */
+  linkedClusterNames(): string[] {
+    const names = new Set<string>();
+    for (const cell of this.s.containers.cells) if (cell.rukus?.cluster) names.add(cell.rukus.cluster);
+    return [...names];
+  }
+
+  /**
+   * Link a cell to one of RUKUS's clusters. It rewrites the cell's controllers and reconciles
+   * every robot container to the cluster's identity, so nothing is written before the user
+   * confirms; a robot that already has a container is a merge, never a silent overwrite.
+   */
+  async linkCell(cellRoot: string, clusterName: string): Promise<void> {
+    const cluster = this.cluster(clusterName);
+    if (!cluster) { vscode.window.showWarningMessage(`RUKUS has no cluster called "${clusterName}".`); return; }
+    const cellFile = path.join(cellRoot, CELL_DIR, CELL_JSON);
+    let cell: CellMarker | undefined;
+    try { cell = parseCellJson(fs.readFileSync(cellFile, 'utf8'), cellRoot).cell; } catch { /* no cell.json yet */ }
+    const markers = this.s.containers.markers.filter(m => underPath(m.root, cellRoot));
+    let folders: string[] = [];
+    try {
+      folders = fs.readdirSync(cellRoot, { withFileTypes: true })
+        .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+        .map(e => path.join(cellRoot, e.name));
+    } catch { /* unreadable: a robot with no folder simply asks */ }
+    const plan = planClusterLink(cluster, cell, markers, folders);
+
+    const lines = [
+      plan.renameCell ? `cell name: ${cell?.name ?? '(none)'} → ${plan.cellName}` : '',
+      plan.changedControllers.length ? `controllers updated: ${plan.changedControllers.join(', ')}` : '',
+      ...plan.robots.map(describeRobotPlan),
+    ].filter(Boolean);
+    const pick = await vscode.window.showInformationMessage(
+      `Link this cell to RUKUS cluster "${cluster.name}"?`,
+      { modal: true, detail: lines.join('\n') || 'Already in sync.' },
+      'Apply all', 'Review each', 'Cancel');
+    if (!pick || pick === 'Cancel') return;
+
+    const applying: RobotLinkPlan[] = [];
+    for (const rp of plan.robots) {
+      if (rp.action === 'choose-folder') {
+        const dir = await vscode.window.showOpenDialog({
+          canSelectFolders: true, canSelectFiles: false, canSelectMany: false,
+          defaultUri: vscode.Uri.file(cellRoot),
+          title: `Folder for ${rp.robot.name} (the robot container goes inside it)`,
+        });
+        if (!dir?.[0]) continue;
+        rp.folder = dir[0].fsPath;
+        rp.action = 'create';
+      }
+      if (pick === 'Review each') {
+        const go = await vscode.window.showInformationMessage(
+          `Robot ${rp.robot.name}`, { modal: true, detail: describeRobotPlan(rp) }, 'Apply', 'Skip');
+        if (go !== 'Apply') continue;
+      }
+      applying.push(rp);
+    }
+
+    writeCellMarker(cellRoot, {
+      name: plan.cellName,
+      controllers: plan.controllers,
+      brand: plan.brand ?? cell?.brand,
+      rukus: linkFor(cluster, this.clustersDir),
+    });
+    for (const rp of applying) this.applyRobotLink(rp);
+    const { secrets, unreadable } = await this.storeClusterSecrets(cluster);
+    await this.afterSync();
+    this._onDidChange.fire();
+    const bits = [
+      `${applying.length} robot(s) reconciled`,
+      plan.changedControllers.length ? `${plan.changedControllers.length} controller(s) updated` : '',
+      secrets ? `${secrets} FTP password(s) stored` : '',
+      unreadable ? `${unreadable} encrypted password(s) another Windows account saved - enter them here` : '',
+    ].filter(Boolean);
+    vscode.window.setStatusBarMessage(`$(link) ${cluster.name}: ${bits.join('; ')}`, 6000);
+  }
+
+  /** write one robot's cluster-derived identity, keeping its working folders and excludes */
+  private applyRobotLink(rp: RobotLinkPlan): void {
+    if (rp.marker && rp.action === 'merge') {
+      const p = path.join(rp.marker.root, ROBOT_DIR, ROBOT_JSON);
+      let raw: Record<string, unknown> = {};
+      try { raw = JSON.parse(fs.readFileSync(p, 'utf8')); } catch { /* rebuild below */ }
+      if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) raw = {};
+      raw.name = rp.set.name;
+      raw.controller = rp.set.controller;
+      raw.brand = rp.set.brand;
+      fs.writeFileSync(p, JSON.stringify(raw, null, 2) + '\n', 'utf8');
+      return;
+    }
+    if (rp.folder) writeRobotJson(rp.folder, { name: rp.set.name, controller: rp.set.controller, brand: rp.set.brand });
+  }
+
+  /** remove the link only; the controllers and robot containers stay as they are */
+  async unlinkCell(cellRoot: string): Promise<void> {
+    setCellRukusLink(cellRoot, undefined);
+    await this.s.containers.refresh();
+    this._onDidChange.fire();
+    vscode.window.setStatusBarMessage('$(link) Cell unlinked from RUKUS', 4000);
+  }
+
+  /** RUKUS's passwords into VS Code's secret storage, bound to the host */
+  private async storeClusterSecrets(cluster: RukusCluster): Promise<{ secrets: number; unreadable: number }> {
+    if (!this.s.live) return { secrets: 0, unreadable: 0 };
+    const wanted = clusterControllers(cluster);
+    const decrypted = await unprotectAll(cluster.robots.map(r => r.ftpPassword ?? ''));
+    let secrets = 0, unreadable = 0;
+    for (const r of cluster.robots) {
+      if (!r.ftpPassword || !wanted[r.name]) continue;
+      if (await this.s.live.getPassword(r.name)) continue;
+      const password = resolvePassword(r.ftpPassword, decrypted);
+      if (password === undefined) { unreadable++; continue; }
+      await this.s.live.setPassword(r.name, password);
+      secrets++;
+    }
+    return { secrets, unreadable };
+  }
+
   /** which cluster a robot belongs to, by name (the first that has it) */
   clusterOfRobot(robotName: string): RukusCluster | undefined {
     return this.clusters.find(c => c.robots.some(r => r.name.toLowerCase() === robotName.toLowerCase()));
@@ -199,9 +321,10 @@ export class RukusClusters implements vscode.Disposable {
     const cellFile = path.join(folder, CELL_DIR, CELL_JSON);
     let existing: Record<string, CellControllerSpec> = {};
     let existingName: string | undefined;
+    let existingBrand: CellMarker['brand'];
     try {
       const parsed = parseCellJson(fs.readFileSync(cellFile, 'utf8'), folder);
-      if (parsed.cell) { existing = parsed.cell.controllers; existingName = parsed.cell.name; }
+      if (parsed.cell) { existing = parsed.cell.controllers; existingName = parsed.cell.name; existingBrand = parsed.cell.brand; }
     } catch { /* no cell.json yet */ }
     const kept = Object.keys(existing).filter(n => !wanted[n]);
     const controllers: Record<string, CellControllerSpec> = { ...existing };
@@ -211,25 +334,15 @@ export class RukusClusters implements vscode.Disposable {
       if (JSON.stringify(existing[n]) !== JSON.stringify(merged)) changed++;
       controllers[n] = merged;
     }
-    const content: Record<string, unknown> = { name: cluster.name, rukus: { cluster: cluster.name, clustersFolder: this.clustersDir, syncedUtc: new Date().toISOString() } };
-    if (Object.keys(controllers).length) content.controllers = controllers;
-    const dir = path.dirname(cellFile);
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(cellFile, JSON.stringify(content, null, 2) + '\n', 'utf8');
-    let secrets = 0, unreadable = 0;
-    if (this.s.live) {
-      // A cluster with "Encrypt robot passwords" on holds them as dpapi:v1:... - readable by the
-      // Windows account that saved it, which is normally this one (dpapi.ts).
-      const decrypted = await unprotectAll(cluster.robots.map(r => r.ftpPassword ?? ''));
-      for (const r of cluster.robots) {
-        if (!r.ftpPassword || !wanted[r.name]) continue;
-        if (await this.s.live.getPassword(r.name)) continue;
-        const password = resolvePassword(r.ftpPassword, decrypted);
-        if (password === undefined) { unreadable++; continue; }
-        await this.s.live.setPassword(r.name, password);
-        secrets++;
-      }
-    }
+    writeCellMarker(folder, {
+      name: cluster.name,
+      controllers,
+      brand: aggregateBrand(cluster.robots) ?? existingBrand,
+      rukus: linkFor(cluster, this.clustersDir),
+    });
+    // A cluster with "Encrypt robot passwords" on holds them as dpapi:v1:... - readable by the
+    // Windows account that saved it, which is normally this one (dpapi.ts).
+    const { secrets, unreadable } = await this.storeClusterSecrets(cluster);
     const bits = [`${Object.keys(wanted).length} robot(s) from RUKUS`, changed ? `${changed} updated` : 'nothing changed', kept.length ? `${kept.length} controller(s) not in RUKUS kept: ${kept.join(', ')}` : '', secrets ? `${secrets} FTP password(s) stored` : '', unreadable ? `${unreadable} encrypted password(s) another Windows account saved - enter them here` : '', existingName && existingName !== cluster.name ? `cell renamed from ${existingName}` : ''].filter(Boolean);
     return bits.join('; ');
   }
@@ -345,7 +458,7 @@ export class RukusClusters implements vscode.Disposable {
       fs.writeFileSync(tmp, text, 'utf8');
       fs.renameSync(tmp, target);
       this.s.output.appendLine(`[RUKUS] cluster ${cell.name} written: ${target}`);
-      this.linkCell(cell.root, cell.name);
+      this.markCellSent(cell.root, cell.name);
       this.forgetPending(cell.root);
       vscode.window.showInformationMessage(`${cell.name} is ${existing ? 'updated' : 'created'} in RUKUS. RUKUS shows it after its cluster list is refreshed (or at its next start).`);
       await this.refresh();
@@ -357,7 +470,7 @@ export class RukusClusters implements vscode.Disposable {
   }
 
   /** the cell's cell.json names the cluster it went to, keeping everything else in it */
-  private linkCell(root: string, cluster: string): void {
+  private markCellSent(root: string, cluster: string): void {
     const file = path.join(root, CELL_DIR, CELL_JSON);
     try {
       const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -378,10 +491,22 @@ class ClustersTree implements vscode.TreeDataProvider<Node> {
   readonly onDidChangeTreeData = this._onDidChange.event;
   constructor(private readonly r: RukusClusters) { r.onDidChange(() => this._onDidChange.fire()); vscode.workspace.onDidChangeWorkspaceFolders(() => this._onDidChange.fire()); }
 
+  refresh() { this._onDidChange.fire(); }
+
   getChildren(el?: Node): Node[] {
     if (!el) {
       if (!this.r.available) return [];   // the welcome text takes over
       if (this.r.lastError) return [{ t: 'text', label: `RUKUS data could not be read: ${this.r.lastError}`, icon: 'warning' }];
+      // A linked cell is the only cluster that matters to the workspace: showing the rest would
+      // invite opening a cluster that does not belong to the cell. Unlinked cells show them all.
+      const linked = this.r.linkedClusterNames();
+      if (linked.length) {
+        const found = linked.map(n => this.r.cluster(n)).filter((c): c is RukusCluster => !!c);
+        const missing = linked.filter(n => !this.r.cluster(n));
+        const out: Node[] = found.map(c => ({ t: 'cluster' as const, c }));
+        if (missing.length) out.push({ t: 'text', label: `Linked cluster(s) not found in RUKUS: ${missing.join(', ')}`, icon: 'warning', tip: 'Open the Cell page to link another cluster or unlink this cell.' });
+        return out;
+      }
       if (!this.r.clusters.length) return [{ t: 'text', label: 'RUKUS has no clusters yet', icon: 'info', tip: this.r.clustersDir }];
       return this.r.clusters.map(c => ({ t: 'cluster' as const, c }));
     }
@@ -422,7 +547,7 @@ export function registerRukusClusters(ctx: vscode.ExtensionContext, s: Services)
   const r = new RukusClusters(s);
   r.state = ctx.globalState;
   const tree = new ClustersTree(r);
-  ctx.subscriptions.push(r);
+  ctx.subscriptions.push(r, s.containers.onDidChange(() => tree.refresh()));
   if (viewDeclared(ctx, 'robotCode.rukusClusters')) ctx.subscriptions.push(watchViewVisibility(vscode.window.createTreeView('robotCode.rukusClusters', { treeDataProvider: tree, showCollapseAll: false })));
   const reg = commandRegistrar(ctx, s.output);
   reg('robotCode.rukus.openCluster', async (arg?: string | Node) => {

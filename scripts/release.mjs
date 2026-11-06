@@ -147,6 +147,10 @@ if (wantGitHub) {
     writeFileSync(notesFile, body.join('\n') + '\n');
     ok('gh', ['release', 'create', tag, vsix, '--title', title, '--notes-file', notesFile, '--verify-tag', ...R]);
   }
+  // The deep tutorials are a separate download (npm run tutorial:bundle), attached when present.
+  const tutorialZip = path.join(repo, `robot-code-tutorials-${version}.zip`);
+  if (existsSync(tutorialZip)) ok('gh', ['release', 'upload', tag, tutorialZip, '--clobber', ...R]);
+  else console.log('release: no tutorial bundle to attach (run "npm run tutorial:bundle" to make one)');
 }
 
 // ---- RUKUS on GitLab: bundle and commit, by name ---------------------------------------

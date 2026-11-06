@@ -1,0 +1,2 @@
+[*NUMREG*]$NUMREG  Storage: SHADOW  Access: RW  : ARRAY[3] OF Numeric Reg
+  [1] = 0  'Picks Today' 

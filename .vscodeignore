@@ -9,6 +9,7 @@ dist/*.map
 esbuild.mjs
 scripts/**
 docs/**
+tutorial/**
 tsconfig.json
 *.vsix
 .gitignore

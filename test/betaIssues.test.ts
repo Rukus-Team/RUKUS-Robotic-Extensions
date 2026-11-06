@@ -149,10 +149,23 @@ export function run(check: (cond: unknown, msg: string) => void): void {
       `fetch/pull/push use the git icons (${iconOf('robotCode.sync.fetchFile')} ${iconOf('robotCode.sync.pullFile')} ${iconOf('robotCode.sync.pushFile')})`);
     check(iconOf('robotCode.sync.compareFile') === '$(git-compare)' && iconOf('robotCode.sync.revertFile') === '$(discard)' && iconOf('robotCode.sync.history') === '$(history)',
       'compare/revert/history icons');
+    const whenOf = (menu: string, command: string) =>
+      (manifest.contributes.menus[menu] ?? []).find((m: { command?: string }) => m.command === command)?.when ?? '';
+    // Fetch, Pull and Push are one group, shown for a container file whose controller has an
+    // address - not only while connected. Push is no longer hidden when the file matches the
+    // snapshot, or when uploads are off (the command then explains how to turn them on).
+    for (const command of ['robotCode.sync.fetchFile', 'robotCode.sync.pullFile', 'robotCode.sync.pushFile']) {
+      const tabWhen = whenOf('editor/title', command);
+      check(/robotCode\.fileInContainer/.test(tabWhen) && /robotCode\.fileHasRobot/.test(tabWhen) && /config\.robotCode\.experimental\.robotConnections/.test(tabWhen),
+        `${command} tab: container + controller + experimental (${tabWhen})`);
+      check(/robotCode\.fileHasRobot/.test(whenOf('commandPalette', command)), `${command} palette: the file's controller`);
+      check(/robotCode\.fileHasRobot/.test(whenOf('robotCode.sync.submenu', command)), `${command} submenu: the file's controller`);
+    }
     const tabPush = manifest.contributes.menus['editor/title'].find((m: { command: string }) => m.command === 'robotCode.sync.pushFile');
-    check(/robotCode\.syncPushable/.test(tabPush?.when ?? ''), `the tab Push button is state-aware: ${tabPush?.when}`);
-    const subPush = manifest.contributes.menus['robotCode.sync.submenu'].find((m: { command: string }) => m.command === 'robotCode.sync.pushFile');
-    check(!!subPush && !/robotCode\.syncPushable/.test(subPush.when ?? ''), 'the context-menu Push is always shown');
+    check(/editorLangId == fanuc-tp/.test(tabPush?.when ?? '') && !/syncPushable|live\.upload/.test(tabPush?.when ?? ''),
+      `the tab Push is TP-only and not hidden by state or the upload switch: ${tabPush?.when}`);
+    const statusSrc = fs.readFileSync(path.join(__dirname, '..', 'packages', 'fanuc', 'src', 'views', 'statusBar.ts'), 'utf8');
+    check(/setContext', 'robotCode\.fileHasRobot'/.test(statusSrc), 'statusBar sets fileHasRobot from the file\'s controller');
     for (const hidden of ['robotCode.sync.diffOpen', 'robotCode.containers.diffWithSnapshot']) {
       const e = manifest.contributes.menus.commandPalette.find((m: { command: string }) => m.command === hidden);
       check(e?.when === 'false', `${hidden} is hidden from the command palette`);

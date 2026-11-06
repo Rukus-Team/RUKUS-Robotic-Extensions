@@ -34,7 +34,7 @@ import { usageFindings, accessOfRef } from '@fanuc/tools/xref';
 import { findUndeclared } from '@fanuc/karel/parser';
 import { KAREL_BUILTINS, KAREL_PREDEFINED } from '@fanuc/karel/builtins';
 import { parseHttpListing, httpGetText, httpList } from '@core/live/http';
-import { ftpGetText, ftpList, FtpClient, globToRegExp, transferTimeout } from '@core/live/ftp';
+import { ftpGetText, ftpList, FtpClient, globToRegExp, transferTimeout, parseFtpListing } from '@core/live/ftp';
 import { filesToShow } from '@core/live/fileFilter';
 import { unwrapControllerHtml, looksLikeHtml } from '@core/live/html';
 import { parseKtransIssues } from '@fanuc/karel/ktransOutput';
@@ -63,6 +63,8 @@ import { run as runRobotSafety } from './robotSafety.test';
 import { run as runReliability } from './reliability.test';
 import { run as runContainersHardening } from './containersHardening.test';
 import { run as runSnapshotSync } from './snapshotSync.test';
+import { run as runTransferQueue } from './transferQueue.test';
+import { run as runProtocol } from './protocol.test';
 import { run as runSyncCore } from './syncCore.test';
 import { run as runFileIcons } from './fileIcons.test';
 import { run as runLint } from './lint.test';
@@ -72,6 +74,7 @@ import { run as runAbbTools } from './abbTools.test';
 import { run as runRukusLayout } from './rukusLayout.test';
 import { run as runRukusStore } from './rukusStore.test';
 import { run as runBetaIssues } from './betaIssues.test';
+import { run as runClusterLink } from './clusterLink.test';
 import { run as runBetaList6, runLive as runBetaList6Live, runDocs as runBetaList6Docs, runWriteGate as runBetaList6WriteGate, runIdentity as runBetaList6Identity, runVcDiscovery as runBetaList6Vc, runNetwork as runBetaList6Network, runOptionInfo as runBetaList6Options, runEventCatalog as runBetaList6Events, runFeatureProfiles as runBetaList6Features } from './betaList6.test';
 import { run as runBetaList7, runAsync as runBetaList7Async } from './betaList7.test';
 import { run as runList8 } from './list8.test';
@@ -83,6 +86,7 @@ import { run as runRapidFormat } from './rapidFormat.test';
 import { run as runRapidAssist } from './rapidAssist.test';
 import { run as runRapidReference } from './rapidReference.test';
 import { run as runRapidCoverage } from './rapidCoverage.test';
+import { run as runWalkthrough } from './walkthrough.test';
 
 const roots = process.argv.slice(2).length ? process.argv.slice(2) : [
   path.resolve(__dirname, '..', '..', 'reference-backup'),
@@ -1719,6 +1723,17 @@ if (backupDir) {
     const fr = renumber(fresh, { ...scaffold, width: 4 });
     const fa = applyLineEdits(fresh, fr.edits).split('\n');
     check(fa[4] === '    :  R[1]=1 ;', `scaffold fallback width=4: ${JSON.stringify(fa[4])}`);
+
+    // zero mode: a new line gets a real 0 in the number field instead of the blank scaffold
+    const zero = { number: 'zero' as const, width: 0, autoSemicolon: true, updateLineCount: true, onlyNew: true };
+    const za = applyLineEdits(src, renumber(src, zero).edits).split('\n');
+    check(za[4] === '   1:  R[1]=1 ;' && za[5] === '   2:  R[2]=2 ;', `zero keeps existing lines: ${JSON.stringify(za.slice(4, 6))}`);
+    check(za[6] === '   0:  R[3]=3 ;', `zero numbers a new line 0: ${JSON.stringify(za[6])}`);
+    check(renumber(za.join('\n'), zero).edits.length === 0, 'zero is stable on its own output');
+    const zna = applyLineEdits(src, renumber(src, { ...zero, autoSemicolon: false }).edits).split('\n');
+    check(zna[6] === '   0:  R[3]=3', `zero without auto-semicolon omits the terminator: ${JSON.stringify(zna[6])}`);
+    const zb = applyLineEdits(blank, renumber(blank, zero).edits).split('\n');
+    check(zb[5] === '   0:   ;', `zero blank line gets "0:   ;": ${JSON.stringify(zb[5])}`);
   }
 
   // the Files panel: programs only by default - every .ls, a .tp only where no .ls of that name exists
@@ -1729,6 +1744,18 @@ if (backupDir) {
   ];
   check(filesToShow(listing, 'programs').map(f => f.name).join(' ') === 'ENTERZON.LS binonly.tp SUB', `files panel, programs: ${filesToShow(listing, 'programs').map(f => f.name).join(' ')}`);
   check(filesToShow(listing, 'all').map(f => f.name).join(' ') === 'ENTERZON.LS ENTERZON.TP MHMENUC.PC binonly.tp NUMREG.VA CURPOS.DG SUB README.TXT', `files panel, all: ${filesToShow(listing, 'all').map(f => f.name).join(' ')}`);
+
+  // FTP LIST parsing: a FANUC Unix-style line (the one that used to crash a folder pull)
+  const ftpParsed = parseFtpListing([
+    '-rw-r--r-- 1 robot robot 1234 Jan 01 00:00 CURPOS.DG',
+    '-rw-r--r-- 1 robot robot 2345 Jan 01 2024 OLD.DG',
+    '01-02-24  03:04PM  42 NUMREG.VA',
+    'MAIN.LS 999',
+  ].join('\r\n'));
+  check(ftpParsed.find(f => f.name === 'CURPOS.DG')?.size === 1234, `ftp LIST: a Unix line with a time keeps its name and size (${JSON.stringify(ftpParsed)})`);
+  check(ftpParsed.find(f => f.name === 'OLD.DG')?.size === 2345 && ftpParsed.find(f => f.name === 'OLD.DG')?.mtime !== undefined, 'ftp LIST: a Unix line with a year keeps its name and mtime');
+  check(ftpParsed.find(f => f.name === 'NUMREG.VA')?.size === 42 && ftpParsed.find(f => f.name === 'NUMREG.VA')?.mtime !== undefined, 'ftp LIST: a DOS date line keeps its name, size and mtime');
+  check(ftpParsed.find(f => f.name === 'MAIN.LS')?.size === 999, 'ftp LIST: a FANUC "NAME SIZE" line');
 
   // mget patterns
   const g = globToRegExp('*.ls *.va');
@@ -1758,12 +1785,15 @@ if (backupDir) {
   await runReliability(check);
   await runContainersHardening(check);
   await runSnapshotSync(check);
+await runTransferQueue(check);
+await runProtocol(check);
   await runSyncCore(check);
   runFileIcons(check);
   runLint(check, fs.existsSync(ref) ? ref : undefined);
   runRukusLayout(check);
   runRukusStore(check);
   runBetaIssues(check);
+  runClusterLink(check);
   runBetaList6(check);
   await runBetaList6Live(check);
   runBetaList6Docs(check);
@@ -1788,6 +1818,7 @@ if (backupDir) {
   runRapidAssist(check);
   runRapidReference(check);
   runRapidCoverage(check);
+  runWalkthrough(check);
 }
 
 // ---------- the grammars: every regex compiles, and the scopes the changelog promises are produced ----------

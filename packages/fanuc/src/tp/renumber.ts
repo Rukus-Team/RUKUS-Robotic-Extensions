@@ -21,9 +21,10 @@ export interface RenumberOptions {
    * `none` writes only the indent. Both are for reading and editing without the numbers;
    * switching back to `show` and renumbering puts them back. `scaffold` writes spaces the width
    * of the number field (at least the configured width, default four) plus a colon, so new
-   * lines get a valid prefix without shifting existing line numbers.
+   * lines get a valid prefix without shifting existing line numbers. `zero` is the scaffold
+   * with a real `0` in the number field (`   0:`), for tools that want a number on every line.
    */
-  number?: 'show' | 'ones' | 'spaces' | 'none' | 'scaffold';
+  number?: 'show' | 'ones' | 'spaces' | 'none' | 'scaffold' | 'zero';
   /** append " ;" to instruction lines that lack a terminator */
   autoSemicolon: boolean;
   /** document lines to leave untouched (e.g. the line the cursor is on) */
@@ -79,7 +80,7 @@ export function renumber(text: string, opts: RenumberOptions): RenumberResult {
   // does document line `j` continue the line above it? (the parser decides, by context)
   const continues = (j: number) => { const nx = lineAt.get(j); return !!nx && (nx.kind === 'continuation' || (nx.ext === true && nx.seq === undefined)); };
 
-  const scaffoldW = opts.number === 'scaffold' ? scaffoldWidth(lines, mn, posOrEnd, opts.width || 4) : 0;
+  const scaffoldW = opts.number === 'scaffold' || opts.number === 'zero' ? scaffoldWidth(lines, mn, posOrEnd, opts.width || 4) : 0;
 
   let n = 0;
   for (let i = mn + 1; i < posOrEnd; i++) {
@@ -115,13 +116,16 @@ export function renumber(text: string, opts: RenumberOptions): RenumberResult {
 
     // `ones` writes `1:` on every line - the number as a marker, not a count
     const style = opts.number === 'ones' ? 'show' : (opts.number ?? 'show');
-    const field = opts.number === 'scaffold' ? ' '.repeat(scaffoldW) : (opts.number === 'ones' ? '1' : String(n)).padStart(opts.width, ' ');
+    const field = opts.number === 'scaffold' ? ' '.repeat(scaffoldW)
+      : opts.number === 'zero' ? '0'.padStart(scaffoldW, ' ')
+      : (opts.number === 'ones' ? '1' : String(n)).padStart(opts.width, ' ');
     const indent = opts.indent ?? '';
     // `spaces` keeps the colon: the digits become spaces, the `:` stays, so the line still
     // reads as a TP line and the instruction column does not move.
     // `none` keeps it too: the number is simply gone, `    :  R[1]=1`.
-    // `scaffold` writes spaces matching the highest existing number width + colon.
-    const head = style === 'show' ? indent + field + ':' : style === 'spaces' || style === 'scaffold' ? indent + ' '.repeat(field.length) + ':' : indent + ':';
+    // `scaffold` writes spaces matching the highest existing number width + colon; `zero`
+    // writes a 0 in that same field, because some tools want a real number on every line.
+    const head = style === 'show' ? indent + field + ':' : style === 'spaces' || style === 'scaffold' ? indent + ' '.repeat(field.length) + ':' : style === 'zero' ? indent + field + ':' : indent + ':';
     let newBody: string;
     if (numbered && style === 'show') {
       newBody = body;
@@ -135,9 +139,10 @@ export function renumber(text: string, opts: RenumberOptions): RenumberResult {
       else if (/^[JLCAS]\s+(P|PR)\[/.test(t) || /^[JLCAS]\s/.test(t)) newBody = t;
       else newBody = '  ' + t;
     }
-    // In scaffold mode with autoSemicolon on, blank lines should still get the terminator.
-    const scaffoldNumbered = style === 'scaffold' && opts.autoSemicolon;
-    const newRaw = withTerminator(head, newBody, continues(i + 1), opts.autoSemicolon, style === 'show' || scaffoldNumbered);
+    // A blank line keeps its prefix when that prefix carries a number: controller format,
+    // the zero mode, and scaffold with auto-semicolon on. A spaces/none prefix does not.
+    const numberedHead = style === 'show' || style === 'zero' || (style === 'scaffold' && opts.autoSemicolon);
+    const newRaw = withTerminator(head, newBody, continues(i + 1), opts.autoSemicolon, numberedHead);
     if (newRaw !== raw) edits.push({ line: i, newText: newRaw });
   }
 

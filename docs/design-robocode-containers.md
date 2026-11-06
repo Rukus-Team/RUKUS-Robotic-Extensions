@@ -64,7 +64,9 @@ metadata now; conventions, header templates, and other workspace-wide settings l
 | Field | Required | Notes |
 |-------|----------|-------|
 | `name` | no | Cell label shown in views. |
-| `controllers` | no | Map of controller names to connection details. Each key is a controller name that `robot.json` can reference. Connection fields: `host` (required), `httpPort` (default 80), `ftpPort` (default 21), `ftpUser` (default ""), `device` (default "MD:"), `useFtp` (default false), `autoConnect` (default false), `autoRefresh` (default false), `pollIntervalMs` (default 5000). Passwords are never stored here — they stay in VS Code SecretStorage. |
+| `brand` | no | `fanuc`, `abb` or `mixed`: the cell's brand, aggregated from its robots at initialization. Absent = detect. |
+| `rukus` | no | `{ cluster, clustersFolder?, syncedUtc? }`: the RUKUS cluster this cell is linked to. Only the linked cluster is listed. |
+| `controllers` | no | Map of controller names to connection details. Each key is a controller name that `robot.json` can reference. Connection fields: `host` (required), `httpPort` (default 80), `ftpPort` (default 21), `ftpUser` (default ""), `device` (default "MD:"), `useFtp` (default false - the preference for single reads and the connection probe; bulk file transfers use `robotCode.transfers.preferFtp`, default true), `autoConnect` (default false), `autoRefresh` (default false), `pollIntervalMs` (default 5000). Passwords are never stored here — they stay in VS Code SecretStorage. |
 
 **Cell containers are optional.** Robot containers work standalone anywhere — the scan
 discovers them regardless. A cell container simply adds a name and a future-proof home for
@@ -91,6 +93,7 @@ Required. Declares this folder as one robot's working area.
 | `programs` | no | all subdirs + root files except `.robocode-robot/` and `exclude` | Relative to the robot folder. These are the working directories the extension indexes as editable programs. |
 | `exclude` | no | `[]` | Only used when `programs` is omitted. Folders to skip. |
 | `controller` | no | — | Name of a controller defined in the cell's `cell.json` controllers map. Binds this robot container to a specific controller for live connections and snapshot-from-robot. |
+| `brand` | no | — | `fanuc` or `abb`: the robot's language, inferred and confirmed when the container is initialized. Absent = detect. Authoritative for everything under this robot's folder. |
 
 ### `.robocode-robot/snapshot.json`
 

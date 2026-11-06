@@ -66,7 +66,7 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
   /** refresh everything the snapshot feeds (markers unchanged: data + index) */
   const refreshAfterSnapshot = async () => {
     await s.containers.refresh();
-    await Promise.all([s.data.refresh(), s.index.refresh()]);
+    await s.refreshAll('Refresh after a snapshot');
   };
 
   // ── Initialize Cell ────────────────────────────────────────────────────────
@@ -125,12 +125,15 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
     const cellName = name.trim() || path.basename(root.fsPath);
     writeCellJson(root.fsPath, cellName, Object.keys(controllers).length ? controllers : undefined);
     await s.containers.refresh();
-    vscode.window.setStatusBarMessage(`RUKUS: cell container created for ${cellName}`, 5000);
-    // The cell is a RUKUS cluster in waiting (beta list 4, item 3): sent now when RUKUS is
-    // here and the user wants it, otherwise remembered and offered once RUKUS turns up.
-    if (s.rukus?.available) {
-      const send = await vscode.window.showInformationMessage(`Also create ${cellName} as a cluster in RUKUS?`, 'Create in RUKUS', 'Not now');
-      if (send) await s.rukus.sendCell({ root: root.fsPath, name: cellName, controllers }, false);
+    vscode.window.setStatusBarMessage(`RobotCode: cell container created for ${cellName}`, 5000);
+    // Link the new cell to a RUKUS cluster when RUKUS is here and its integration is on: the
+    // cluster's robots become this cell's controllers and robot containers inherit its identity.
+    // Without RUKUS (or with it switched off) the cell is simply a RUKUS cluster in waiting.
+    if (s.rukus?.available && config<boolean>('rukus.enabled', true)) {
+      const link = await vscode.window.showQuickPick(
+        [{ label: 'Not now', description: 'leave this cell unlinked', cluster: undefined as string | undefined }, ...s.rukus.clusters.map(c => ({ label: c.name, description: `${c.robots.length} robot(s)`, cluster: c.name }))],
+        { placeHolder: 'Link this cell to a RUKUS cluster? Its robots become the cell\'s controllers.' });
+      if (link?.cluster) await s.rukus.linkCell(root.fsPath, link.cluster);
       else s.rukus.rememberPending(root.fsPath);
     } else s.rukus?.rememberPending(root.fsPath);
   });
@@ -230,11 +233,12 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
 
     const first = await vscode.window.showInformationMessage(
       `Robot container "${spec.name}" created${programs ? ` with ${programs.length} working folder${programs.length === 1 ? '' : 's'}` : ''}.`,
-      'Snapshot from Backup…', 'Snapshot from Robot…', 'Later'
+      'Snapshot from Backup…', 'Snapshot from Robot…', 'Open the walkthrough'
     );
     const created = s.containers.markers.find(m => path.resolve(m.root) === path.resolve(root));
     if (first === 'Snapshot from Backup…') await vscode.commands.executeCommand('robotCode.data.snapshotFromBackup', { marker: created });
     if (first === 'Snapshot from Robot…') await vscode.commands.executeCommand('robotCode.data.snapshotFromRobot', { marker: created });
+    if (first === 'Open the walkthrough') await vscode.commands.executeCommand('robotCode.openRobotWalkthrough');
   });
 
   // ── Snapshot from Backup ───────────────────────────────────────────────────
@@ -297,10 +301,22 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
     try {
       // the async copy: the synchronous one froze the extension host for the whole backup, with
       // this very notification standing still on screen
-      const count = await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: `Snapshotting ${marker.name}`, cancellable: false },
-        progress => copySnapshotAsync(srcDir, marker.snapshotDir, (n, name) => { if (n % 25 === 0 || n === 1) progress.report({ message: `${n} files — ${name}` }); })
-      );
+      const count = await s.transfers.enqueue({
+        key: `container:${marker.root.toLowerCase()}`, kind: 'snapshot', visibility: 'background',
+        label: `Snapshot from backup ${marker.name}`,
+        run: async (_signal, item) => {
+          item.technical(`copy: ${srcDir} → ${marker.snapshotDir}`);
+          const n = await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Notification, title: `Snapshotting ${marker.name}`, cancellable: false },
+            progress => copySnapshotAsync(srcDir, marker.snapshotDir, (done, name) => {
+              if (done % 25 === 0 || done === 1) { progress.report({ message: `${done} files — ${name}` }); item.report(`${done} files · ${name}`); }
+            }),
+          );
+          item.technical(`snapshot: copy ${n} files`);
+          return n;
+        },
+      });
+      if (count === undefined) { vscode.window.setStatusBarMessage('$(circle-slash) Snapshot removed from the queue', 5000); return; }
       keepGitignoreCurrent(marker.root);
       const now = new Date().toISOString();
       writeProvenance(marker.root, {
@@ -366,23 +382,30 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
       fs.mkdirSync(tmpDir, { recursive: true });
       const matchAll = globToRegExp('*.*');  // a complete, verbatim backup
       let files: { name: string; isDir: boolean }[];
-      try { files = (await live.listFiles(profile)).filter(f => !f.isDir && matchAll.test(f.name)); }
+      try { files = (await live.listFiles(profile, profile.device, undefined, { bulk: true })).filter(f => !f.isDir && matchAll.test(f.name)); }
       catch (e: unknown) {
         void showRecoverableError(`Could not list ${profile.device} on ${profile.name}: ${e instanceof Error ? e.message : String(e)}`, s.output, () => vscode.commands.executeCommand('robotCode.data.snapshotFromRobot', node));
         return;
       }
       if (!files.length) { vscode.window.showInformationMessage(`Nothing on ${profile.name} ${profile.device} to snapshot.`); return; }
-      await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Snapshotting ${marker.name} from ${profile.name}`, cancellable: true }, async (progress, token) => {
-        const writes: Thenable<void>[] = [];
-        await live.readBinaryMany(profile, files.map(f => f.name), profile.device, (fname, result, i) => {
-          progress.report({ message: `${fname} (${i + 1}/${files.length})`, increment: 100 / files.length });
-          if ('data' in result) {
-            ok++;
-            writes.push(vscode.workspace.fs.writeFile(vscode.Uri.file(path.join(tmpDir, fname.toLowerCase())), result.data).then(undefined, e => { ok--; failed++; live.log(profile.name, `snapshot: could not save ${fname}: ${e instanceof Error ? e.message : String(e)}`); }));
-          } else { failed++; live.log(profile.name, `snapshot: ${fname} failed: ${result.error}`); }
-        }, () => token.isCancellationRequested);
-        await Promise.all(writes);
-      });
+      const ran = await live.withTransfer(profile.name,
+        { kind: 'snapshot', label: `Snapshot ${marker.name} from ${profile.name}`, file: marker.name },
+        async (signal, item) => {
+          await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Snapshotting ${marker.name} from ${profile.name}`, cancellable: true }, async (progress, token) => {
+            const writes: Thenable<void>[] = [];
+            await live.readBinaryMany(profile, files.map(f => f.name), profile.device, (fname, result, i) => {
+              item.report(`${fname} (${i + 1}/${files.length})`, (i + 1) / files.length);
+              progress.report({ message: `${fname} (${i + 1}/${files.length})`, increment: 100 / files.length });
+              if ('data' in result) {
+                ok++;
+                writes.push(vscode.workspace.fs.writeFile(vscode.Uri.file(path.join(tmpDir, fname.toLowerCase())), result.data).then(undefined, e => { ok--; failed++; live.log(profile.name, `snapshot: could not save ${fname}: ${e instanceof Error ? e.message : String(e)}`); }));
+              } else { failed++; live.log(profile.name, `snapshot: ${fname} failed: ${result.error}`); }
+            }, () => token.isCancellationRequested || signal.aborted);
+            await Promise.all(writes);
+          });
+          return true;
+        });
+      if (ran === undefined) { vscode.window.setStatusBarMessage('$(circle-slash) Snapshot removed from the queue', 5000); return; }
       if (!ok) { void showRecoverableError(`Snapshot of ${profile.name} produced no files.`, s.output, () => vscode.commands.executeCommand('robotCode.data.snapshotFromRobot', node)); return; }
 
       // controller info for the provenance, from the files just pulled

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="176" viewBox="0 0 400 176" role="img" aria-label="A push is refused when the robot changed since the snapshot">
+  <style>
+    .box { fill: none; stroke: var(--vscode-foreground, #cccccc); }
+    .t { font-family: var(--vscode-font-family, sans-serif); font-size: 12px; fill: var(--vscode-foreground, #cccccc); }
+    .s { font-family: var(--vscode-font-family, sans-serif); font-size: 10px; fill: var(--vscode-descriptionForeground, #9d9d9d); }
+    .ok { stroke: var(--vscode-charts-green, #89d185); fill: none; }
+    .bad { stroke: var(--vscode-charts-red, #f14c4c); fill: none; }
+  </style>
+  <rect class="box" x="8" y="20" width="96" height="44" rx="6"/>
+  <text class="t" x="56" y="40" text-anchor="middle">Your file</text>
+  <text class="s" x="56" y="55" text-anchor="middle">what you edit</text>
+
+  <rect class="box" x="150" y="20" width="100" height="44" rx="6"/>
+  <text class="t" x="200" y="40" text-anchor="middle">Snapshot</text>
+  <text class="s" x="200" y="55" text-anchor="middle">last fetched</text>
+
+  <rect class="box" x="296" y="20" width="96" height="44" rx="6"/>
+  <text class="t" x="344" y="40" text-anchor="middle">Robot</text>
+  <text class="s" x="344" y="55" text-anchor="middle">now</text>
+
+  <defs>
+    <marker id="hg" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="var(--vscode-charts-green, #89d185)"/></marker>
+    <marker id="hr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="var(--vscode-charts-red, #f14c4c)"/></marker>
+  </defs>
+
+  <line class="ok" x1="104" y1="42" x2="150" y2="42" marker-end="url(#hg)"/>
+  <line class="ok" x1="250" y1="42" x2="296" y2="42" marker-end="url(#hg)"/>
+  <text class="s" x="250" y="14" text-anchor="middle">Push</text>
+
+  <text class="t" x="200" y="96" text-anchor="middle">Robot == Snapshot ?</text>
+  <line class="ok" x1="150" y1="112" x2="96" y2="150" marker-end="url(#hg)"/>
+  <text class="s" x="90" y="166" text-anchor="middle">yes: the push goes through</text>
+  <line class="bad" x1="250" y1="112" x2="304" y2="150" marker-end="url(#hr)"/>
+  <text class="s" x="320" y="166" text-anchor="middle">no: refused until you Update Snapshot</text>
+</svg>

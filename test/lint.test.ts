@@ -137,6 +137,9 @@ export function run(check: Check, fanucRoot?: string): void {
   check(!has(tpOn, 'tp.unusedLabel'), 'TP: a rule turned off is not even computed');
   const tpCall = tpChecks('/PROG A\n/MN\n   1:  CALL B ;\n   2:  CALL C ;\n/END\n', parseTp('/PROG A\n/MN\n   1:  CALL B ;\n   2:  CALL C ;\n/END\n'), { calls: { resolve: n => (n === 'B' ? 'found' : 'missing') } });
   check(tpCall.filter(f => f.code === 'tp.missingProgram').length === 1, 'TP: a CALL is missing only when the robot does not have the program');
+  const noTerm = '/PROG A\n/MN\n   1:  R[1]=1\n   2:  R[2]=2 ;\n/END\n';
+  check(tpChecks(noTerm, parseTp(noTerm), { autoRenumber: true }).some(f => f.code === 'tp.missingTerminator'), 'TP: a missing terminator is reported even with auto-renumber on');
+  check(tpChecks(noTerm, parseTp(noTerm), { autoRenumber: false }).some(f => f.code === 'tp.missingTerminator'), 'TP: a missing terminator is reported with auto-renumber off too');
 
   // ---------- KAREL ----------
   const kl = karelChecks(parseKarel(KL));

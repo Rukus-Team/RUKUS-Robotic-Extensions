@@ -160,8 +160,8 @@ export async function run(check: (cond: unknown, msg: string) => void): Promise<
   check(snapshotFetchedWithin(minsAgo(-10), BUF, NOW), 'snapshotFetchedWithin: a future timestamp (clock skew) counts as fresh');
 
   // ---- pull-after-push: only an explicit push pulls, and the policy decides on a difference ----
-  check(pullAfterPushDecision(true, 'always', true) === 'overwrite', "pullAfterPush: 'always' overwrites when identical");
-  check(pullAfterPushDecision(true, 'always', false) === 'overwrite', "pullAfterPush: 'always' overwrites even when the controller changed it");
+check(pullAfterPushDecision(true, 'always', true) === 'overwrite', "pullAfterPush: 'always' overwrites when identical");
+check(pullAfterPushDecision(true, 'always', false) === 'overwrite', "pullAfterPush: 'always' overwrites a compiled copy that differs from what was sent");
   check(pullAfterPushDecision(true, 'when-identical', true) === 'overwrite', "pullAfterPush: 'when-identical' overwrites when identical");
   check(pullAfterPushDecision(true, 'when-identical', false) === 'keep', "pullAfterPush: 'when-identical' keeps the local copy on a difference");
   check(pullAfterPushDecision(true, 'never', true) === 'off', "pullAfterPush: 'never' leaves the working copy alone");

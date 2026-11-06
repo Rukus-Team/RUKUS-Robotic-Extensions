@@ -28,8 +28,12 @@ export class RobotFileSystem implements vscode.FileSystemProvider {
   watch(): vscode.Disposable { return new vscode.Disposable(() => {}); }
 
   async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
-    const { file } = split(uri);
+    const { robot, device, file } = split(uri);
     if (!file) return { type: vscode.FileType.Directory, ctime: 0, mtime: 0, size: 0 };
+    // A stat must not cost a download: the recent listing already knows the size.
+    const c = this.conn(robot);
+    const listed = c ? this.robots.cachedListing(c.profile.name, device)?.find(f => !f.isDir && f.name.toUpperCase() === file.toUpperCase()) : undefined;
+    if (listed?.size !== undefined) return { type: vscode.FileType.File, ctime: 0, mtime: Date.now(), size: listed.size, permissions: vscode.FilePermission.Readonly };
     const data = await this.readFile(uri);
     return { type: vscode.FileType.File, ctime: 0, mtime: Date.now(), size: data.byteLength, permissions: vscode.FilePermission.Readonly };
   }
@@ -63,7 +67,7 @@ export class RobotFileSystem implements vscode.FileSystemProvider {
   }
 
   /** drop cached content so the next open re-reads from the controller */
-  invalidate(uri?: vscode.Uri) { if (uri) this.cache.delete(uri.toString()); else this.cache.clear(); }
+  invalidate(uri?: vscode.Uri) { this.robots.invalidateListing(); if (uri) this.cache.delete(uri.toString()); else this.cache.clear(); }
 
   createDirectory(): void { throw vscode.FileSystemError.NoPermissions('Controller files are read-only in this version.'); }
   writeFile(): void { throw vscode.FileSystemError.NoPermissions('Writing to the controller is not enabled in this version (see ROADMAP.md, write tier).'); }

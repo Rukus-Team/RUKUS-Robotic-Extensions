@@ -1,8 +1,8 @@
 /**
  * The one place the renumber settings are read.
  *
- * `robotCode.tp.autoRenumber` is `on`, `off` or `custom` (older settings files still say
- * `true` / `false`, which read as on / off). `on` writes what the controller writes:
+ * `robotCode.tp.autoRenumber` is `on`, `off`, `custom`, `scaffold` or `zero` (older settings
+ * files still say `true` / `false`, which read as on / off). `on` writes what the controller writes:
  * `   1:  R[1]=1 ;` - a four-wide number field, ` ;` on every instruction. `custom` writes
  * the style in `robotCode.tp.customRenumber`, whose default is what Sam asked for: four
  * spaces, the number as it is, a colon, and no terminator added (`    1:  R[1]=1`). A
@@ -14,7 +14,7 @@ import { config } from '@core/util';
 import type { RenumberOptions } from './renumber';
 import { EXT_COMMENT_WIDTH } from './extendedComment';
 
-export type AutoRenumberMode = 'on' | 'off' | 'custom' | 'scaffold';
+export type AutoRenumberMode = 'on' | 'off' | 'custom' | 'scaffold' | 'zero';
 
 export interface CustomRenumber { indent: string; width: number; terminator: boolean; number: 'show' | 'ones' | 'spaces' | 'none' }
 export const DEFAULT_CUSTOM: CustomRenumber = { indent: '    ', width: 0, terminator: false, number: 'show' };
@@ -25,6 +25,7 @@ export function autoRenumberMode(scope?: vscode.ConfigurationScope): AutoRenumbe
   if (v === false || v === 'off') return 'off';
   if (v === 'custom') return 'custom';
   if (v === 'scaffold') return 'scaffold';
+  if (v === 'zero') return 'zero';
   return 'on';
 }
 
@@ -51,6 +52,11 @@ export function scaffoldOptions(scope?: vscode.ConfigurationScope, extra: Partia
   return { number: 'scaffold', autoSemicolon: config<boolean>('tp.autoSemicolon', true, scope), updateLineCount: true, onlyNew: true, width: config<number>('tp.lineNumberWidth', 4, scope), ...extra };
 }
 
+/** zero mode: a new line gets `0:` in the number field instead of the blank scaffold */
+export function zeroOptions(scope?: vscode.ConfigurationScope, extra: Partial<RenumberOptions> = {}): RenumberOptions {
+  return { number: 'zero', autoSemicolon: config<boolean>('tp.autoSemicolon', true, scope), updateLineCount: true, onlyNew: true, width: config<number>('tp.lineNumberWidth', 4, scope), ...extra };
+}
+
 /**
  * The options `renumber()` needs for the current mode. In `custom` and `scaffold` only the
  * lines being typed get the style (`onlyNew`): the program's existing numbering is never
@@ -60,7 +66,8 @@ export function renumberOptions(scope?: vscode.ConfigurationScope, extra: Partia
   const mode = autoRenumberMode(scope);
   if (mode === 'custom') return customOptions(scope, extra);
   if (mode === 'scaffold') return scaffoldOptions(scope, extra);
+  if (mode === 'zero') return zeroOptions(scope, extra);
   return controllerOptions(scope, extra);
 }
 
-export const MODE_LABEL: Record<AutoRenumberMode, string> = { on: 'on (controller format)', off: 'off', custom: 'custom', scaffold: 'scaffold' };
+export const MODE_LABEL: Record<AutoRenumberMode, string> = { on: 'on (controller format)', off: 'off', custom: 'custom', scaffold: 'scaffold', zero: 'zero (new lines numbered 0)' };

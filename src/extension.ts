@@ -32,6 +32,7 @@ import { registerTools } from '@fanuc/tools';
 import { registerLiveDecorations } from '@fanuc/tp/liveDecorations';
 import { registerTypeDecorations } from '@fanuc/tp/typeDecorations';
 import { registerContextStatus } from '@fanuc/views/statusBar';
+import { registerTransferStatus } from '@fanuc/views/transferStatus';
 import { SysVarsReference, registerSysVarProviders } from '@fanuc/data/sysVarsReference';
 import { registerContainerCommands } from '@core/containerCommands';
 import { registerSyncCommands, registerSyncOnOpen } from '@core/syncCommands';
@@ -40,6 +41,9 @@ import { registerFeatureFinder } from '@core/views/featureFinder';
 import { registerReportIssue } from '@core/reportIssue';
 import { registerFileIcons } from '@core/fileIcons';
 import { registerRukusClusters } from '@core/rukus/clusters';
+import { registerCellPage } from '@core/live/cellPage';
+import { registerOnboarding } from '@core/onboarding';
+import { registerExperimentalCommands } from '@core/experimental';
 import { windowFolders, setWindowFolders } from '@core/util';
 import { errorDetail, isOwnFailure } from '@core/errors';
 
@@ -101,11 +105,13 @@ export function activate(ctx: vscode.ExtensionContext) {
     registerLiveDecorations(ctx, s);
     registerTypeDecorations(ctx, s);
     registerContextStatus(ctx, s);
+    registerTransferStatus(ctx, s);
     registerSnapshotDiffCommands(ctx, s);
   }
   registerContainerCommands(ctx, s);
   registerSyncCommands(ctx, s);
   registerSyncOnOpen(ctx, s);
+  registerCellPage(ctx, s);
   registerFeatureFinder(ctx);
   registerReportIssue(ctx);
   registerFileIcons(ctx);
@@ -113,6 +119,8 @@ export function activate(ctx: vscode.ExtensionContext) {
   // and opening one of its files offers the same
   registerBrandOffStubs(ctx, { fanuc, abb });
   registerFeatureProfiles(ctx);
+  registerOnboarding(ctx);
+  registerExperimentalCommands(ctx);
 
   if (fanuc) ctx.subscriptions.push(
     vscode.commands.registerCommand('robotCode.data.refresh', async () => {
@@ -120,7 +128,7 @@ export function activate(ctx: vscode.ExtensionContext) {
       // Merge cell-defined controllers into RobotManager
       const defs = s.containers.controllerDefs();
       if (s.live && Object.keys(defs).length) s.live.mergeCellProfiles(defs);
-      await Promise.all([s.data.refresh(), s.index.refresh()]);
+      await s.refreshAll('Refresh workspace index');
       const warn = s.containers.warnings.length ? ` (${s.containers.warnings.length} container warning(s))` : '';
       vscode.window.setStatusBarMessage(`RUKUS: ${s.index.programCount} programs in ${s.index.groups().size} folder(s); controller data for ${s.data.datasets.length} robot folder(s)${warn}`, 5000);
     }),
@@ -136,7 +144,7 @@ export function activate(ctx: vscode.ExtensionContext) {
       await setWindowFolders('data.backupFolders', [...windowFolders('data.backupFolders'), folder]);
       // adding a folder back is the way to undo having removed it
       await setWindowFolders('data.hiddenBackupFolders', windowFolders('data.hiddenBackupFolders').filter(h => !sameFolder(h, folder)));
-      await Promise.all([s.data.refresh(), s.index.refresh()]);
+      await s.refreshAll('Refresh workspace index');
     }),
     /**
      * Take a backup out of the Backup panel (and its programs out of the program views). A
@@ -153,12 +161,12 @@ export function activate(ctx: vscode.ExtensionContext) {
       const listed = windowFolders('data.backupFolders');
       if (listed.some(f => sameFolder(f, folder!))) await setWindowFolders('data.backupFolders', listed.filter(f => !sameFolder(f, folder!)));
       else await setWindowFolders('data.hiddenBackupFolders', [...windowFolders('data.hiddenBackupFolders'), folder]);
-      await Promise.all([s.data.refresh(), s.index.refresh()]);
+      await s.refreshAll('Refresh workspace index');
       const undo = await vscode.window.showInformationMessage(`${label ?? folder} removed from the Backup panel. The files on disk are untouched.`, 'Undo');
       if (undo) {
         if (listed.some(f => sameFolder(f, folder!))) await setWindowFolders('data.backupFolders', listed);
         else await setWindowFolders('data.hiddenBackupFolders', windowFolders('data.hiddenBackupFolders').filter(h => !sameFolder(h, folder!)));
-        await Promise.all([s.data.refresh(), s.index.refresh()]);
+        await s.refreshAll('Refresh workspace index');
       }
     }),
     vscode.commands.registerCommand('robotCode.data.restoreBackupFolders', async () => {
@@ -167,7 +175,7 @@ export function activate(ctx: vscode.ExtensionContext) {
       const picks = await vscode.window.showQuickPick(hidden.map(h => ({ label: h.split(/[\\/]/).pop() ?? h, description: h, folder: h })), { canPickMany: true, placeHolder: 'Backups to show again' });
       if (!picks?.length) return;
       await setWindowFolders('data.hiddenBackupFolders', hidden.filter(h => !picks.some(p => p.folder === h)));
-      await Promise.all([s.data.refresh(), s.index.refresh()]);
+      await s.refreshAll('Refresh workspace index');
     }),
   );
   // says once in Output when a user-level folder list is being ignored

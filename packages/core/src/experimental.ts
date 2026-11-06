@@ -36,3 +36,20 @@ export function requireRobotConnections(): boolean {
 export function gated<A extends any[], R>(fn: (...a: A) => R): (...a: A) => R | undefined {
   return (...a: A) => (requireRobotConnections() ? fn(...a) : undefined);
 }
+
+/**
+ * The command the walkthrough links to: turn the switch on without sending the user into
+ * Settings. The setting is per-window, so it is written to the workspace when one is open and
+ * to the user settings otherwise. The Controllers view is revealed afterwards, so the result
+ * is visible immediately.
+ */
+export function registerExperimentalCommands(ctx: vscode.ExtensionContext): void {
+  ctx.subscriptions.push(vscode.commands.registerCommand('robotCode.experimental.enableRobotConnections', async () => {
+    const target = vscode.workspace.workspaceFolders?.length
+      ? vscode.ConfigurationTarget.Workspace
+      : vscode.ConfigurationTarget.Global;
+    await vscode.workspace.getConfiguration('robotCode').update(ROBOT_CONNECTIONS_SETTING, true, target);
+    await vscode.commands.executeCommand('robotCode.live.focusView');
+    vscode.window.setStatusBarMessage('Robot Code: experimental robot connections are on', 5000);
+  }));
+}
