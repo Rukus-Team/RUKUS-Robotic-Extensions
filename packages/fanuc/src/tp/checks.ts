@@ -57,7 +57,7 @@ export interface TpCheckEnv {
   settings?: LintSettings;
   /** robotCode.tp.diagnostics.<key> in the editor; the default everywhere else */
   setting?<T>(key: string, fallback: T): T;
-  /** the editor renumbers lines itself: line-number and terminator findings would only flicker */
+  /** the editor renumbers lines itself: line-number findings would only flicker (a missing terminator is still reported) */
   autoRenumber?: boolean;
   extCommentWidth?: number;
   /** cross-reference notes keyed `KIND:index` (needs every program of the robot) */
@@ -209,7 +209,10 @@ export function tpChecks(text: string, prog: TpProgram, env: TpCheckEnv = {}): L
       // an extended comment ends with one ` ;`, on its last line - but only a `:` continuation
       // is its next line; a second numbered `--eg` line is a new comment and the first one is unterminated
       const extMiddle = l.ext && next?.ext && next.seq === undefined;
-      if (!isCircFirst && !extMiddle && !autoRenumber) add(lineRange(l.line), 'Missing " ;" terminator.', 'warning', CODES.terminator);
+      // Always reported, even with auto-renumber on: a line saved without its ` ;` is the
+      // controller refusing the program, and the warning is the only sign before a push. The
+      // quick fix (Renumber lines) adds it.
+      if (!isCircFirst && !extMiddle) add(lineRange(l.line), 'Missing " ;" terminator - every TP line ends with one.', 'warning', CODES.terminator);
     }
     // ` ; ;` at the end: the controller refuses to load the program (ASBN-031 Expecting ':', checked on
     // V9.40). Not in a comment or remark, whose text may end in a semicolon of its own.

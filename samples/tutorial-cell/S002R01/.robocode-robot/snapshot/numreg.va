@@ -1,0 +1,3 @@
+[*NUMREG*]$NUMREG  Storage: SHADOW  Access: RW  : ARRAY[6] OF Numeric Reg
+  [1] = 0  'Cycle Start' 
+  [5] = 0  'Part Count' 

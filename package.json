@@ -2,7 +2,7 @@
   "name": "robot-code",
   "displayName": "RUKUS Robotic Extensions — FANUC & ABB (Beta)",
   "description": "BETA - in active development, not yet proven on a live cell. One extension for FANUC and ABB robots: FANUC TP (.ls) and KAREL (.kl), ABB RAPID (.mod/.sys/.prg) with hover docs, go-to-definition, diagnostics, linting, flowcharts and call graphs; controller backups and live controllers (FANUC over HTTP/FTP, ABB IRC5 and OmniCore over Robot Web Services) with registers, RAPID data, I/O, alarms and positions; ktrans integration and the RUKUS desktop app.",
-  "version": "26.109.15",
+  "version": "26.111.2076",
   "publisher": "rukus-team",
   "license": "MIT",
   "repository": {
@@ -1161,6 +1161,21 @@
         "category": "RUKUS"
       },
       {
+        "command": "robotCode.live._transferStats",
+        "title": "Dump Transfer Stats (debug)",
+        "category": "RUKUS"
+      },
+      {
+        "command": "robotCode.transfers.show",
+        "title": "Show Transfer Queue",
+        "category": "RUKUS"
+      },
+      {
+        "command": "robotCode.transfers.cancelAll",
+        "title": "Cancel All Transfers",
+        "category": "RUKUS"
+      },
+      {
         "command": "robotCode.tools.diffBackups",
         "title": "Compare Two Backups…",
         "category": "RUKUS",
@@ -1379,6 +1394,12 @@
         "icon": "$(repo-push)"
       },
       {
+        "command": "robotCode.sync.restorePrePush",
+        "title": "Restore Pre-Push Copy on Robot…",
+        "category": "RUKUS",
+        "icon": "$(history)"
+      },
+      {
         "command": "robotCode.sync.compareFile",
         "title": "Compare with Snapshot",
         "category": "RUKUS",
@@ -1492,8 +1513,50 @@
       {
         "command": "robotCode.containers.initRobot",
         "title": "Initialize Robot Container…",
-        "category": "RUKUS",
+        "category": "Robot Code",
         "icon": "$(add)"
+      },
+      {
+        "command": "robotCode.cell.open",
+        "title": "Open Cell Page",
+        "category": "Robot Code",
+        "icon": "$(home)"
+      },
+      {
+        "command": "robotCode.tutorial.open",
+        "title": "Open the Tutorial Cell",
+        "category": "Robot Code",
+        "icon": "$(mortar-board)"
+      },
+      {
+        "command": "robotCode.tutorial.openReadme",
+        "title": "Read the Tutorial (Markdown Preview)",
+        "category": "Robot Code",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "robotCode.experimental.enableRobotConnections",
+        "title": "Enable Experimental Robot Connections",
+        "category": "Robot Code",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "robotCode.openGettingStarted",
+        "title": "Getting Started: Edit Robot Programs",
+        "category": "Robot Code",
+        "icon": "$(mortar-board)"
+      },
+      {
+        "command": "robotCode.openRobotWalkthrough",
+        "title": "Getting Started: Set Up a Robot",
+        "category": "Robot Code",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "robotCode.openRukusWalkthrough",
+        "title": "Getting Started: Robot Code + RUKUS",
+        "category": "Robot Code",
+        "icon": "$(beaker)"
       },
       {
         "command": "robotCode.data.snapshotFromBackup",
@@ -1861,17 +1924,17 @@
         },
         {
           "command": "robotCode.sync.fetchFile",
-          "when": "robotCode.fileInContainer && config.robotCode.experimental.robotConnections",
+          "when": "robotCode.fileInContainer && robotCode.fileHasRobot && config.robotCode.experimental.robotConnections",
           "group": "navigation@0.2"
         },
         {
           "command": "robotCode.sync.pullFile",
-          "when": "robotCode.fileInContainer && config.robotCode.experimental.robotConnections",
+          "when": "robotCode.fileInContainer && robotCode.fileHasRobot && config.robotCode.experimental.robotConnections",
           "group": "navigation@0.3"
         },
         {
           "command": "robotCode.sync.pushFile",
-          "when": "robotCode.fileInContainer && editorLangId == fanuc-tp && config.robotCode.live.upload && robotCode.syncPushable && config.robotCode.experimental.robotConnections",
+          "when": "robotCode.fileInContainer && robotCode.fileHasRobot && editorLangId == fanuc-tp && config.robotCode.experimental.robotConnections",
           "group": "navigation@0.4"
         },
         {
@@ -1974,17 +2037,17 @@
       "robotCode.sync.submenu": [
         {
           "command": "robotCode.sync.fetchFile",
-          "when": "config.robotCode.experimental.robotConnections",
+          "when": "robotCode.fileHasRobot && config.robotCode.experimental.robotConnections",
           "group": "a@1"
         },
         {
           "command": "robotCode.sync.pullFile",
-          "when": "config.robotCode.experimental.robotConnections",
+          "when": "robotCode.fileHasRobot && config.robotCode.experimental.robotConnections",
           "group": "a@2"
         },
         {
           "command": "robotCode.sync.pushFile",
-          "when": "((editorLangId == fanuc-tp || resourceExtname == .ls) && config.robotCode.live.upload) && config.robotCode.experimental.robotConnections",
+          "when": "(editorLangId == fanuc-tp || resourceExtname == .ls) && robotCode.fileHasRobot && config.robotCode.experimental.robotConnections",
           "group": "a@3"
         },
         {
@@ -2008,6 +2071,11 @@
         {
           "command": "robotCode.sync.history",
           "group": "b@3"
+        },
+        {
+          "command": "robotCode.sync.restorePrePush",
+          "when": "robotCode.fileHasRobot && config.robotCode.experimental.robotConnections",
+          "group": "b@4"
         }
       ],
       "robotCode.tp.submenu": [
@@ -2166,12 +2234,12 @@
         },
         {
           "command": "robotCode.showFeatures",
-          "when": "view == robotCode.programs || view == robotCode.robots",
+          "when": "view == robotCode.programs || view == robotCode.cell",
           "group": "navigation@9"
         },
         {
           "command": "robotCode.showFeatures",
-          "when": "view =~ /^robotCode\\./ && view != robotCode.programs && view != robotCode.robots",
+          "when": "view =~ /^robotCode\\./ && view != robotCode.programs && view != robotCode.cell",
           "group": "9_help@1"
         },
         {
@@ -2201,17 +2269,17 @@
         },
         {
           "command": "robotCode.live.addRobot",
-          "when": "view == robotCode.robots",
+          "when": "view == robotCode.cell",
           "group": "navigation@1"
         },
         {
           "command": "robotCode.live.searchRobots",
-          "when": "view == robotCode.robots",
+          "when": "view == robotCode.cell",
           "group": "navigation@1"
         },
         {
           "command": "robotCode.live.refresh",
-          "when": "view == robotCode.robots",
+          "when": "view == robotCode.cell",
           "group": "navigation@2"
         },
         {
@@ -2291,26 +2359,51 @@
         },
         {
           "command": "robotCode.live.manageRobots",
-          "when": "view == robotCode.robots",
+          "when": "view == robotCode.cell",
           "group": "navigation@3"
         },
         {
           "command": "robotCode.rukus.open",
-          "when": "view == robotCode.robots",
+          "when": "view == robotCode.cell",
           "group": "navigation@4"
         },
         {
           "command": "robotCode.live.getAll",
-          "when": "view == robotCode.robots",
+          "when": "view == robotCode.cell",
           "group": "1_get@1"
         },
         {
           "command": "robotCode.reportIssue",
-          "when": "view == robotCode.robots",
+          "when": "view == robotCode.cell",
           "group": "9_help@1"
         }
       ],
       "commandPalette": [
+        {
+          "command": "robotCode.cell.open"
+        },
+        {
+          "command": "robotCode.tutorial.open"
+        },
+        {
+          "command": "robotCode.tutorial.openReadme"
+        },
+        {
+          "command": "robotCode.experimental.enableRobotConnections",
+          "when": "!config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.openGettingStarted",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.openRobotWalkthrough",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.openRukusWalkthrough",
+          "when": "false"
+        },
         {
           "command": "robotCode.live.liveEdit",
           "when": "config.robotCode.experimental.robotConnections"
@@ -2564,6 +2657,18 @@
           "when": "false"
         },
         {
+          "command": "robotCode.live._transferStats",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.transfers.show",
+          "when": "false"
+        },
+        {
+          "command": "robotCode.transfers.cancelAll",
+          "when": "false"
+        },
+        {
           "command": "robotCode.live.getSection",
           "when": "false"
         },
@@ -2581,15 +2686,19 @@
         },
         {
           "command": "robotCode.sync.fetchFile",
-          "when": "resourceScheme == file && robotCode.liveConnected && config.robotCode.experimental.robotConnections"
+          "when": "resourceScheme == file && robotCode.fileHasRobot && config.robotCode.experimental.robotConnections"
         },
         {
           "command": "robotCode.sync.pullFile",
-          "when": "resourceScheme == file && robotCode.liveConnected && config.robotCode.experimental.robotConnections"
+          "when": "resourceScheme == file && robotCode.fileHasRobot && config.robotCode.experimental.robotConnections"
         },
         {
           "command": "robotCode.sync.pushFile",
-          "when": "editorLangId == fanuc-tp && robotCode.liveConnected && config.robotCode.live.upload && config.robotCode.experimental.robotConnections"
+          "when": "editorLangId == fanuc-tp && robotCode.fileHasRobot && config.robotCode.experimental.robotConnections"
+        },
+        {
+          "command": "robotCode.sync.restorePrePush",
+          "when": "resourceScheme == file && robotCode.fileHasRobot && config.robotCode.experimental.robotConnections"
         },
         {
           "command": "robotCode.sync.revertFile",
@@ -2653,6 +2762,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "robotCode.cell.open",
+          "when": "view == robotCode.cell && viewItem == cell",
+          "group": "inline@1"
+        },
         {
           "command": "robotCode.abb.connect",
           "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-(disconnected|error)$/",
@@ -2780,12 +2894,12 @@
         },
         {
           "command": "robotCode.live.downloadFile",
-          "when": "view == robotCode.robots && viewItem == robot-file",
+          "when": "view == robotCode.cell && viewItem == robot-file",
           "group": "inline@1"
         },
         {
           "command": "robotCode.live.downloadFile",
-          "when": "view == robotCode.robots && viewItem == robot-file",
+          "when": "view == robotCode.cell && viewItem == robot-file",
           "group": "a@1"
         },
         {
@@ -2915,107 +3029,107 @@
         },
         {
           "command": "robotCode.live.getSection",
-          "when": "view == robotCode.robots && viewItem =~ /^section-(controller|position|tasks|registers|ualarms|io|files)(-loaded)?$/",
+          "when": "view == robotCode.cell && viewItem =~ /^section-(controller|position|tasks|registers|ualarms|io|files)(-loaded)?$/",
           "group": "inline@0"
         },
         {
           "command": "robotCode.live.toggleFilesShow",
-          "when": "view == robotCode.robots && viewItem =~ /^section-files(-loaded)?$/",
+          "when": "view == robotCode.cell && viewItem =~ /^section-files(-loaded)?$/",
           "group": "inline@1"
         },
         {
           "command": "robotCode.live.dashboard",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-/",
           "group": "inline@0"
         },
         {
           "command": "robotCode.live.manageRobots",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-/",
           "group": "inline@0"
         },
         {
           "command": "robotCode.live.connect",
-          "when": "view == robotCode.robots && viewItem == robot-disconnected",
+          "when": "view == robotCode.cell && viewItem == robot-disconnected",
           "group": "inline@1"
         },
         {
           "command": "robotCode.live.disconnect",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-connected/",
           "group": "inline@1"
         },
         {
           "command": "robotCode.live.refresh",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-connected/",
           "group": "inline@2"
         },
         {
           "command": "robotCode.live.getAll",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-connected/",
           "group": "a@0"
         },
         {
           "command": "robotCode.live.toggleAutoRefresh",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-connected/",
           "group": "a@0b"
         },
         {
           "command": "robotCode.data.snapshotFromRobot",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-connected/",
           "group": "a@0c"
         },
         {
           "command": "robotCode.sync.errors",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-connected/",
           "group": "a@0d"
         },
         {
           "command": "robotCode.live.pullBackup",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-connected/",
           "group": "a@1"
         },
         {
           "command": "robotCode.live.openRobotFile",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-connected/",
           "group": "a@2"
         },
         {
           "command": "robotCode.live.showOptions",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-connected/",
           "group": "a@2b"
         },
         {
           "command": "robotCode.live.openAsWorkspaceFolder",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-connected/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-connected/",
           "group": "a@3"
         },
         {
           "command": "robotCode.rukus.monitor",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-/",
           "group": "c@1"
         },
         {
           "command": "robotCode.rukus.alarms",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-/",
           "group": "c@2"
         },
         {
           "command": "robotCode.rukus.backup",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-/",
           "group": "c@3"
         },
         {
           "command": "robotCode.live.setPassword",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-/",
           "group": "b@1"
         },
         {
           "command": "robotCode.live.forgetIdentity",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-/",
           "group": "b@2"
         },
         {
           "command": "robotCode.live.removeRobot",
-          "when": "view == robotCode.robots && viewItem =~ /^robot-/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-/",
           "group": "b@2"
         }
       ],
@@ -3024,6 +3138,11 @@
           "submenu": "robotCode.menu",
           "when": "resourceScheme == fanuc || robotCode.hasContainers || explorerResourceIsFolder",
           "group": "5_cutcopypaste@8"
+        },
+        {
+          "command": "robotCode.cell.open",
+          "when": "explorerResourceIsFolder && resourceFilename == .robocode-cell",
+          "group": "navigation@1"
         }
       ]
     },
@@ -3065,11 +3184,11 @@
           "contextualTitle": "RUKUS clusters"
         },
         {
-          "id": "robotCode.robots",
-          "name": "Controllers",
-          "icon": "media/activity.svg",
-          "contextualTitle": "Controllers",
-          "when": "config.robotCode.experimental.robotConnections && !robotCode.hideFanuc && !robotCode.fanucOff"
+        "id": "robotCode.cell",
+        "name": "Cell",
+        "icon": "media/activity.svg",
+        "contextualTitle": "Cell",
+        "when": "config.robotCode.experimental.robotConnections && !robotCode.hideFanuc && !robotCode.fanucOff"
         },
         {
           "id": "robotCode.snapshot",
@@ -3125,24 +3244,24 @@
     "viewsWelcome": [
       {
         "view": "robotCode.registers",
-        "contents": "No controller data loaded. Add a backup folder to load register comments, frames, and macros.\n[Add Backup Folder](command:robotCode.data.addBackupFolder)"
+        "contents": "No controller data loaded.\n[Add Backup Folder](command:robotCode.data.addBackupFolder) [Try the Tutorial Cell](command:robotCode.tutorial.open)"
       },
       {
-        "view": "robotCode.robots",
-        "contents": "Live data from a FANUC controller, read only when you press Get.\n[Add Robot](command:robotCode.live.addRobot) [Open Dashboard](command:robotCode.live.dashboard)\nThe one write, Upload Program, always asks first."
+        "view": "robotCode.cell",
+        "contents": "The cell's robots, read only when you press Get.\n[Add Robot](command:robotCode.live.addRobot) [Open Cell Page](command:robotCode.cell.open) [Set Up a Robot Walkthrough](command:robotCode.openRobotWalkthrough)\nThe one write, Upload Program, always asks first."
       },
       {
         "view": "robotCode.rukusClusters",
         "when": "!robotCode.rukusAvailable",
-        "contents": "RUKUS was not found. With it, its clusters appear here.\n[Get RUKUS](command:robotCode.rukus.revealData) [Initialize Cell Container…](command:robotCode.containers.initCell)\nInstalled elsewhere? Set `robotCode.rukus.dataFolder`."
+        "contents": "RUKUS was not found. With it, its clusters appear here.\n[Get RUKUS](command:robotCode.rukus.revealData) [Initialize Cell Container…](command:robotCode.containers.initCell)\nInstalled elsewhere? Set `robotCode.rukus.dataFolder`. New to RUKUS? [Robot Code + RUKUS walkthrough](command:robotCode.openRukusWalkthrough)."
       },
       {
         "view": "robotCode.snapshot",
-        "contents": "The snapshot is the robot's last known state; working copies are compared with it.\n[Initialize Robot Container…](command:robotCode.containers.initRobot)\nThen connect and **Fetch All**, or snapshot a backup folder."
+        "contents": "The snapshot is the robot's last known state; working copies are compared with it.\n[Initialize Robot Container…](command:robotCode.containers.initRobot) [Try the Tutorial Cell](command:robotCode.tutorial.open)\nThen connect and **Fetch…**, or snapshot a backup folder."
       },
       {
         "view": "robotCode.macros",
-        "contents": "The macro table comes from sysmacro.va in a backup folder."
+        "contents": "The macro table comes from sysmacro.va in a backup folder.\n[Add Backup Folder](command:robotCode.data.addBackupFolder)"
       },
       {
         "view": "robotCode.abbControllers",
@@ -3154,14 +3273,14 @@
       },
       {
         "view": "robotCode.pcPrograms",
-        "contents": "KAREL sources (.kl) and compiled PC programs (.pc) found in the workspace and backup folders appear here."
+        "contents": "KAREL sources (.kl) and compiled PC programs (.pc) appear here.\n[Open the Tutorial Cell](command:robotCode.tutorial.open)"
       }
     ],
     "walkthroughs": [
       {
         "id": "robotCode.gettingStarted",
-        "title": "RUKUS Robotic Extensions: Getting Started",
-        "description": "Full IDE support for FANUC robots — TP (.ls) and KAREL (.kl) programs with hover docs, diagnostics, flow charts, and more.",
+        "title": "Edit Robot Programs",
+        "description": "Full IDE support for FANUC robots - TP (.ls) and KAREL (.kl) programs with hover docs, diagnostics, flow charts, and more. Works offline; no robot needed.",
         "icon": "media/icon.png",
         "featuredFor": [
           "*.ls",
@@ -3170,71 +3289,153 @@
         ],
         "steps": [
           {
-            "id": "robotCode.walkthrough.addBackup",
-            "title": "Open a Controller Backup",
-            "description": "The extension reads registers, positions, macros, and payloads from `.va` files in a FANUC controller backup folder. Point the extension at one to get register comments, hover values, and diagnostics.",
-            "media": {
-              "markdown": "media/walkthrough/step1-backup.md"
-            },
-            "completionEvents": [
-              "onCommand:robotCode.data.addBackupFolder"
-            ]
+            "id": "robotCode.walkthrough.edit.programs",
+            "title": "Get Some Programs",
+            "description": "Open a folder that holds `.ls` / `.kl` programs, or try the bundled tutorial cell. Register comments, hover values and diagnostics all come from the files on disk - nothing connects to a robot.",
+            "media": { "markdown": "media/walkthrough/edit-1-programs.md" },
+            "completionEvents": ["onCommand:robotCode.tutorial.open"]
           },
           {
-            "id": "robotCode.walkthrough.sidebar",
+            "id": "robotCode.walkthrough.edit.preview",
+            "title": "Read Tutorials as Previews",
+            "description": "Markdown notes - the tutorial cell's `README.md` - open as source by default. **Ctrl+Shift+V** opens a rendered preview, or use the **Open Preview** icon; read the exercises that way.",
+            "media": { "markdown": "media/walkthrough/edit-2-preview.md" },
+            "completionEvents": ["onCommand:robotCode.tutorial.openReadme"]
+          },
+          {
+            "id": "robotCode.walkthrough.edit.tp",
+            "title": "Read a TP Program",
+            "description": "Open a `.ls` file, hover the instructions and registers, and open the outline. Then draw the program as a flow chart - its branch structure at a glance.",
+            "media": { "markdown": "media/walkthrough/edit-3-tp.md" },
+            "completionEvents": ["onCommand:robotCode.tp.showFlow"]
+          },
+          {
+            "id": "robotCode.walkthrough.edit.sidebar",
             "title": "Explore the Sidebar",
-            "description": "The **RUKUS Robotic Extensions** panel in the Activity Bar has six sections: **Controllers** (live robots), **Snapshot** (the robot's last known state), **Programs** (TP), **PC programs** (KAREL), **Macros**, and **Data** (registers and I/O).",
-            "media": {
-              "markdown": "media/walkthrough/step2-sidebar.md"
-            },
-            "completionEvents": [
-              "onView:robotCode.robots"
-            ]
+            "description": "The **Robot Code** panel holds **Programs** (TP), **PC programs** (KAREL), **Macros** and **Data** (registers, payloads and I/O) - plus **Snapshot** and **Controllers** once you work with a robot.",
+            "media": { "markdown": "media/walkthrough/edit-4-sidebar.md" },
+            "completionEvents": ["onCommand:workbench.view.extension.robotCode"]
           },
           {
-            "id": "robotCode.walkthrough.tpEditor",
-            "title": "Open a TP Program",
-            "description": "Open any `.ls` file to see syntax highlighting, hover documentation for every instruction, register comments resolved from the backup, and CodeLens jump counts on labels.",
-            "media": {
-              "markdown": "media/walkthrough/step3-tp-editor.md"
-            },
-            "completionEvents": [
-              "onLanguage:fanuc-tp"
-            ]
+            "id": "robotCode.walkthrough.edit.shortcuts",
+            "title": "Shortcuts and Commands",
+            "description": "Key shortcuts for the common operations, and **What Can I Do Here?** - one picker with every command, grouped by intent, read from the installed extension so it cannot drift.",
+            "media": { "markdown": "media/walkthrough/edit-5-shortcuts.md" },
+            "completionEvents": ["onCommand:robotCode.showFeatures"]
           },
           {
-            "id": "robotCode.walkthrough.shortcuts",
-            "title": "Learn the Shortcuts",
-            "description": "Key shortcuts for the most common operations: **Ctrl+Alt+R** renumber, **Ctrl+/** toggle remark, **Ctrl+Alt+L** go to label, **Ctrl+Alt+F** show flow chart, **Ctrl+Shift+B** compile KAREL.",
-            "media": {
-              "markdown": "media/walkthrough/step4-shortcuts.md"
-            },
-            "completionEvents": [
-              "onCommand:workbench.action.showCommands"
-            ]
+            "id": "robotCode.walkthrough.edit.karel",
+            "title": "KAREL and Data Files",
+            "description": "KAREL sources (`.kl`) get hover docs, go-to-definition and a pre-compile lint; `.va` dumps power the register and I/O hovers. Check a KAREL file before you compile it.",
+            "media": { "markdown": "media/walkthrough/edit-6-karel.md" },
+            "completionEvents": ["onCommand:robotCode.karel.precheck"]
+          }
+        ]
+      },
+      {
+        "id": "robotCode.robot",
+        "title": "Set Up a Robot",
+        "description": "Robot-first: one robot container, a snapshot of the controller, and the fetch / compare / push loop. Connecting to a robot is an experimental feature - the first step turns it on.",
+        "icon": "media/icon.png",
+        "steps": [
+          {
+            "id": "robotCode.walkthrough.robot.enable",
+            "title": "Turn On Robot Connections",
+            "description": "Talking to a robot (FTP/HTTP reads, teach, upload) is still being proven on real cells, so it sits behind an experimental switch, off by default. This turns it on and reveals the **Controllers** view.",
+            "media": { "markdown": "media/walkthrough/robot-1-enable.md" },
+            "completionEvents": ["onSettingChanged:robotCode.experimental.robotConnections"]
           },
           {
-            "id": "robotCode.walkthrough.liveRobot",
-            "title": "Connect to a Robot (experimental)",
+            "id": "robotCode.walkthrough.robot.container",
+            "title": "Initialize a Robot Container",
+            "description": "A robot container (`.robocode-robot/`) tells the extension which folders are this robot's editable programs, and gives the snapshot somewhere to live. The wizard finds backups for you and leaves them out of the editable set.",
+            "media": { "markdown": "media/walkthrough/robot-2-container.md" },
+            "completionEvents": ["onCommand:robotCode.containers.initRobot"]
+          },
+          {
+            "id": "robotCode.walkthrough.robot.snapshot",
+            "title": "Take a Snapshot",
+            "description": "The snapshot is the robot's last known state - the line every working copy is compared against. Take one from a backup folder (offline) or, once connected, from the robot itself.",
+            "media": { "markdown": "media/walkthrough/robot-3-snapshot.md" },
+            "completionEvents": ["onCommand:robotCode.data.snapshotFromBackup"]
+          },
+          {
+            "id": "robotCode.walkthrough.robot.connect",
+            "title": "Connect a Controller",
             "when": "config.robotCode.experimental.robotConnections",
-            "description": "Add a FANUC controller or ROBOGUIDE virtual controller by IP for live register, I/O, position, and program state. **Only Push writes to the robot.**",
-            "media": {
-              "markdown": "media/walkthrough/step5-live-robot.md"
-            },
-            "completionEvents": [
-              "onCommand:robotCode.live.addRobot"
-            ]
+            "description": "Add a FANUC controller or a ROBOGUIDE virtual controller by IP. Reads are on demand - nothing polls the robot - and the connection heartbeat only proves it is answering.",
+            "media": { "markdown": "media/walkthrough/robot-4-connect.md" },
+            "completionEvents": ["onCommand:robotCode.live.addRobot"]
           },
           {
-            "id": "robotCode.walkthrough.sync",
-            "title": "Keep Your Copy in Sync",
-            "description": "The snapshot is the robot's last known state: **Fetch** updates it, **Pull** brings it into your file, **Push** sends your file back - and a push is refused if the robot changed since the snapshot, so a pendant edit is never silently overwritten.",
-            "media": {
-              "markdown": "media/walkthrough/step6-sync.md"
-            },
-            "completionEvents": [
-              "onCommand:robotCode.sync.fetchFile"
-            ]
+            "id": "robotCode.walkthrough.robot.sync",
+            "title": "Fetch, Compare, Push",
+            "when": "config.robotCode.experimental.robotConnections",
+            "description": "**Fetch** updates the snapshot, **Pull** brings the robot's copy into your file, **Push** sends your file back - and a push is refused verbatim if the robot changed since the snapshot, so a pendant edit is never silently overwritten.",
+            "media": { "markdown": "media/walkthrough/robot-5-sync.md" },
+            "completionEvents": ["onCommand:robotCode.sync.fetch"]
+          },
+          {
+            "id": "robotCode.walkthrough.robot.teach",
+            "title": "Teach a Position",
+            "when": "config.robotCode.experimental.robotConnections",
+            "description": "Right-click a `P[n]` and **Teach Position from Robot** reads the current position once and rewrites just the numbers that changed. The file changes; the robot does not.",
+            "media": { "markdown": "media/walkthrough/robot-6-teach.md" },
+            "completionEvents": ["onCommand:robotCode.tp.teachPosition"]
+          },
+          {
+            "id": "robotCode.walkthrough.robot.done",
+            "title": "You're Set Up",
+            "description": "That is the whole robot-first loop. Have RUKUS installed? **Robot Code + RUKUS** covers the hand-off for monitoring, alarms and backups. For more than one robot, see the cell containers how-to.",
+            "media": { "markdown": "media/walkthrough/robot-7-done.md" },
+            "completionEvents": ["onCommand:robotCode.openRukusWalkthrough"]
+          }
+        ]
+      },
+      {
+        "id": "robotCode.rukus",
+        "title": "Robot Code + RUKUS",
+        "description": "Optional - needs the separate RUKUS app. RUKUS owns live monitoring, alarm history and scheduled backups; Robot Code is the editor and hands off. Skip this if you do not have RUKUS.",
+        "icon": "media/icon.png",
+        "steps": [
+          {
+            "id": "robotCode.walkthrough.rukus.what",
+            "title": "RUKUS Is a Separate App",
+            "description": "RUKUS is the robot utility kit, installed on its own. It keeps a live view, the alarm log and the backup schedule. Robot Code links to it instead of growing a worse copy - everything here is optional.",
+            "media": { "markdown": "media/walkthrough/rukus-1-what.md" },
+            "completionEvents": ["onCommand:robotCode.rukus.revealData"]
+          },
+          {
+            "id": "robotCode.walkthrough.rukus.open",
+            "title": "Open a Cluster as a Workspace",
+            "when": "robotCode.rukusAvailable",
+            "description": "Clicking a cluster opens its backup folder as the workspace and writes the cluster's robots into the cell's `cell.json` - names, addresses and devices, with FTP passwords moved into secret storage.",
+            "media": { "markdown": "media/walkthrough/rukus-2-open.md" },
+            "completionEvents": ["onCommand:robotCode.rukus.openCluster"]
+          },
+          {
+            "id": "robotCode.walkthrough.rukus.sync",
+            "title": "Sync from RUKUS",
+            "when": "robotCode.rukusAvailable",
+            "description": "**Sync from RUKUS** re-reads the open cluster and updates `cell.json` again - new robots, changed addresses, anything RUKUS knows that the cell does not.",
+            "media": { "markdown": "media/walkthrough/rukus-3-sync.md" },
+            "completionEvents": ["onCommand:robotCode.rukus.syncClusters"]
+          },
+          {
+            "id": "robotCode.walkthrough.rukus.send",
+            "title": "Send a Cell to RUKUS",
+            "when": "robotCode.rukusAvailable",
+            "description": "**Send Cell to RUKUS** writes the open cell's controllers to RUKUS as a cluster (or updates the one it came from). A cell made before RUKUS was installed is remembered and offered the next time RUKUS turns up.",
+            "media": { "markdown": "media/walkthrough/rukus-4-send.md" },
+            "completionEvents": ["onCommand:robotCode.rukus.exportCell"]
+          },
+          {
+            "id": "robotCode.walkthrough.rukus.handoff",
+            "title": "Hand Off Monitoring, Alarms, Backups",
+            "when": "robotCode.rukusAvailable",
+            "description": "The robot page's cards open RUKUS on the right page: **Live Monitor**, **Alarm History** and **Backups and Schedules**. A failed push can open RUKUS's Error Watcher too. Robot Code holds no connection open for these.",
+            "media": { "markdown": "media/walkthrough/rukus-5-handoff.md" },
+            "completionEvents": ["onCommand:robotCode.rukus.monitor"]
           }
         ]
       }
@@ -3260,14 +3461,16 @@
             "on",
             "off",
             "custom",
-            "scaffold"
+            "scaffold",
+            "zero"
           ],
           "default": "on",
           "enumDescriptions": [
             "Renumber as you edit, in the controller's format: a 4-wide number field, \"  \" before the instruction, \" ;\" on every line (robotCode.tp.lineNumberWidth / autoSemicolon).",
             "Do not renumber as you edit. Renumber TP Lines and Format Document still work, in the controller's format.",
             "Renumber the lines you type in the style set by robotCode.tp.customRenumber. Existing numbered lines are left as they are; use Apply Custom Line Style to restyle a program or selection.",
-            "Scaffold new lines with a blank prefix (spaces matching the highest existing line number width + colon). Existing lines are not renumbered. LINE_COUNT still updates. Useful for large programs or when renumbering creates git noise."
+            "Scaffold new lines with a blank prefix (spaces matching the highest existing line number width + colon). Existing lines are not renumbered. LINE_COUNT still updates. Useful for large programs or when renumbering creates git noise.",
+            "Like scaffold, but new lines get a real 0 as their line number (0: in the same number field) for tools that want a number on every line. Existing lines are not renumbered."
           ],
           "markdownDescription": "Automatically renumber TP lines (and update `LINE_COUNT`) as you edit. `true` / `false` from older settings still mean on / off."
         },
@@ -3682,7 +3885,12 @@
         "robotCode.containers.guardUpload": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Before a push, fetch the program from the robot and compare it to the snapshot **verbatim**. If they differ, someone changed the program on the pendant since the last fetch; the push is refused until the snapshot is updated, so uncaptured robot changes are never silently overwritten."
+          "markdownDescription": "Before a push, fetch the program from the robot and compare it to the snapshot **normalized**. Line numbers and metadata (DATE/MODIFIED) are not a change; real text is. If they differ, someone changed the program on the pendant since the last fetch; the push is refused until the snapshot is updated, so uncaptured robot changes are never silently overwritten."
+        },
+        "robotCode.containers.prePushBackup": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Keep the gate read as one pre-push copy in `.robocode-robot/push-backup/` (overwritten each push). If the final sync fails or is cancelled, the push can be reverted from it. This is recovery for the last push only; the snapshot history is for versioning."
         },
         "robotCode.containers.pullAfterPush": {
           "type": "string",
@@ -3693,11 +3901,38 @@
           ],
           "default": "always",
           "enumDescriptions": [
-            "After an explicit Upload Program, overwrite the working file with the controller's read-back even when it differs from what you sent (it usually will - DATE/MODIFIED, line numbers, variable labels) - so working = snapshot = robot. The difference is reported.",
-            "Only overwrite the working file when the controller's read-back is identical to what you sent; otherwise keep your file and warn.",
+            "After an explicit Upload Program, overwrite the working file with the controller's read-back even when the compile rewrote it (line numbers, labels, metadata, or a source with no point data) - so working = snapshot = robot. A differing read-back is a warning, not a failed push.",
+            "Overwrite the working file only when the read-back is identical (normalized) to what you sent; a compiled rewrite keeps your file and warns.",
             "Never touch the working file on a push. The snapshot still advances to the controller's copy."
           ],
-          "markdownDescription": "The last step of an explicit **Upload Program**: pull the controller's copy back so **working = snapshot = robot**. This never applies to a live-edit save (which never rewrites the file you are editing). `when-identical` keeps your file when the controller changed it (usually only metadata)."
+          "markdownDescription": "The last step of an explicit **Upload Program**: pull the controller's copy back so **working = snapshot = robot**. This never applies to a live-edit save (which never rewrites the file you are editing). A compile normally rewrites the source (and a source with no point data can read back with a different line layout); a difference is shown as a warning and `always` still pulls it. Only a controller error (the STOR is refused) fails the push."
+        },
+        "robotCode.containers.pullPartnerAfterPush": {
+          "type": "string",
+          "enum": ["always", "never"],
+          "default": "always",
+          "enumDescriptions": [
+            "Also read the compiled `.TP`/`.PC` the controller just made, into the snapshot (the current behavior).",
+            "Read only the source back; refresh the compiled copy on the next fetch."
+          ],
+          "markdownDescription": "After a push, whether to read the partner representation (`.LS` ↔ `.TP`, `.KL` ↔ `.PC`) into the snapshot. `never` saves one transfer per push; the source read-back still verifies the write."
+        },
+        "robotCode.containers.pullCompiledAfterSourcePush": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "After a source program (`.LS` / `.KL`) is uploaded, fetched or pulled, also read the compiled `.TP` / `.PC` into the snapshot. Off skips that extra (often slow) transfer on a push and on a manual fetch/pull - useful when you only want the source; the compiled copy is refreshed by a later full fetch. `containers.pullPartnerAfterPush: never` still disables every partner read."
+        },
+        "robotCode.containers.unchangedCheck": {
+          "type": "string",
+          "enum": ["auto", "size-time", "size", "never"],
+          "default": "auto",
+          "enumDescriptions": [
+            "Skip the read when the size matches and, if the controller lists an mtime, that matches too. Falls back to size only when no mtime is available.",
+            "Skip only when both size and mtime match.",
+            "Skip on size alone (fastest; a same-size edit is not noticed until the next push gate).",
+            "Always read every file (the old behavior)."
+          ],
+          "markdownDescription": "A fetch or folder pull asks the controller for its listing first; when a file's size/mtime match the last fetch, it is not downloaded. The push gate always reads the full copy, so a skipped change can never be silently overwritten. The first fetch after this setting is added reads everything and records the sizes."
         },
         "robotCode.containers.snapshotHistory": {
           "type": "number",
@@ -3754,7 +3989,7 @@
               "useFtp": {
                 "type": "boolean",
                 "default": false,
-                "description": "Read files over FTP instead of the web server."
+                "description": "Prefer FTP for single reads (dashboard, registers, options) and the connection probe. Bulk file transfers use robotCode.transfers.preferFtp instead."
               },
               "pollIntervalMs": {
                 "type": "number",
@@ -3872,6 +4107,27 @@
           "type": "boolean",
           "default": false,
           "markdownDescription": "Allow **Push to Robot** (Ctrl+Alt+Shift+U): the open `.ls` goes onto the connected robot's device over FTP and replaces the program of that name. It is the one command that writes to a controller, so it is off until you turn it on; it always asks first, is refused if the robot changed since the snapshot, refuses a program the controller reports as running, and reads the program back afterwards. Off hides it."
+        },
+        "robotCode.live.protocolFallback": {
+          "type": "string",
+          "enum": ["auto", "off"],
+          "default": "auto",
+          "enumDescriptions": [
+            "If a read's preferred transport fails with a network error, try the other one once and remember what worked.",
+            "Only use the profile's protocol for reads."
+          ],
+          "markdownDescription": "Reads prefer their chosen protocol and, with `auto`, fall back to the other when it does not answer or its FTP login is refused. Bulk file transfers prefer FTP (`transfers.preferFtp`); single reads use the profile's protocol. Uploads are always FTP and never fall back. The status banners name the transport each fetch/pull/push used."
+        },
+        "robotCode.transfers.recentSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 0,
+          "markdownDescription": "How long a finished transfer stays in the transfer queue (the status bar item's QuickPick) before it is forgotten. `0` removes it at once. The status bar itself hides when nothing is active."
+        },
+        "robotCode.transfers.preferFtp": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Bulk file transfers (single-file fetch/pull, folder fetch/pull, backup, snapshot-from-robot, compare-all) try FTP first, even when the robot profile uses HTTP for single reads. If FTP is unavailable or its login is refused, reads fall back to HTTP (`live.protocolFallback: auto`). Writes are always FTP."
         },
         "robotCode.tp.diagnostics.duplicatePositionTolerance": {
           "type": "number",
@@ -4128,7 +4384,8 @@
     "release": "node scripts/release.mjs",
     "version:id": "node scripts/version-id.mjs",
     "notepadpp": "node scripts/make-notepadpp.mjs && node esbuild.mjs --npp",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "tutorial:bundle": "node scripts/make-tutorial-bundle.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

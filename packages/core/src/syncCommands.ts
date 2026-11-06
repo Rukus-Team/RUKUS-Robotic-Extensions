@@ -15,7 +15,7 @@ import type { RobotMarker } from './robotContainers';
 import { markerBoundRobot, profileNamed } from './robotBinding';
 import { snapshotStatus } from './containerCompare';
 import {
-  isSnapshotDataFile, isSnapshotProgramFile, findSnapshotFile, listSnapshotHistory, verbatimCompare, isCompiledProgram, snapshotNamesUnder, snapshotFetchedWithin,
+  isSnapshotDataFile, isSnapshotProgramFile, findSnapshotFile, listSnapshotHistory, verbatimCompare, isCompiledProgram, pairedProgramName, snapshotNamesUnder, snapshotFetchedWithin,
 } from './robotContainers';
 import {
   fetchFilesFromRobot, fetchFileFromRobot, revertFromSnapshot, withContainerLock,
@@ -184,8 +184,25 @@ async function pickRobot(s: Services, robots: RobotManager, placeHolder: string)
   return ensureConnected(s, robots, pick.name);
 }
 
-async function refreshAfterSync(s: Services): Promise<void> {
-  await Promise.all([s.data.refresh(), s.index.refresh()]);
+/** The snapshot files a single-file sync touched: the source and its compiled partner. */
+function snapshotPathsFor(marker: RobotMarker, fileName: string): string[] {
+  const out: string[] = [];
+  for (const name of [fileName, pairedProgramName(fileName)]) {
+    if (!name) continue;
+    const p = findSnapshotFile(marker.snapshotDir, name);
+    if (p) out.push(p);
+  }
+  return out;
+}
+
+async function refreshAfterSync(s: Services, paths?: string[]): Promise<void> {
+  // A single-file sync touched one or two snapshot files; index those, not the whole workspace.
+  if (paths?.length) {
+    for (const p of paths) await s.index.refreshUri(vscode.Uri.file(p));
+    await s.containers.refresh();
+    return;
+  }
+  await s.refreshAll('Refresh after sync');
 }
 
 // ── fetch ───────────────────────────────────────────────────────────────────
@@ -195,12 +212,18 @@ async function fetchFileCommand(s: Services, arg?: unknown): Promise<void> {
   if (!target?.fileName) { vscode.window.showInformationMessage('Open a working program or data file, or pick a snapshot file.'); return; }
   const conn = await robotForMarker(s, target.marker);
   if (!conn) return;
-  const res = await withContainerLock(target.marker, () => vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: `Fetching ${target.fileName} from ${conn.profile.name}` },
-    () => fetchFileFromRobot(s, target.marker, conn, target.fileName!)));
+  const live = s.live;
+  if (!live) return;
+  const res = await withContainerLock(target.marker, () => live.withTransfer(conn.profile.name,
+    { kind: 'fetch', label: `Fetch ${target.fileName} → ${conn.profile.name}`, file: target.fileName },
+    () => vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: `Fetching ${target.fileName} from ${conn.profile.name}` },
+      () => fetchFileFromRobot(s, target.marker, conn, target.fileName!))));
+  if (!res) { vscode.window.setStatusBarMessage('$(circle-slash) Fetch removed from the queue', 5000); return; }
   if (!res.ok) { vscode.window.showWarningMessage(`Could not fetch ${target.fileName} from ${conn.profile.name}: ${res.error ?? 'not on the controller'}`); return; }
-  await refreshAfterSync(s);
-  vscode.window.setStatusBarMessage(`$(cloud-download) Snapshot: ${target.fileName} fetched${res.changed ? ' (changed)' : ''} · just now`, 6000);
+  await refreshAfterSync(s, snapshotPathsFor(target.marker, target.fileName));
+  const proto = (res.protocol ?? 'ftp').toUpperCase();
+  vscode.window.setStatusBarMessage(`$(cloud-download) Snapshot: ${target.fileName} fetched over ${proto}${res.changed ? ' (changed)' : ''} · just now`, 6000);
 }
 
 async function fetchMatching(s: Services, marker: RobotMarker, conn: RobotConnection, test: (name: string) => boolean, what: string): Promise<void> {
@@ -208,25 +231,29 @@ async function fetchMatching(s: Services, marker: RobotMarker, conn: RobotConnec
   if (!live) return;
   let listing;
   try {
-    listing = await live.listFiles(conn.profile);
+    listing = await live.listFiles(conn.profile, conn.profile.device, undefined, { bulk: true });
   } catch (e: unknown) {
     vscode.window.showWarningMessage(`Could not list ${conn.profile.device} on ${conn.profile.name}: ${e instanceof Error ? e.message : String(e)}`);
     return;
   }
   const names = listing.filter(f => !f.isDir && test(f.name)).map(f => f.name);
   if (!names.length) { vscode.window.showInformationMessage(`Nothing to fetch (${what}) from ${conn.profile.name}.`); return; }
-  const outcome = await withContainerLock(marker, () => live.withTransfer(conn.profile.name, () => vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: `Fetching ${what} from ${conn.profile.name}`, cancellable: true },
-    (progress, token) => {
-      const ac = new AbortController();
-      token.onCancellationRequested(() => ac.abort());
-      progress.report({ message: `0/${names.length}` });
-      return fetchFilesFromRobot(s, marker, conn, names, {
-        onFile: (done, total, name) => progress.report({ increment: 100 / total, message: `${done}/${total} · ${name}` }),
-        isCancelled: () => token.isCancellationRequested,
-        signal: ac.signal,
-      });
-    })));
+  const outcome: FetchOutcome | undefined = await withContainerLock(marker, () => live.withTransfer(conn.profile.name,
+    { kind: 'fetch', label: `Fetch ${what} → ${conn.profile.name}` },
+    (signal, item) => vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: `Fetching ${what} from ${conn.profile.name}`, cancellable: true },
+      (progress, token) => {
+        const ac = new AbortController();
+        token.onCancellationRequested(() => ac.abort());
+        signal.addEventListener('abort', () => ac.abort(), { once: true });
+        progress.report({ message: `0/${names.length}` });
+        return fetchFilesFromRobot(s, marker, conn, names, {
+          onFile: (done, total, name) => { item.report(`${done}/${total} · ${name}`, done / total); progress.report({ increment: 100 / total, message: `${done}/${total} · ${name}` }); },
+          isCancelled: () => token.isCancellationRequested || signal.aborted,
+          signal: ac.signal,
+        }, listing);
+      })));
+  if (!outcome) { vscode.window.setStatusBarMessage('$(circle-slash) Fetch removed from the queue', 5000); return; }
   await refreshAfterSync(s);
   reportOutcome(s, marker, conn, outcome, what);
 }
@@ -265,8 +292,10 @@ export const FETCH_CHOICES: readonly FetchChoice[] = [
 function reportOutcome(s: Services, marker: RobotMarker, conn: RobotConnection, outcome: FetchOutcome, what: string): void {
   const bits = [`${outcome.ok} file${outcome.ok === 1 ? '' : 's'}`];
   if (outcome.changed) bits.push(`${outcome.changed} changed`);
+  if (outcome.unchanged) bits.push(`${outcome.unchanged} unchanged`);
   if (outcome.failed) bits.push(`${outcome.failed} failed`);
-  vscode.window.setStatusBarMessage(`$(cloud-download) Snapshot ${marker.name}: ${what} fetched · ${bits.join(' · ')}`, 8000);
+  const proto = (outcome.protocol ?? 'ftp').toUpperCase();
+  vscode.window.setStatusBarMessage(`$(cloud-download) Snapshot ${marker.name}: ${what} fetched over ${proto} · ${bits.join(' · ')}`, 8000);
   s.output.appendLine(`[RUKUS] snapshot fetch ${marker.name} (${conn.profile.name}): ${bits.join(', ')}${outcome.errors.length ? `\n  ${outcome.errors.join('\n  ')}` : ''}`);
   if (outcome.failed) void vscode.window.showWarningMessage(`${outcome.failed} file(s) could not be fetched from ${conn.profile.name}. See the RUKUS Robotic Extensions output.`, 'Open Output').then(p => { if (p) s.output.show(true); });
 }
@@ -343,7 +372,7 @@ async function folderCommand(s: Services, arg: unknown, pull: boolean): Promise<
   const live = s.live;
   if (!live) return;
   let listing;
-  try { listing = await live.listFiles(conn.profile); }
+  try { listing = await live.listFiles(conn.profile, conn.profile.device, undefined, { bulk: true }); }
   catch (e: unknown) { vscode.window.showWarningMessage(`Could not list ${conn.profile.device} on ${conn.profile.name}: ${e instanceof Error ? e.message : String(e)}`); return; }
   const files = listing.filter(f => !f.isDir);
   const local = localFilesUnder(s, scope.marker, scope.scope ? undefined : scope.dir);
@@ -367,45 +396,52 @@ async function folderCommand(s: Services, arg: unknown, pull: boolean): Promise<
     if (ok !== 'Pull') return;
   }
   const verb = pull ? 'Pulling' : 'Fetching';
-  const { outcome, pulled } = await withContainerLock(scope.marker, () => live.withTransfer(conn.profile.name, async () => {
-    const out = await vscode.window.withProgress(
-      { location: vscode.ProgressLocation.Notification, title: `${verb} ${scope.label} from ${conn.profile.name}`, cancellable: true },
-      (progress, token) => {
-        const ac = new AbortController();
-        token.onCancellationRequested(() => ac.abort());
-        progress.report({ message: `0/${names.length}` });
-        return fetchFilesFromRobot(s, scope.marker, conn, names, {
-          onFile: (done, total, name) => progress.report({ increment: 100 / total, message: `${done}/${total} · ${name}` }),
-          isCancelled: () => token.isCancellationRequested,
-          signal: ac.signal,
+  const result = await withContainerLock(scope.marker, () => live.withTransfer(conn.profile.name,
+    { kind: pull ? 'pull' : 'fetch', label: `${verb} ${scope.label} → ${conn.profile.name}` },
+    async (signal, item) => {
+      const out = await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `${verb} ${scope.label} from ${conn.profile.name}`, cancellable: true },
+        (progress, token) => {
+          const ac = new AbortController();
+          token.onCancellationRequested(() => ac.abort());
+          signal.addEventListener('abort', () => ac.abort(), { once: true });
+          progress.report({ message: `0/${names.length}` });
+          return fetchFilesFromRobot(s, scope.marker, conn, names, {
+            onFile: (done, total, name) => { item.report(`${done}/${total} · ${name}`, done / total); progress.report({ increment: 100 / total, message: `${done}/${total} · ${name}` }); },
+            isCancelled: () => token.isCancellationRequested || signal.aborted,
+            signal: ac.signal,
+          }, listing);
         });
-      });
-    let written = 0;
-    if (pull) {
-      const targets = names.filter(n => !isCompiledProgram(n) && local.paths.has(n.toUpperCase()));
-      if (targets.length) await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: `Writing ${targets.length} file(s) under "${scope.label}"`, cancellable: true },
-        async (progress, token) => {
-          for (const name of targets) {
-            if (token.isCancellationRequested) break;
-            const dest = local.paths.get(name.toUpperCase());
-            if (dest === undefined) continue;
-            const snap = snapshotCopy(s, scope.marker, name);
-            if (snap === undefined) continue;
-            try { await writeWorkingCopy(vscode.Uri.file(dest), snap, '\n'); written++; } catch { /* the snapshot still advanced */ }
-            progress.report({ increment: 100 / targets.length, message: `${written}/${targets.length} · ${name}` });
-          }
-        });
-    }
-    return { outcome: out, pulled: written };
-  }));
+      let written = 0;
+      if (pull) {
+        const targets = names.filter(n => !isCompiledProgram(n) && local.paths.has(n.toUpperCase()));
+        if (targets.length) await vscode.window.withProgress(
+          { location: vscode.ProgressLocation.Notification, title: `Writing ${targets.length} file(s) under "${scope.label}"`, cancellable: true },
+          async (progress, token) => {
+            for (const name of targets) {
+              if (token.isCancellationRequested || signal.aborted) break;
+              const dest = local.paths.get(name.toUpperCase());
+              if (dest === undefined) continue;
+              const snap = snapshotCopy(s, scope.marker, name);
+              if (snap === undefined) continue;
+              try { await writeWorkingCopy(vscode.Uri.file(dest), snap, '\n'); written++; } catch { /* the snapshot still advanced */ }
+              progress.report({ increment: 100 / targets.length, message: `${written}/${targets.length} · ${name}` });
+            }
+          });
+      }
+      return { outcome: out, pulled: written };
+    }));
+  if (!result) { vscode.window.setStatusBarMessage('$(circle-slash) Folder operation removed from the queue', 5000); return; }
+  const { outcome, pulled } = result;
   await refreshAfterSync(s);
   const bits = [`${outcome.ok} file${outcome.ok === 1 ? '' : 's'} fetched`];
   if (outcome.changed) bits.push(`${outcome.changed} changed`);
+  if (outcome.unchanged) bits.push(`${outcome.unchanged} unchanged`);
   if (pull) bits.push(`${pulled} written`);
   if (outcome.failed) bits.push(`${outcome.failed} failed`);
-  vscode.window.setStatusBarMessage(`$(cloud-download) ${scope.label} · ${bits.join(' · ')} · ${conn.profile.name}`, 8000);
-  s.output.appendLine(`[RUKUS] ${pull ? 'pull' : 'fetch'} ${scope.label} from ${conn.profile.name}: ${bits.join(', ')}${outcome.errors.length ? `\n  ${outcome.errors.join('\n  ')}` : ''}`);
+  const proto = (outcome.protocol ?? 'ftp').toUpperCase();
+  vscode.window.setStatusBarMessage(`$(cloud-download) ${scope.label} over ${proto} · ${bits.join(' · ')} · ${conn.profile.name}`, 8000);
+  s.output.appendLine(`[RUKUS] ${pull ? 'pull' : 'fetch'} ${scope.label} from ${conn.profile.name} over ${proto}: ${bits.join(', ')}${outcome.errors.length ? `\n  ${outcome.errors.join('\n  ')}` : ''}`);
   if (outcome.failed) void vscode.window.showWarningMessage(`${outcome.failed} file(s) could not be read from ${conn.profile.name}. See the RUKUS Robotic Extensions output.`, 'Open Output').then(p => { if (p) s.output.show(true); });
 }
 
@@ -429,11 +465,15 @@ async function fetchCompareAllCommand(s: Services, arg?: unknown): Promise<void>
   if (!working.length) { vscode.window.showInformationMessage(`No working programs for ${marker.name} to compare.`); return; }
   const byName = new Map(working.map(p => [fileNameForUri(s, p.uri), p]));
   let compared = 0, differs = 0, failed = 0;
-  await withContainerLock(marker, () => live.withTransfer(conn.profile.name, () => vscode.window.withProgress(
+  let proto: 'ftp' | 'http' | undefined;
+  await withContainerLock(marker, () => live.withTransfer(conn.profile.name,
+    { kind: 'compare', label: `Compare ${working.length} programs with ${conn.profile.name}` },
+    (signal, item) => vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: `Comparing ${working.length} programs with ${conn.profile.name}`, cancellable: true },
     (progress, token) => {
       const ac = new AbortController();
       token.onCancellationRequested(() => ac.abort());
+      signal.addEventListener('abort', () => ac.abort(), { once: true });
       return new Promise<void>(resolve => {
         void live.readBinaryMany(conn.profile, [...byName.keys()], conn.profile.device, (name, result) => {
         const info = byName.get(name);
@@ -450,14 +490,15 @@ async function fetchCompareAllCommand(s: Services, arg?: unknown): Promise<void>
         compared++;
         if (!d.same) differs++;
         noteRobotCompare(info.uri.fsPath, { differs: !d.same, metadataOnly: d.metadataOnly, changed: d.changed + d.added + d.deleted });
+        item.report(`${compared}/${byName.size} · ${name}`, compared / byName.size);
         progress.report({ message: `${compared}/${byName.size}` });
-      }, () => token.isCancellationRequested, ac.signal).then(() => resolve(), () => resolve());
+      }, () => token.isCancellationRequested || signal.aborted, ac.signal).then(p => { proto = p; resolve(); }, () => resolve());
       });
     })));
   comparedChanged.fire();
   const bits = [`${compared} compared`, differs ? `${differs} differ` : 'all match'];
   if (failed) bits.push(`${failed} failed`);
-  vscode.window.setStatusBarMessage(`$(sync) ${marker.name}: ${bits.join(' · ')}`, 8000);
+  vscode.window.setStatusBarMessage(`$(sync) ${marker.name} over ${(proto ?? 'ftp').toUpperCase()}: ${bits.join(' · ')}`, 8000);
   if (failed) void vscode.window.showWarningMessage(`${failed} program(s) could not be read from ${conn.profile.name}. See the RUKUS Robotic Extensions output.`, 'Open Output').then(p => { if (p) s.output.show(true); });
 }
 
@@ -470,19 +511,25 @@ async function pullFileCommand(s: Services, arg?: unknown): Promise<void> {
   if (!uri || uri.scheme !== 'file') { vscode.window.showInformationMessage('There is no working copy of that file to overwrite.'); return; }
   const conn = await robotForMarker(s, target.marker);
   if (!conn) return;
-  const ok = await withContainerLock(target.marker, async () => {
+  const live = s.live;
+  if (!live) return;
+  let proto: 'ftp' | 'http' | undefined;
+  const ok = await withContainerLock(target.marker, () => live.withTransfer(conn.profile.name,
+    { kind: 'pull', label: `Pull ${target.fileName} → ${conn.profile.name}`, file: target.fileName },
+    async () => {
     const res = await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: `Pulling ${target.fileName} from ${conn.profile.name}` },
       () => fetchFileFromRobot(s, target.marker, conn, target.fileName!));
     if (!res.ok) { vscode.window.showWarningMessage(`Could not read ${target.fileName} from ${conn.profile.name}: ${res.error ?? 'not on the controller'}`); return false; }
+    proto = res.protocol;
     const snap = snapshotCopy(s, target.marker, target.fileName!);
     if (snap === undefined) { vscode.window.showWarningMessage(`The snapshot has no copy of ${target.fileName}.`); return false; }
     await writeWorkingCopy(uri, snap, '\n');
     return true;
-  });
+  }));
   if (!ok) return;
-  await refreshAfterSync(s);
-  vscode.window.setStatusBarMessage(`$(arrow-down) ${path.basename(uri.fsPath)} replaced with the snapshot copy from ${conn.profile.name} · Ctrl+Z undoes it`, 8000);
+  await refreshAfterSync(s, snapshotPathsFor(target.marker, target.fileName));
+  vscode.window.setStatusBarMessage(`$(arrow-down) ${path.basename(uri.fsPath)} replaced with the snapshot copy from ${conn.profile.name} over ${(proto ?? 'ftp').toUpperCase()} · Ctrl+Z undoes it`, 8000);
 }
 
 async function revertFileCommand(s: Services, arg?: unknown): Promise<void> {
@@ -545,7 +592,7 @@ async function pullToWorkingCommand(s: Services, arg?: unknown): Promise<void> {
     void showRecoverableError(`Could not pull ${path.basename(src)} into the working folders: ${e instanceof Error ? e.message : String(e)}`, s.output, () => pullToWorkingCommand(s, arg));
     return;
   }
-  await refreshAfterSync(s);
+  await refreshAfterSync(s, [dest]);
   suppressSyncPrompt(vscode.Uri.file(dest));
   await vscode.window.showTextDocument(vscode.Uri.file(dest), { preview: false });
   vscode.window.setStatusBarMessage(`$(cloud-download) ${path.basename(dest)} pulled from the snapshot into ${path.basename(path.dirname(dest))}`, 6000);
@@ -565,17 +612,21 @@ async function compareFileCommand(s: Services, arg?: unknown): Promise<void> {
   const uri = target.workingUri ?? argUri(arg);
   if (!uri || uri.scheme !== 'file') { vscode.window.showInformationMessage('There is no working copy of that file to compare.'); return; }
   const conn = connectedRobotFor(s, target.marker);
-  if (conn) {
+  if (conn && s.live) {
+    const live = s.live;
     const pick = await vscode.window.showInformationMessage(
       `Update the snapshot of ${target.fileName} from ${conn.profile.name} before comparing?`,
       'Update & Compare', 'Compare Only');
     if (!pick) return;
     if (pick === 'Update & Compare') {
-      const res = await withContainerLock(target.marker, () => vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: `Fetching ${target.fileName} from ${conn.profile.name}` },
-        () => fetchFileFromRobot(s, target.marker, conn, target.fileName!)));
+      const res = await withContainerLock(target.marker, () => live.withTransfer(conn.profile.name,
+        { kind: 'compare', label: `Fetch ${target.fileName} (compare) → ${conn.profile.name}`, file: target.fileName },
+        () => vscode.window.withProgress(
+          { location: vscode.ProgressLocation.Notification, title: `Fetching ${target.fileName} from ${conn.profile.name}` },
+          () => fetchFileFromRobot(s, target.marker, conn, target.fileName!))));
+      if (!res) { await vscode.commands.executeCommand('robotCode.sync.diffOpen', uri); return; }
       if (!res.ok) vscode.window.showWarningMessage(`Could not read ${target.fileName} from ${conn.profile.name}: ${res.error ?? 'not on the controller'}. Comparing against the current snapshot.`);
-      else await refreshAfterSync(s);
+      else await refreshAfterSync(s, snapshotPathsFor(target.marker, target.fileName));
     }
   }
   await vscode.commands.executeCommand('robotCode.sync.diffOpen', uri);
@@ -741,7 +792,7 @@ export function registerSyncOnOpen(ctx: vscode.ExtensionContext, s: Services): v
       { location: vscode.ProgressLocation.Notification, title: `Fetching ${name} from ${conn.profile.name}` },
       () => fetchFileFromRobot(s, marker, conn, fileNameForUri(s, ed.document.uri))));
     if (!res.ok) { vscode.window.showWarningMessage(`Could not fetch ${name} from ${conn.profile.name}: ${res.error ?? 'not on the controller'}`); return; }
-    await refreshAfterSync(s);
+    await refreshAfterSync(s, snapshotPathsFor(marker, fileNameForUri(s, ed.document.uri)));
     vscode.window.setStatusBarMessage(`$(cloud-download) Snapshot: ${name} fetched${res.changed ? ' (changed)' : ''} from ${conn.profile.name}`, 6000);
   };
   ctx.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(() => { void offer(); }));

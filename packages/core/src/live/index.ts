@@ -29,10 +29,10 @@ import { brandForFile } from '../brand';
 import type { FetchKind } from './types';
 
 export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotManager {
-  const robots = new RobotManager(ctx, s.output);
+  const robots = new RobotManager(ctx, s.output, s.transfers);
   const fs = new RobotFileSystem(robots);
-  const tree = new RobotsTree(robots);
-  const treeView = vscode.window.createTreeView('robotCode.robots', { treeDataProvider: tree, showCollapseAll: true });
+  const tree = new RobotsTree(robots, s.containers);
+  const treeView = vscode.window.createTreeView('robotCode.cell', { treeDataProvider: tree, showCollapseAll: true });
   ctx.subscriptions.push(robots, treeView,
     vscode.workspace.registerFileSystemProvider(FANUC_SCHEME, fs, { isCaseSensitive: false, isReadonly: true }));
   // "1 of 2 live" on the section header
@@ -114,7 +114,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     const name = await pickRobot(nameOf(node), true);
     if (!name) return;
     const failed = await vscode.window.withProgress(
-      { location: { viewId: 'robotCode.robots' }, title: `Reading ${what} from ${name}` },
+      { location: { viewId: 'robotCode.cell' }, title: `Reading ${what} from ${name}` },
       () => robots.fetch(name, kinds));
     if (failed.length) {
       const pick = await vscode.window.showWarningMessage(
@@ -145,7 +145,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
 
     if (kinds.length) {
       const failed = await vscode.window.withProgress(
-        { location: { viewId: 'robotCode.robots' }, title: `Reading ${name}` },
+        { location: { viewId: 'robotCode.cell' }, title: `Reading ${name}` },
         () => robots.fetch(name, kinds));
       if (failed.length) robots.log(name, `on connect, could not read ${failed.map(k => FETCH_UNITS[k].file).join(', ')}`);
     }
@@ -241,7 +241,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     const name = await pickRobot(nameOf(node));
     if (!name) return;
     try {
-      await vscode.window.withProgress({ location: { viewId: 'robotCode.robots' }, title: `Connecting to ${name}` }, () => robots.connect(name));
+      await vscode.window.withProgress({ location: { viewId: 'robotCode.cell' }, title: `Connecting to ${name}` }, () => robots.connect(name));
       vscode.window.setStatusBarMessage(`$(plug) ${name} connected`, 5000);
     } catch (e: any) {
       if (e instanceof WebServerUnreachableError) {
@@ -253,7 +253,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
         if (pick === 'Switch to FTP & Connect') {
           try {
             await robots.setUseFtp(name, true);
-            await vscode.window.withProgress({ location: { viewId: 'robotCode.robots' }, title: `Connecting to ${name} over FTP` }, () => robots.connect(name));
+            await vscode.window.withProgress({ location: { viewId: 'robotCode.cell' }, title: `Connecting to ${name} over FTP` }, () => robots.connect(name));
             vscode.window.setStatusBarMessage(`$(plug) ${name} connected over FTP`, 5000);
           } catch (e2: any) {
             const next = await vscode.window.showErrorMessage(`Could not connect to ${name} over FTP: ${e2?.message ?? e2}`, 'Fix connection…');
@@ -306,7 +306,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     const name = await pickRobot(nameOf(node), true);
     if (!name) return;
     const error = await vscode.window.withProgress(
-      { location: { viewId: 'robotCode.robots' }, title: `Listing ${robots.get(name)!.profile.device} on ${name}` },
+      { location: { viewId: 'robotCode.cell' }, title: `Listing ${robots.get(name)!.profile.device} on ${name}` },
       () => tree.loadFiles(name));
     if (error) robots.log(name, `listing failed: ${error}`);
   });
@@ -338,7 +338,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
       if (pick === 'Read everything') await get(name, FETCH_KINDS, 'everything');
       return;
     }
-    await vscode.window.withProgress({ location: { viewId: 'robotCode.robots' }, title: `Refreshing ${name}` }, () => robots.refresh(name));
+    await vscode.window.withProgress({ location: { viewId: 'robotCode.cell' }, title: `Refreshing ${name}` }, () => robots.refresh(name));
     // Re-list only if it had been listed. Refresh means "the things I am looking at, again",
     // so it must not turn into the one command that quietly adds a request.
     if (tree.hasFiles(name)) await tree.loadFiles(name);
@@ -360,7 +360,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     vscode.window.setStatusBarMessage(`${name}: auto-refresh ${on ? 'on' : 'off'}`, 3000);
   });
 
-  reg('robotCode.live.focusView', () => vscode.commands.executeCommand('robotCode.robots.focus'));
+  reg('robotCode.live.focusView', () => vscode.commands.executeCommand('robotCode.cell.focus'));
 
   // ---- hand-off to RUKUS ----
   const rukusFor = (node: any, route: 'monitor' | 'alarms' | 'backup' | 'home') => async () => {
@@ -482,7 +482,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     const dest = place ? vscode.Uri.file(place.archiveFolder) : vscode.Uri.joinPath(picked![0], `${name}_${stamp}`);
     await vscode.workspace.fs.createDirectory(dest);
     let files: { name: string; isDir: boolean }[];
-    try { files = (await robots.listFiles(c.profile)).filter(f => !f.isDir && match.test(f.name)); }
+    try { files = (await robots.listFiles(c.profile, c.profile.device, undefined, { bulk: true })).filter(f => !f.isDir && match.test(f.name)); }
     catch (e: any) { void showRecoverableError(`Could not list ${c.profile.device} on ${name}: ${e?.message ?? e}. Set an FTP user for listing.`, s.output); return; }
     if (!files.length) { vscode.window.showInformationMessage(`Nothing on ${name} ${c.profile.device} matches ${pattern}.`); return; }
     let ok = 0, failed = 0;
@@ -490,20 +490,25 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     const started = Date.now();
     // One session for the lot - the mget shape. Per-file sessions were the whole reason a
     // backup crawled: a controller takes longer to accept a login than to send a file.
-    await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Backing up ${name}`, cancellable: true }, async (progress, token) => {
-      const writes: Thenable<void>[] = [];
-      try {
-        await robots.readBinaryMany(c.profile, files.map(f => f.name), c.profile.device, (fname, result, i) => {
-          progress.report({ message: `${fname} (${i + 1}/${files.length})`, increment: 100 / files.length });
-          if ('data' in result) { ok++; writes.push(vscode.workspace.fs.writeFile(vscode.Uri.joinPath(dest, fname.toLowerCase()), result.data).then(undefined, e => { ok--; failed++; failedNames.push(fname); robots.log(name, `backup: could not save ${fname}: ${e?.message ?? e}`); })); }
-          else { failed++; failedNames.push(fname); robots.log(name, `backup: ${fname} failed: ${result.error}`); }
-        }, () => token.isCancellationRequested);
-      } catch (e: any) {
-        robots.log(name, `backup: session ended early: ${e?.message ?? e}`);
-        vscode.window.showWarningMessage(`The connection to ${name} dropped part-way through: ${e?.message ?? e}. ${ok} file(s) were saved.`);
-      }
-      await Promise.all(writes);
+    const ran = await robots.withTransfer(name, { kind: 'backup', label: `Backup ${name}` }, async (signal, item) => {
+      await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Backing up ${name}`, cancellable: true }, async (progress, token) => {
+        const writes: Thenable<void>[] = [];
+        try {
+          await robots.readBinaryMany(c.profile, files.map(f => f.name), c.profile.device, (fname, result, i) => {
+            item.report(`${fname} (${i + 1}/${files.length})`, (i + 1) / files.length);
+            progress.report({ message: `${fname} (${i + 1}/${files.length})`, increment: 100 / files.length });
+            if ('data' in result) { ok++; writes.push(vscode.workspace.fs.writeFile(vscode.Uri.joinPath(dest, fname.toLowerCase()), result.data).then(undefined, e => { ok--; failed++; failedNames.push(fname); robots.log(name, `backup: could not save ${fname}: ${e?.message ?? e}`); })); }
+            else { failed++; failedNames.push(fname); robots.log(name, `backup: ${fname} failed: ${result.error}`); }
+          }, () => token.isCancellationRequested || signal.aborted);
+        } catch (e: any) {
+          robots.log(name, `backup: session ended early: ${e?.message ?? e}`);
+          vscode.window.showWarningMessage(`The connection to ${name} dropped part-way through: ${e?.message ?? e}. ${ok} file(s) were saved.`);
+        }
+        await Promise.all(writes);
+      });
+      return true;
     });
+    if (ran === undefined) { vscode.window.setStatusBarMessage('$(circle-slash) Backup removed from the queue', 5000); return; }
     robots.log(name, `backup to ${dest.fsPath}: ${ok} files, ${failed} failed, ${pattern} over ${c.profile.useFtp ? 'FTP (one session)' : 'HTTP'} in ${((Date.now() - started) / 1000).toFixed(1)} s`);
     if (place && rukusCluster) {
       const manifest = backupManifest({
@@ -531,6 +536,10 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     const c = robots.get(name)!;
     vscode.workspace.updateWorkspaceFolders(vscode.workspace.workspaceFolders?.length ?? 0, 0, { uri: robotUri(name, c.profile.device), name: `${name} ${c.profile.device}` });
   });
+
+  // hidden: measured transfers (protocol, session, login and transfer time), for the
+  // transfer-optimization work and for answering "why was that push slow?".
+  reg('robotCode.live._transferStats', () => robots.transferSamples());
 
   // hidden: state dump for tests / troubleshooting
   reg('robotCode.live._state', () => robots.list().map(c => ({

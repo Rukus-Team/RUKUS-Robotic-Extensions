@@ -8,6 +8,17 @@ export function isNoAnswer(e: unknown): boolean {
   return /\b(timed? ?out|did not answer|not answering|socket hang up)\b/i.test((e as Error | undefined)?.message ?? '');
 }
 
+/** FTP 550 / HTTP 404 while reading: the controller has no file of that name. */
+export function isMissingOnRobotError(message: string): boolean {
+  return /(?:RETR|SIZE) failed:\s*550\b/i.test(message) || /\bHTTP 404\b/i.test(message);
+}
+
+/** The FTP login was refused (530): the port answers, but anonymous/blank did not get in. */
+export function isFtpAuthFailure(e: unknown): boolean {
+  const message = (e as Error | undefined)?.message ?? String(e);
+  return /FTP login failed|\b530\b/i.test(message);
+}
+
 /**
  * The likely cause of a failed robot request, in words a cell engineer can act on. Shared by
  * the robot form's Test button, Connect, and the push messages, so a robot that cannot be

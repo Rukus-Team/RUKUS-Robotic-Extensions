@@ -12,10 +12,13 @@ import {
   snapshotFileTimes, snapshotFileAge, snapshotRelKey,
   pushSnapshotFileToHistory, pruneSnapshotHistory, listSnapshotHistory,
   findSnapshotProgram, findSnapshotSource, readSnapshotProgram,
-  isSourceProgram, isCompiledProgram, pairedProgramName,
-  isSnapshotDataFile, isSnapshotProgramFile, SNAPSHOT_HISTORY_DIR, ROBOT_DIR,
+  isSourceProgram, isCompiledProgram, pairedProgramName, shouldFetchCompiledPartner,
+  isSnapshotDataFile, isSnapshotProgramFile, roundTripCompare,
+  recordPushBackup, readPushBackup, pushBackupPath,
+  ROBOT_GITIGNORE_LINES, SNAPSHOT_HISTORY_DIR, ROBOT_DIR,
   type SnapshotProvenance,
 } from '@core/robotContainers';
+import { isMissingOnRobotError } from '@core/live/connectionHints';
 
 export async function run(check: (cond: unknown, msg: string) => void): Promise<void> {
   // ---- verbatim compare ----
@@ -34,6 +37,14 @@ export async function run(check: (cond: unknown, msg: string) => void): Promise<
   check(!md.same && md.metadataOnly === true, `verbatimCompare: only a DATE line changed -> still a conflict, labelled metadata-only (${JSON.stringify(md)})`);
   check(!metadataOnlyDiff('a\nb', 'a\nc'), 'metadataOnlyDiff: a real code change is not metadata');
   check(metadataOnlyDiff('DATE = 1', 'DATE = 2'), 'metadataOnlyDiff: a DATE change is metadata');
+  // The push gate is normalized: line numbers, DATE and controller stamps are not a conflict.
+  const tp = (n: number) => `/PROG T\n/MN\n  ${n}: R[1]=1 ;\n/END\n`;
+  check(roundTripCompare(tp(1), tp(2), 'tp').equal, 'roundTripCompare: a renumber is not a gate conflict');
+  check(roundTripCompare(meta, metaChanged, 'tp').equal, 'roundTripCompare: DATE-only is not a gate conflict');
+  check(!roundTripCompare(tp(1), '/PROG T\n/MN\n  1: R[2]=1 ;\n/END\n', 'tp').equal, 'roundTripCompare: a real change still conflicts');
+  check(isMissingOnRobotError('FTP RETR failed: 550 No such file'), 'isMissingOnRobotError: FTP 550 means the program is not there');
+  check(isMissingOnRobotError('HTTP 404 for MD:MAIN.LS'), 'isMissingOnRobotError: HTTP 404 means the program is not there');
+  check(!isMissingOnRobotError('timeout after 30000 ms'), 'isMissingOnRobotError: a timeout is not "not there"');
 
   // ---- classifications ----
   check(isSnapshotDataFile('NUMREG.VA') && isSnapshotDataFile('iostate.dg') && isSnapshotDataFile('cell.io') && isSnapshotDataFile('sysframe.va'), 'isSnapshotDataFile: registers, iostate, .io and frames are data');
@@ -93,6 +104,18 @@ export async function run(check: (cond: unknown, msg: string) => void): Promise<
     check(listSnapshotHistory(tmp, 'MISSING.LS').length === 0, 'listSnapshotHistory: a file with no history is an empty list');
     check(listSnapshotHistory(tmp, 'OTHER.LS', 'PROG.LS').length === 1, 'listSnapshotHistory: the fallback name matches a flat-named version');
 
+    // ---- the pre-push copy: one file, overwritten each push ----
+    fs.writeFileSync(path.join(tmp, ROBOT_DIR, '.gitignore'), 'my-own-line/\n');
+    const written = recordPushBackup(tmp, 'PROG.LS', 'BEFORE-PUSH', { robot: 'R1', host: '1.2.3.4', device: 'MD:' });
+    const gi = fs.readFileSync(path.join(tmp, ROBOT_DIR, '.gitignore'), 'utf8');
+    check(gi.includes('push-backup/') && gi.includes('my-own-line/'), `recordPushBackup: push-backup/ is appended to an existing .gitignore (${gi.replace(/\n/g, ' | ')})`);
+    check(fs.existsSync(written) && fs.existsSync(path.join(pushBackupPath(tmp), 'push-backup.json')), 'recordPushBackup: writes the file and one manifest');
+    const first = readPushBackup(tmp);
+    check(first?.text === 'BEFORE-PUSH' && first?.meta.robot === 'R1' && first?.meta.file === 'PROG.LS' && /^[0-9a-f]{64}$/.test(first?.meta.sha256 ?? ''), `readPushBackup: round-trips with the hash (${JSON.stringify(first?.meta)})`);
+    recordPushBackup(tmp, 'PROG.LS', 'SECOND', { robot: 'R1', host: '1.2.3.4', device: 'MD:' });
+    check(readPushBackup(tmp)?.text === 'SECOND', 'recordPushBackup: keeps only the last push');
+    check(ROBOT_GITIGNORE_LINES.includes('push-backup/'), 'the pre-push copy is gitignored');
+
     // ---- snapshot program lookup + read (the index-free compare fallback) ----
     check(findSnapshotProgram(snap, 'PROG') === path.join(snap, 'PROG.LS'), 'findSnapshotProgram: finds PROG.LS by program name');
     check(findSnapshotProgram(snap, 'other') === path.join(snap, 'PROGS', 'OTHER.LS'), 'findSnapshotProgram: finds a nested program by name');
@@ -107,6 +130,10 @@ export async function run(check: (cond: unknown, msg: string) => void): Promise<
     check(pairedProgramName('NAME.LS') === 'NAME.TP' && pairedProgramName('name.tp') === 'name.LS', `pairedProgramName: LS<->TP either way (${pairedProgramName('name.tp')})`);
     check(pairedProgramName('NAME.KL') === 'NAME.PC' && pairedProgramName('NAME.PC') === 'NAME.KL', 'pairedProgramName: KL<->PC either way');
     check(pairedProgramName('NUMREG.VA') === undefined && pairedProgramName('notes.txt') === undefined, 'pairedProgramName: a non-program has no pair');
+  check(!shouldFetchCompiledPartner('PROG.LS', false) && !shouldFetchCompiledPartner('PROG.KL', false), 'shouldFetchCompiledPartner: off skips the compiled partner on a source fetch/pull');
+  check(shouldFetchCompiledPartner('PROG.LS', true) && shouldFetchCompiledPartner('PROG.KL', true), 'shouldFetchCompiledPartner: on keeps the pair for a source');
+  check(shouldFetchCompiledPartner('PROG.TP', false) && shouldFetchCompiledPartner('PROG.PC', false), 'shouldFetchCompiledPartner: a compiled source still pulls its editable partner');
+  check(shouldFetchCompiledPartner('NUMREG.VA', false), 'shouldFetchCompiledPartner: a data file has no compiled partner to skip');
     fs.writeFileSync(path.join(snap, 'COMPILED.TP'), Buffer.from([0xfe, 0xef, 0x00, 0x01]));
     check(findSnapshotProgram(snap, 'COMPILED') === path.join(snap, 'COMPILED.TP'), 'findSnapshotProgram: finds a compiled-only program');
     check(findSnapshotSource(snap, 'COMPILED') === undefined, 'findSnapshotSource: a compiled-only program has no source');

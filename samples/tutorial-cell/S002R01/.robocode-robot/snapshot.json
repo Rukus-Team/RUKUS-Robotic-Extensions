@@ -1,0 +1,6 @@
+{
+  "date": "2026-10-01T09:00:00Z",
+  "source": { "kind": "backup", "path": "tutorial/S002R01" },
+  "fileCount": 2,
+  "controller": { "name": "S002R01", "version": "V9.40", "fNumber": "F000001" }
+}

@@ -371,6 +371,10 @@ Everything here uses channels a stock R-30iB has: FTP (read/write files), the bu
 
 ## 4. Open questions / notes
 
+- [x] **Transfer speed**: a push is one FTP login (gate read, write, read-back, compiled partner); bulk transfers prefer FTP (`transfers.preferFtp`) with an HTTP fallback for reads, and a folder pull keeps its listing on the same FTP session; reads size-scale their timeout (HTTP included); a fetch skips files whose size/mtime match (`containers.unchangedCheck`); a visible queue shows the real step and can cancel, and the push-conflict update indexes one file instead of the workspace; the FTP heartbeat is a bare TCP check; `fanuc://` `stat` uses the listing instead of downloading.
+- [ ] **Dedicated Transfers panel** (experimental, future GitHub issue): a `robotCode.transfers` view with Active/Queued/Recent, per-item technical log, cancel/filter/clear, reusing the queue. The status bar item and QuickPick are the current UI.
+- [ ] **Isolated heartbeat channel** (future): move the heartbeat off the transfer path so it can never contend with a push; for now it is paused and marked `$(clock)` during a transfer.
+
 - [ ] Low-power mode (single setting) instead of a separate lite build: slower poll, no inlay hints/CodeLens, skip dated backup folders when indexing. Only if a weak PC actually struggles (Sam, 2026-09-12).
 
 - [x] Robot Connections form with Test connection, hints, name suggestions from backups (0.4.1) — not yet eyeballed in the UI; Sam to test.

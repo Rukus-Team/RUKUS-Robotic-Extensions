@@ -19,11 +19,14 @@ import { robotUri } from './fs';
 import type { RemoteFile, FetchKind } from './types';
 import { config } from '../util';
 import { filesToShow } from './fileFilter';
+import type { ContainerIndex } from '../containerIndex';
+import type { CellMarker } from '../robotContainers';
 
 type SectionKind = 'controller' | 'position' | 'tasks' | 'registers' | 'ualarms' | 'io' | 'files' | 'rukus' | 'errors';
 type RegKind = 'R' | 'PR' | 'SR';
 
 type Node =
+  | { t: 'cell'; cell: CellMarker }
   | { t: 'group'; label: string; scope: 'workspace' | 'user' }
   | { t: 'robot'; c: RobotConnection }
   | { t: 'info'; c: RobotConnection; label: string; desc?: string; icon: string; color?: string; tooltip?: string; cmd?: vscode.Command }
@@ -89,8 +92,15 @@ export class RobotsTree implements vscode.TreeDataProvider<Node> {
   private readonly _onDidChange = new vscode.EventEmitter<Node | undefined>();
   readonly onDidChangeTreeData = this._onDidChange.event;
   private fileCache = new Map<string, { at: number; files: RemoteFile[]; error?: string }>();
-  constructor(private robots: RobotManager) {
+  constructor(private robots: RobotManager, private containers: ContainerIndex) {
     robots.onDidChange(() => this._onDidChange.fire(undefined));
+    containers.onDidChange(() => this._onDidChange.fire(undefined));
+  }
+
+  /** the connections a cell declares by controller name, matched case-insensitively */
+  private robotsInCell(cell: CellMarker): RobotConnection[] {
+    const names = new Set(Object.keys(cell.controllers).map(n => n.toLowerCase()));
+    return this.robots.list().filter(c => names.has(c.profile.name.toLowerCase()));
   }
 
   /** forget the listing so the Files panel goes back to "not read yet" */
@@ -127,6 +137,28 @@ export class RobotsTree implements vscode.TreeDataProvider<Node> {
   async getChildren(el?: Node): Promise<Node[]> {
     if (!el) {
       const list = this.robots.list();
+      // Cells first: a cell is the workspace's own unit, and a robot belongs to one by the
+      // controller name its profile carries. Anything a cell does not claim falls back to
+      // the old workspace/user split, so no connection ever disappears from the tree.
+      if (this.containers.cells.length > 0) {
+        const out: Node[] = [...this.containers.cells]
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(cell => ({ t: 'cell' as const, cell }));
+        const claimed = new Set<string>();
+        for (const cell of this.containers.cells) for (const n of Object.keys(cell.controllers)) claimed.add(n.toLowerCase());
+        const loose = list.filter(c => !claimed.has(c.profile.name.toLowerCase()));
+        const workspace = loose.filter(c => c.source === 'workspace');
+        const user = loose.filter(c => c.source === 'user');
+        if (workspace.length) {
+          out.push({ t: 'group', label: 'Unassigned', scope: 'workspace' });
+          out.push(...workspace.map(c => ({ t: 'robot' as const, c })));
+        }
+        if (user.length) {
+          out.push({ t: 'group', label: 'User settings', scope: 'user' });
+          out.push(...user.map(c => ({ t: 'robot' as const, c })));
+        }
+        return out;
+      }
       const workspace = list.filter(c => c.source === 'workspace');
       const user = list.filter(c => c.source === 'user');
       const out: Node[] = [];
@@ -140,6 +172,7 @@ export class RobotsTree implements vscode.TreeDataProvider<Node> {
       }
       return out;
     }
+    if (el.t === 'cell') return this.robotsInCell(el.cell).map(c => ({ t: 'robot' as const, c }));
     if (el.t === 'robot') {
       const c = el.c;
       const p = c.profile;
@@ -253,6 +286,17 @@ export class RobotsTree implements vscode.TreeDataProvider<Node> {
 
   getTreeItem(el: Node): vscode.TreeItem {
     switch (el.t) {
+      case 'cell': {
+        const n = this.robotsInCell(el.cell).length;
+        const it = new vscode.TreeItem(el.cell.name, n ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
+        it.description = `${n} robot${n === 1 ? '' : 's'}`;
+        it.iconPath = icon('home');
+        it.contextValue = 'cell';
+        it.command = { command: 'robotCode.cell.open', title: 'Open Cell Page', arguments: [el.cell.root] };
+        it.tooltip = new vscode.MarkdownString(
+          `**${el.cell.name}**\n\n${el.cell.root}${el.cell.rukus?.cluster ? `\n\nRUKUS cluster **${el.cell.rukus.cluster}**` : ''}`);
+        return it;
+      }
       case 'group': {
         const it = new vscode.TreeItem(el.label, vscode.TreeItemCollapsibleState.None);
         it.iconPath = icon(el.scope === 'workspace' ? 'folder' : 'account', 'descriptionForeground');

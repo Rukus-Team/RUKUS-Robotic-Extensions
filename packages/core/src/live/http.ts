@@ -6,6 +6,7 @@
 import * as http from 'node:http';
 import type { RemoteFile } from './types';
 import { unwrapControllerHtml, isTextFile } from './html';
+import { transferTimeout } from './ftp';
 
 export interface HttpOptions { host: string; port: number; timeoutMs?: number }
 
@@ -40,15 +41,17 @@ export function httpGet(opts: HttpOptions, path: string, signal?: AbortSignal): 
   });
 }
 
-export async function httpGetText(opts: HttpOptions, device: string, file: string, signal?: AbortSignal): Promise<string> {
-  const r = await httpGet(opts, deviceToPath(device) + file, signal);
+export async function httpGetText(opts: HttpOptions, device: string, file: string, signal?: AbortSignal, sizeHint?: number): Promise<string> {
+  // A flat 8 s was enough for a header and too short for a large program: scale the whole
+  // request like an FTP data transfer, with 30 s as the floor.
+  const r = await httpGet({ ...opts, timeoutMs: opts.timeoutMs ?? transferTimeout(8000, sizeHint ?? 0) }, deviceToPath(device) + file, signal);
   if (r.status !== 200) throw new Error(`HTTP ${r.status} for ${device}${file}`);
   return unwrapControllerHtml(r.body.toString('latin1'));
 }
 
 /** Raw bytes; text files are unwrapped from the web server's HTML/<XMP> wrapper. */
-export async function httpGetBinary(opts: HttpOptions, device: string, file: string, signal?: AbortSignal): Promise<Buffer> {
-  const r = await httpGet(opts, deviceToPath(device) + file, signal);
+export async function httpGetBinary(opts: HttpOptions, device: string, file: string, signal?: AbortSignal, sizeHint?: number): Promise<Buffer> {
+  const r = await httpGet({ ...opts, timeoutMs: opts.timeoutMs ?? transferTimeout(8000, sizeHint ?? 0) }, deviceToPath(device) + file, signal);
   if (r.status !== 200) throw new Error(`HTTP ${r.status} for ${device}${file}`);
   if (isTextFile(file)) return Buffer.from(unwrapControllerHtml(r.body.toString('latin1')), 'latin1');
   return r.body;

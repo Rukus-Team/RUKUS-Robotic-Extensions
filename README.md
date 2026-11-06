@@ -30,6 +30,32 @@ This is a beta, so reports are very welcome:
 The repository is public: leave customer programs, plant names and IP addresses out of reports. A small
 made-up file that shows the problem is the most useful thing to attach.
 
+## Getting started
+
+Robot Code opens three walkthroughs on its **Get Started** page, and the empty sidebar views link
+to the ones that fit:
+
+- **Edit Robot Programs** - the editor, offline. Open a folder of `.ls` / `.kl` files, or run
+  **Robot Code: Open the Tutorial Cell** for a small two-robot cell to click through (a program
+  that differs from its snapshot, one that matches, a mistake to find, and register comments to
+  hover). Every step says what you should see.
+- **Set Up a Robot** - robot-first. Connecting to a robot is an experimental feature, off by
+  default; the first step turns it on. Robot containers work standalone.
+- **Robot Code + RUKUS** - optional, and needs the separate RUKUS app. RUKUS owns live
+  monitoring, alarm history and scheduled backups; Robot Code hands off to it.
+
+**What Can I Do Here?** opens one picker with every command, grouped by intent.
+
+### Where to go next
+
+- **How-to guides** for specific tasks - offset and move positions, convert frames, restructure a
+  program, analyse a cell, find a pendant edit, set up a cell container - are in
+  [`docs/how-to/`](docs/how-to/).
+- **Deep tutorials** (positions and frames, refactoring, analysis, the sync model, containers) are
+  a separate download from the [releases page](https://github.com/Rukus-Team/RUKUS-Robotic-Extensions/releases)
+  (`robot-code-tutorials-<version>.zip`).
+- **The map** of all four kinds of document is [`docs/README.md`](docs/README.md).
+
 ## What it does
 
 ### TP programs (`.ls`)
@@ -172,7 +198,7 @@ There is deliberately no watch mode. A watch is a poll wearing a different hat.
 
 ### RUKUS's clusters are the cells
 
-With RUKUS installed there is nothing to set up: the **RUKUS Clusters** view lists its clusters from `Documents\RUKUS` (or a portable RUKUS's data folder). Click a cluster and its backup folder becomes the workspace with the cluster's robots in the Controllers view; click another and the workspace switches. Changes made in RUKUS reach the open cell on their own. **Send Cell to RUKUS** writes the cell's controllers back into the cluster file without touching what only RUKUS knows. Backups taken here are filed where RUKUS files its own, named by RUKUS's templates, with RUKUS's manifest. Without RUKUS, **Initialize Cell Container…** sets a cell up by hand.
+With RUKUS installed there is nothing to set up: the **RUKUS Clusters** view lists its clusters from `Documents\RUKUS` (or a portable RUKUS's data folder). Click a cluster and its backup folder becomes the workspace with the cluster's robots in the **Cell** view; click another and the workspace switches. A cell can also be **linked** to a cluster (when it is initialized, or from the Cell page): only the linked cluster is listed, its robots become the cell's controllers, and each robot container inherits the cluster's IP, device and brand - with a merge confirmation when a container already exists. Changes made in RUKUS reach the open cell on their own. **Send Cell to RUKUS** writes the cell's controllers back into the cluster file without touching what only RUKUS knows. Backups taken here are filed where RUKUS files its own, named by RUKUS's templates, with RUKUS's manifest. Without RUKUS, **Initialize Cell Container…** sets a cell up by hand.
 
 ### Opens in RUKUS
 
@@ -195,7 +221,7 @@ One set of checks for TP, KAREL and ABB RAPID, in the editor, over a whole folde
 
 ### Controller data views
 
-Activity bar → **RUKUS Robotic Extensions**, six sections with a count or status on each header: **Controllers** ("1 of 2 live"; each row a status dot, model, IP and what it is running — or why it failed), **Backup** (each backup folder: date, counts, data files read, any bracket arguments the parser had to guess at), **Programs** (TP, with call/caller trees; compiled-only `.tp` dimmed; **+** starts a new one), **PC programs** (KAREL sources and `.pc`), **Macros** (the macro table, with whether each target exists), **Data** (R, PR, SR, payload schedules, I/O). One colour and one icon per kind — amber TP, blue PC, teal macro, grey data — the same in the editor's call-target tints and the status bar. The *Registers & I/O Table* command opens a filterable table with one-click "find uses" and copy-as-`R[5:Comment]`. Under a connected controller the panels are grouped *Controller*, *Device*, *RUKUS*; each is dim until read, dated once read.
+Activity bar → **RUKUS Robotic Extensions**, six sections with a count or status on each header: **Cell** ("1 of 2 live"; each row a status dot, model, IP and what it is running — or why it failed), **Backup** (each backup folder: date, counts, data files read, any bracket arguments the parser had to guess at), **Programs** (TP, with call/caller trees; compiled-only `.tp` dimmed; **+** starts a new one), **PC programs** (KAREL sources and `.pc`), **Macros** (the macro table, with whether each target exists), **Data** (R, PR, SR, payload schedules, I/O). One colour and one icon per kind — amber TP, blue PC, teal macro, grey data — the same in the editor's call-target tints and the status bar. The *Registers & I/O Table* command opens a filterable table with one-click "find uses" and copy-as-`R[5:Comment]`. Under a connected controller the panels are grouped *Controller*, *Device*, *RUKUS*; each is dim until read, dated once read.
 
 Data comes from the workspace or from folders listed in `robotCode.data.backupFolders` ("Add Controller Backup Folder…"). Point it at an *All of the above* backup; `.va` files are read directly.
 
@@ -207,10 +233,10 @@ the robot". Containers make the relationship explicit instead of inferred:
 
 ```
 cell/                          # the workspace
-  .robocode-cell/cell.json     # optional: cell name (conventions can be added later)
+  .robocode-cell/cell.json     # cell name, controllers, brand, the linked RUKUS cluster
   robot 1/
     .robocode-robot/
-      robot.json               # { "name": "S002R01", "programs": ["2_Load_LS", "5_KAREL"] }
+      robot.json               # { "name": "S002R01", "programs": ["2_Load_LS", "5_KAREL"], "brand": "fanuc" }
       snapshot.json            # when the snapshot was taken, from where, controller info
       .gitignore               # keeps snapshot/ out of git (robotCode.containers.gitignoreSnapshot)
       snapshot/                # a complete, verbatim robot backup
@@ -221,6 +247,14 @@ cell/                          # the workspace
 - **Markers partition the workspace.** Only declared program folders are indexed as
   editable programs. Archived backups and `.robot-history/` under a robot folder are
   invisible to the extension. Folders without a marker keep today's behavior exactly.
+- **Brand lives in the container.** `robot.json` says `"brand": "fanuc" | "abb"` (inferred
+  and confirmed when the container is initialized); `cell.json` aggregates it (`fanuc` /
+  `abb` / `mixed`). The loader and the side bar read these markers instead of guessing from
+  files, and an older container without one falls back to detection.
+- **The Cell page** (`Robot Code: Open Cell Page`, or the cell rung in the **Cell** view) is
+  the GUI for the whole cell: controllers, robots (initialize, reinitialize/edit, remove), the
+  RUKUS link, and the settings that enable sync and writes (**Allow Push to Robot**,
+  experimental robot connections, …), so a safety switch is not buried in Settings.
 - **The snapshot is the robot's one data source** — register comments, frames, macros and
   payloads in the working programs come from it, with no date heuristics and no guessing
   between robots. Everything is still fully offline.
@@ -233,7 +267,7 @@ cell/                          # the workspace
   terminators and `LINE_COUNT`, so a renumber-only change reads as identical and one
   inserted line shows as one line, not a cascade.
 - **Snapshots are taken on demand**: *Snapshot from Backup Folder…* copies one of your
-  dated archives wholesale, and *Snapshot from Robot…* (on the **Controllers** view and the robot
+  dated archives wholesale, and *Snapshot from Robot…* (on the **Cell** view and the robot
   page) overwrites the snapshot with everything on a connected controller. Both replace the previous
   snapshot wholesale and record provenance (`snapshot.json`: date, source, file count, controller F
   number and version). A **Fetch** on the Snapshot view is the incremental alternative: it updates
@@ -340,7 +374,7 @@ shows after an update, run *Developer: Reload Window*** - VS Code keeps icons un
 
 ## Finding things
 
-**Ctrl+Alt+H** (or the **?** on the Programs and Controllers sections) opens *What Can I Do Here?*: every feature grouped by what you are trying to do, each with its keyboard shortcut. The full shortcut table, and leader mappings for the Vim extension, are in `docs/KEYBOARD-AND-VIM.md`.
+**Ctrl+Alt+H** (or the **?** on the Programs and Cell sections) opens *What Can I Do Here?*: every feature grouped by what you are trying to do, each with its keyboard shortcut. The full shortcut table, and leader mappings for the Vim extension, are in `docs/KEYBOARD-AND-VIM.md`.
 
 ## Settings
 

@@ -11,13 +11,17 @@
  */
 import * as vscode from 'vscode';
 import { robotConnectionsEnabled } from '../experimental';
-import { httpGet, httpGetText, httpGetBinary, httpList } from './http';
-import { ftpGetText, ftpList, FtpClient } from './ftp';
+import { httpGet, httpGetText, httpGetBinary, httpList, deviceToPath } from './http';
+import type { TransferHandle, TransferKind, TransferQueue, TransferVisibility } from '../transferQueue';
+import { FtpClient } from './ftp';
 import { robotUri } from './fs';
 import { parseControllerInfo, parseCurPos, parsePrgState, parseIoState } from './parsers';
-import { isNoAnswer } from './connectionHints';
+import { isNoAnswer, isFtpAuthFailure } from './connectionHints';
+import { protocolOrder } from './protocol';
+import { config } from '../util';
+import { tcpOpen } from './netScan';
 import { FETCH_KINDS } from './types';
-import type { RobotProfile, LiveSnapshot, ConnectionState, RemoteFile, FetchKind, ControllerOptionEntry, OptionHighlight } from './types';
+import type { RobotProfile, LiveSnapshot, ConnectionState, RemoteFile, FetchKind, ControllerOptionEntry, OptionHighlight, TransferProtocol, TransferSample } from './types';
 import type { CellControllerSpec } from '../robotContainers';
 import { upsertCellController, removeCellController } from '../robotContainers';
 import { getBoundSecret, storeBoundSecret, deleteBoundSecret } from './boundSecrets';
@@ -44,6 +48,33 @@ export interface RobotTraffic {
   lastWhat?: string;
 }
 
+/**
+ * One open transport for a logical operation. A push keeps one of these for its
+ * preflight, gate, write and read-back, so the controller sees one login instead of
+ * one per step. Reads may be HTTP; writes are FTP-only.
+ */
+/** What a queued transfer calls itself in the status bar / QuickPick. */
+export interface TransferMeta {
+  kind: TransferKind;
+  label: string;
+  file?: string;
+  visibility?: TransferVisibility;
+}
+
+export interface TransferSession {
+  readonly protocol: TransferProtocol;
+  /** this session used the non-preferred transport */
+  readonly fallback: boolean;
+  readonly device: string;
+  readonly id: number;
+  readText(file: string): Promise<string>;
+  readBinary(file: string): Promise<Buffer>;
+  write(file: string, data: Uint8Array): Promise<void>;
+  list(): Promise<RemoteFile[]>;
+  readMany(files: string[], onFile: (name: string, result: { data: Uint8Array } | { error: string }, index: number) => void, isCancelled?: () => boolean, signal?: AbortSignal): Promise<void>;
+  close(): Promise<void>;
+}
+
 export interface RobotConnection {
   profile: RobotProfile;
   source: 'workspace' | 'user';
@@ -57,6 +88,8 @@ export interface RobotConnection {
   reachable?: boolean;
   /** when the last heartbeat ran, ms */
   pingedAt?: number;
+  /** the heartbeat is queued/paused while a transfer owns the robot; do not read this as "disconnected" */
+  heartbeatPaused?: boolean;
 }
 
 /**
@@ -131,10 +164,25 @@ export class RobotManager implements vscode.Disposable {
   private heartbeating = false;
   /** one queue per robot: a bulk transfer runs alone, so two sessions never share the wire */
   private readonly transferChains = new Map<string, Promise<unknown>>();
+  /** the transport that last worked for a robot, so a fallback is not retried every time */
+  private readonly protocolPref = new Map<string, TransferProtocol>();
+  /** recent transfers, for the hidden stats command */
+  private readonly samples: TransferSample[] = [];
+  /** ids of the sessions currently open; the smallest free id is reused (s1 when nothing is open) */
+  private readonly activeSessions = new Set<number>();
+
+  private allocSessionId(): number {
+    let id = 1;
+    while (this.activeSessions.has(id)) id++;
+    this.activeSessions.add(id);
+    return id;
+  }
+
+  private releaseSession(id: number): void { this.activeSessions.delete(id); }
   /** Resolves the cell.json root path for workspace-scoped controller storage. Set by Services. */
   cellRootResolver?: () => string | undefined;
 
-  constructor(private ctx: vscode.ExtensionContext, private output: vscode.OutputChannel) {
+  constructor(private ctx: vscode.ExtensionContext, private output: vscode.OutputChannel, private queue?: TransferQueue) {
     this.loadProfiles();
     this.disposables.push(vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration('robotCode.robots')) this.loadProfiles(); }));
     // trusting the folder lets its own controllers (workspace settings, cell.json) in
@@ -345,13 +393,13 @@ export class RobotManager implements vscode.Disposable {
    * Before a write: read the identity file and check it. Throws when the controller at the
    * address is not this profile's. A header without an F number passes (nothing to compare).
    */
-  async verifyIdentity(name: string): Promise<void> {
+  async verifyIdentity(name: string, session?: TransferSession): Promise<void> {
     const c = this.connections.get(name);
     if (!c) throw new Error(`Unknown robot ${name}`);
     const unit = FETCH_UNITS.info;
     let text: string;
-    try { text = await this.readText(c.profile, unit.file); }
-    catch { text = await this.readText(c.profile, unit.fallback!); }
+    try { text = await this.readText(c.profile, unit.file, c.profile.device, session); }
+    catch { text = await this.readText(c.profile, unit.fallback!, c.profile.device, session); }
     const seen = parseControllerInfo(text);
     const mismatch = await this.checkIdentity(c, seen);
     if (mismatch) throw new Error(mismatch);
@@ -379,6 +427,9 @@ export class RobotManager implements vscode.Disposable {
     c.snapshot = emptySnapshot(name);
     c.state = 'connected';
     c.reachable = true; c.pingedAt = Date.now();
+    // Start the next connection on the profile's protocol; a previous fallback may have been
+    // for a server that has since recovered.
+    this.protocolPref.delete(name.toLowerCase());
     this.log(name, 'connected');
     this._onDidChange.fire(name);
     this._onDidConnect.fire(name);
@@ -424,6 +475,18 @@ export class RobotManager implements vscode.Disposable {
     try { await c.connect(); } finally { await c.quit().catch(() => { /* already closing */ }); }
   }
 
+  /**
+   * A heartbeat only asks whether the port answers. Logging in every ten seconds is a
+   * session the controller does not need (login is the expensive part), so FTP is checked
+   * with a bare TCP connect.
+   */
+  private async probeCheap(p: RobotProfile): Promise<void> {
+    this.gate();
+    if (!p.useFtp) { await this.probe(p); return; }
+    this.count(p.name, 'heartbeat');
+    if (!await tcpOpen(p.host, p.ftpPort, 3000)) throw new Error(`${p.host}:${p.ftpPort} did not answer`);
+  }
+
   /** Keep the option list a brand read for a connected robot on its snapshot, and tell the views. */
   setOptions(name: string, options: ControllerOptionEntry[], highlights: OptionHighlight[] = []): void {
     const c = this.connections.get(name); if (!c?.snapshot) return;
@@ -435,7 +498,8 @@ export class RobotManager implements vscode.Disposable {
     const c = this.connections.get(name); if (!c) return;
     this.stopAuto(c);
     c.state = 'disconnected'; c.error = undefined; c.snapshot = undefined;
-    c.reachable = undefined; c.pingedAt = undefined;
+    c.reachable = undefined; c.pingedAt = undefined; c.heartbeatPaused = undefined;
+    this.protocolPref.delete(name.toLowerCase());
     this.log(name, 'disconnected');
     this._onDidChange.fire(name);
   }
@@ -452,14 +516,31 @@ export class RobotManager implements vscode.Disposable {
     if (this.heartbeating) return;
     this.heartbeating = true;
     try {
-      for (const c of this.connections.values()) if (c.state === 'connected' && !c.busy) await this.probeConnection(c);
+      for (const c of this.connections.values()) if (c.state === 'connected') {
+        if (c.busy || this.queue?.isBusy(c.profile.name)) {
+          // A transfer owns the wire: do not open a second session, and do not turn the
+          // connection red just because the beat is queued.
+          c.heartbeatPaused = true;
+          this._onDidChange.fire(c.profile.name);
+          continue;
+        }
+        c.heartbeatPaused = false;
+        await this.probeConnection(c);
+      }
     } finally { this.heartbeating = false; }
   }
 
   /** Re-check one robot now (the status bar's click when it is not answering). */
   async ping(name: string): Promise<void> {
     const c = this.connections.get(name);
-    if (c && c.state === 'connected' && !c.busy) await this.probeConnection(c);
+    if (!c || c.state !== 'connected') return;
+    if (c.busy || this.queue?.isBusy(c.profile.name)) {
+      c.heartbeatPaused = true;
+      this._onDidChange.fire(c.profile.name);
+      return;
+    }
+    c.heartbeatPaused = false;
+    await this.probeConnection(c);
   }
 
   /** Does FTP answer for this robot right now? Used to offer an FTP fallback when HTTP is wedged. */
@@ -476,20 +557,45 @@ export class RobotManager implements vscode.Disposable {
    * while the first is mid-flight - the overlap that can wedge a controller's single-session web
    * server. Overlapping transfers queue behind each other, one robot at a time.
    */
-  async withTransfer<T>(name: string, fn: () => Promise<T> | Thenable<T>): Promise<T> {
+  async withTransfer<T>(
+    name: string, meta: TransferMeta,
+    fn: (signal: AbortSignal, item: TransferHandle) => PromiseLike<T> | T,
+  ): Promise<T | undefined> {
     const c = this.connections.get(name);
-    const run = async (): Promise<T> => {
+    const run = async (signal: AbortSignal, item: TransferHandle): Promise<T> => {
       if (c) c.busy = true;
-      try { return await fn(); } finally { if (c) c.busy = false; }
+      try { return await fn(signal, item); }
+      finally {
+        if (c) {
+          c.busy = false;
+          c.heartbeatPaused = false;
+          this._onDidChange.fire(name);
+        }
+      }
+    };
+    if (this.queue) {
+      return this.queue.enqueue({ key: `robot:${name.toLowerCase()}`, robot: name, ...meta, run });
+    }
+    // No queue (a bare manager in a test): keep the old per-robot chain.
+    const controller = new AbortController();
+    const item: TransferHandle = {
+      id: 0,
+      get cancelled() { return controller.signal.aborted; },
+      report: () => { /* no UI */ },
+      technical: (line: string) => { this.output.appendLine(`[${name}] ${line}`); },
+      waiting: () => { /* no UI */ },
+      running: () => { /* no UI */ },
+      fail: () => { /* no UI */ },
     };
     const prev = this.transferChains.get(name) ?? Promise.resolve();
-    const chain = prev.then(run, run);
+    const chain = prev.then(() => run(controller.signal, item), () => run(controller.signal, item));
     this.transferChains.set(name, chain.then(() => undefined, () => undefined));
     return chain;
   }
 
   private async probeConnection(c: RobotConnection): Promise<void> {
-    try { await this.probe(c.profile); c.reachable = true; c.error = undefined; }
+    c.heartbeatPaused = false;
+    try { await this.probeCheap(c.profile); c.reachable = true; c.error = undefined; }
     catch (e: any) { c.reachable = false; c.error = e?.message ?? String(e); }
     c.pingedAt = Date.now();
     this._onDidChange.fire(c.profile.name);
@@ -505,38 +611,43 @@ export class RobotManager implements vscode.Disposable {
    * Fetch exactly the units asked for - one controller file each - and nothing else.
    * Returns the units that failed, so the caller can surface a single message.
    */
-  async fetch(name: string, kinds: FetchKind[]): Promise<FetchKind[]> {
+  async fetch(name: string, kinds: FetchKind[], session?: TransferSession): Promise<FetchKind[]> {
+    // Inside a push the session is already open and the push owns the queue entry.
+    if (session) return this.doFetch(name, kinds, session);
+    const result = await this.withTransfer(name,
+      { kind: 'get', label: `Get ${kinds.join(', ')} from ${name}`, visibility: 'quick' },
+      () => this.doFetch(name, kinds));
+    return result ?? [];
+  }
+
+  private async doFetch(name: string, kinds: FetchKind[], session?: TransferSession): Promise<FetchKind[]> {
     const c = this.connections.get(name);
     if (!c || c.state !== 'connected' || !c.snapshot) return kinds;
-    if (c.busy) return [];
-    c.busy = true;
     const failed: FetchKind[] = [];
-    try {
-      for (const kind of kinds) {
-        const unit = FETCH_UNITS[kind];
-        try {
-          let text: string;
-          try { text = await this.readText(c.profile, unit.file); }
-          catch (e) { if (!unit.fallback) throw e; text = await this.readText(c.profile, unit.fallback); }
-          // Free: every controller file header carries F number / version / date - and so says
-          // whether this is still the profile's controller. A different one ends the session.
-          const seen = parseControllerInfo(text);
-          if (await this.checkIdentity(c, seen)) { failed.push(...kinds.slice(kinds.indexOf(kind))); break; }
-          unit.apply(c.snapshot!, text);
-          Object.assign(c.snapshot!.info, stripEmpty(seen));
-          c.snapshot.fetchedAt.set(kind, Date.now());
-          if (kind !== 'info') c.snapshot.fetchedAt.set('info', Date.now());
-          c.snapshot.errors.delete(kind);
-          c.reachable = true;
-        } catch (e: any) {
-          failed.push(kind);
-          // no answer at all (refused, timed out, unreachable): red now, not at the next heartbeat
-          if (isNoAnswer(e)) { c.reachable = false; c.error = e?.message ?? String(e); c.pingedAt = Date.now(); }
-          c.snapshot.errors.set(kind, e?.message ?? String(e));
-          this.log(name, `${unit.label}: ${e?.message ?? e}`);
-        }
+    for (const kind of kinds) {
+      const unit = FETCH_UNITS[kind];
+      try {
+        let text: string;
+        try { text = await this.readText(c.profile, unit.file, c.profile.device, session); }
+        catch (e) { if (!unit.fallback) throw e; text = await this.readText(c.profile, unit.fallback, c.profile.device, session); }
+        // Free: every controller file header carries F number / version / date - and so says
+        // whether this is still the profile's controller. A different one ends the session.
+        const seen = parseControllerInfo(text);
+        if (await this.checkIdentity(c, seen)) { failed.push(...kinds.slice(kinds.indexOf(kind))); break; }
+        unit.apply(c.snapshot!, text);
+        Object.assign(c.snapshot!.info, stripEmpty(seen));
+        c.snapshot.fetchedAt.set(kind, Date.now());
+        if (kind !== 'info') c.snapshot.fetchedAt.set('info', Date.now());
+        c.snapshot.errors.delete(kind);
+        c.reachable = true;
+      } catch (e: any) {
+        failed.push(kind);
+        // no answer at all (refused, timed out, unreachable): red now, not at the next heartbeat
+        if (isNoAnswer(e)) { c.reachable = false; c.error = e?.message ?? String(e); c.pingedAt = Date.now(); }
+        c.snapshot.errors.set(kind, e?.message ?? String(e));
+        this.log(name, `${unit.label}: ${e?.message ?? e}`);
       }
-    } finally { c.busy = false; }
+    }
     this._onDidChange.fire(name);
     return failed;
   }
@@ -564,6 +675,7 @@ export class RobotManager implements vscode.Disposable {
   async setUseFtp(name: string, on: boolean): Promise<void> {
     const c = this.connections.get(name); if (!c) return;
     c.profile = { ...c.profile, useFtp: on };
+    this.protocolPref.delete(name.toLowerCase());
     await this.addProfile(c.profile, profileTarget(name));
     this.log(name, `read files over ${on ? 'FTP' : 'HTTP'}`);
     this._onDidChange.fire(name);
@@ -615,76 +727,239 @@ export class RobotManager implements vscode.Disposable {
   /** what this extension has asked of a robot since VS Code started */
   traffic(name: string): RobotTraffic | undefined { return this.connections.get(name)?.traffic; }
 
-  async readText(p: RobotProfile, file: string, device = p.device): Promise<string> {
-    this.gate();
-    const text = p.useFtp
-      ? await ftpGetText({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) }, device, file)
-      : await httpGetText({ host: p.host, port: p.httpPort }, device, file);
-    this.count(p.name, `${device}${file}`, text.length);
-    return text;
+  // ---- transfers: one session per logical operation ----
+
+  private fallbackEnabled(): boolean {
+    return vscode.workspace.getConfiguration('robotCode.live').get<string>('protocolFallback', 'auto') !== 'off';
   }
+
+  private sample(robot: string, op: string, file: string | undefined, bytes: number, session: TransferSession, ms: number, loginMs?: number): void {
+    this.samples.push({ at: Date.now(), robot, op, file, bytes, protocol: session.protocol, fallback: session.fallback, session: session.id, ms, loginMs });
+    if (this.samples.length > 2000) this.samples.splice(0, this.samples.length - 2000);
+  }
+
+  /** recent measured transfers, oldest first (hidden `robotCode.live._transferStats`) */
+  transferSamples(): TransferSample[] { return [...this.samples]; }
+
+  /** one technical line for the status bar/QuickPick: the real verb, session and path */
+  private noteFile(p: RobotProfile, session: TransferSession, verb: string, file: string, device: string, bytes?: number, ms?: number): void {
+    const suffix = bytes !== undefined ? ` (${bytes} B${ms !== undefined ? `, ${ms} ms` : ''})` : '';
+    const line = session.protocol === 'ftp'
+      ? `ftp(s${session.id}): ${verb} ${device}${file}${suffix}`
+      : `http(s${session.id}): GET ${deviceToPath(device)}${file}${suffix}`;
+    this.queue?.note(p.name, line);
+  }
+
+  private async openFtpSession(p: RobotProfile, device: string, fallback: boolean): Promise<{ session: TransferSession; loginMs: number }> {
+    const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) });
+    const id = this.allocSessionId();
+    const started = Date.now();
+    try {
+      await c.connect();
+      await c.cwd(device);
+    } catch (e) {
+      this.releaseSession(id);
+      throw e;
+    }
+    const loginMs = Date.now() - started;
+    this.queue?.note(p.name, `ftp(s${id}): login ${p.host}:${p.ftpPort} (${loginMs} ms)`);
+    const session: TransferSession = {
+      protocol: 'ftp', fallback, device, id,
+      readText: async f => (await c.retrieveSized(f)).toString('latin1'),
+      readBinary: f => c.retrieveSized(f),
+      write: (f, d) => c.store(f, d),
+      list: () => c.list(),
+      readMany: (files, onFile, isCancelled, signal) => c.retrieveMany(files, onFile, () => !!isCancelled?.() || !!signal?.aborted),
+      close: async () => { try { await c.quit(); } finally { this.releaseSession(id); } },
+    };
+    return { session, loginMs };
+  }
+
+  private openHttpSession(p: RobotProfile, device: string, fallback: boolean): { session: TransferSession; loginMs: number } {
+    const http = { host: p.host, port: p.httpPort };
+    const id = this.allocSessionId();
+    this.queue?.note(p.name, `http(s${id}): ${p.host}:${p.httpPort}`);
+    const session: TransferSession = {
+      protocol: 'http', fallback, device, id,
+      readText: f => httpGetText(http, device, f),
+      readBinary: f => httpGetBinary(http, device, f),
+      write: async () => { throw new Error('The controller web server does not accept uploads; FTP is required.'); },
+      list: () => httpList(http, device),
+      readMany: async (files, onFile, isCancelled, signal) => {
+        for (let i = 0; i < files.length; i++) {
+          if (isCancelled?.() || signal?.aborted) return;
+          try { onFile(files[i], { data: await httpGetBinary(http, device, files[i], signal) }, i); }
+          catch (e: any) { onFile(files[i], { error: e?.message ?? String(e) }, i); }
+        }
+      },
+      close: async () => { this.releaseSession(id); },
+    };
+    return { session, loginMs: 0 };
+  }
+
+  /**
+   * One transport for a logical operation.
+   *
+   * Bulk file work prefers FTP even when the profile uses HTTP for single reads
+   * (`robotCode.transfers.preferFtp`). A read falls back to the other transport when
+   * `robotCode.live.protocolFallback` is auto and the failure was a network one or an FTP login
+   * refusal; writes are FTP only. Non-bulk reads keep the last transport that worked.
+   */
+  async openSession(p: RobotProfile, device = p.device, opts: { write?: boolean; bulk?: boolean } = {}): Promise<{ session: TransferSession; loginMs: number }> {
+    this.gate();
+    const key = p.name.toLowerCase();
+    const order = protocolOrder({
+      useFtp: p.useFtp,
+      bulk: !!opts.bulk,
+      write: !!opts.write,
+      preferFtp: config<boolean>('transfers.preferFtp', true),
+      sticky: opts.bulk ? undefined : this.protocolPref.get(key),
+    });
+    let last: unknown;
+    for (let i = 0; i < order.length; i++) {
+      const proto = order[i];
+      try {
+        const opened = proto === 'ftp'
+          ? await this.openFtpSession(p, device, i > 0)
+          : this.openHttpSession(p, device, i > 0);
+        this.protocolPref.set(key, proto);
+        return opened;
+      } catch (e) {
+        last = e;
+        if (opts.write) throw e;
+        if (i === order.length - 1) throw e;
+        if (!this.fallbackEnabled()) throw e;
+        if (!isNoAnswer(e) && !isFtpAuthFailure(e)) throw e;
+        this.queue?.note(p.name, `${proto}: ${(e as Error)?.message ?? e} → ${order[i + 1]} fallback`);
+      }
+    }
+    throw last;
+  }
+
+  /** Run `fn` on one open session; it is closed whatever happens. */
+  async withSession<T>(p: RobotProfile, device: string, fn: (session: TransferSession) => Promise<T>, opts: { write?: boolean; bulk?: boolean } = {}): Promise<T> {
+    const { session, loginMs } = await this.openSession(p, device, opts);
+    this.sample(p.name, 'session', undefined, 0, session, loginMs, loginMs);
+    try { return await fn(session); } finally { await session.close(); }
+  }
+
+  async readText(p: RobotProfile, file: string, device = p.device, session?: TransferSession): Promise<string> {
+    this.gate();
+    const started = Date.now();
+    if (session) {
+      this.noteFile(p, session, 'RETR', file, device);
+      const text = await session.readText(file);
+      this.count(p.name, `${device}${file}`, text.length);
+      this.noteFile(p, session, 'RETR', file, device, text.length, Date.now() - started);
+      this.sample(p.name, 'read', `${device}${file}`, text.length, session, Date.now() - started);
+      return text;
+    }
+    const opened = await this.openSession(p, device);
+    try {
+      this.noteFile(p, opened.session, 'RETR', file, device);
+      const text = await opened.session.readText(file);
+      this.count(p.name, `${device}${file}`, text.length);
+      this.noteFile(p, opened.session, 'RETR', file, device, text.length, Date.now() - started);
+      this.sample(p.name, 'read', `${device}${file}`, text.length, opened.session, Date.now() - started, opened.loginMs);
+      return text;
+    } finally { await opened.session.close(); }
+  }
+
   /**
    * The ONE write in this tier: a file onto the controller's device, over FTP (the
    * controller's web server takes no uploads). Only "Push to Robot" calls it,
    * after its own confirmation; the reply the controller gives when it refuses (program
    * selected, running, write-protected) comes back as the error.
    */
-  async writeBinary(p: RobotProfile, file: string, data: Uint8Array, device = p.device): Promise<void> {
+  async writeBinary(p: RobotProfile, file: string, data: Uint8Array, device = p.device, session?: TransferSession): Promise<void> {
     this.gate();
-    const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser || 'anonymous', password: await this.getPassword(p.name, p.host) });
-    try { await c.connect(); await c.cwd(device); await c.store(file, data); } finally { await c.quit(); }
-    this.count(p.name, `${device}${file} (upload)`, data.length);
-  }
-  async readBinary(p: RobotProfile, file: string, device = p.device): Promise<Uint8Array> {
-    this.gate();
-    let data: Uint8Array;
-    if (p.useFtp) {
-      const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) });
-      try { await c.connect(); await c.cwd(device); data = await c.retrieve(file); } finally { await c.quit(); }
-    } else {
-      data = await httpGetBinary({ host: p.host, port: p.httpPort }, device, file);
+    const started = Date.now();
+    if (session) {
+      this.noteFile(p, session, 'STOR', file, device, data.length);
+      await session.write(file, data);
+      this.invalidateListing(p.name);
+      this.count(p.name, `${device}${file} (upload)`, data.length);
+      this.noteFile(p, session, 'STOR', file, device, data.length, Date.now() - started);
+      this.sample(p.name, 'write', `${device}${file}`, data.length, session, Date.now() - started);
+      return;
     }
-    this.count(p.name, `${device}${file}`, data.length);
-    return data;
+    const opened = await this.openSession(p, device, { write: true });
+    try {
+      this.noteFile(p, opened.session, 'STOR', file, device, data.length);
+      await opened.session.write(file, data);
+      this.invalidateListing(p.name);
+      this.count(p.name, `${device}${file} (upload)`, data.length);
+      this.noteFile(p, opened.session, 'STOR', file, device, data.length, Date.now() - started);
+      this.sample(p.name, 'write', `${device}${file}`, data.length, opened.session, Date.now() - started, opened.loginMs);
+    } finally { await opened.session.close(); }
   }
+
+  async readBinary(p: RobotProfile, file: string, device = p.device, session?: TransferSession): Promise<Uint8Array> {
+    this.gate();
+    const started = Date.now();
+    if (session) {
+      this.noteFile(p, session, 'RETR', file, device);
+      const data = await session.readBinary(file);
+      this.count(p.name, `${device}${file}`, data.length);
+      this.noteFile(p, session, 'RETR', file, device, data.length, Date.now() - started);
+      this.sample(p.name, 'read', `${device}${file}`, data.length, session, Date.now() - started);
+      return data;
+    }
+    const opened = await this.openSession(p, device);
+    try {
+      this.noteFile(p, opened.session, 'RETR', file, device);
+      const data = await opened.session.readBinary(file);
+      this.count(p.name, `${device}${file}`, data.length);
+      this.noteFile(p, opened.session, 'RETR', file, device, data.length, Date.now() - started);
+      this.sample(p.name, 'read', `${device}${file}`, data.length, opened.session, Date.now() - started, opened.loginMs);
+      return data;
+    } finally { await opened.session.close(); }
+  }
+
   /**
-   * Many files, one session. Over FTP this logs in ONCE and RETRs each file on the same
-   * control connection, which is the whole difference between a backup that takes half a
-   * minute and one that takes ten: the controller's cost is per session, not per byte.
-   * Over HTTP each file is its own GET, as it has to be. Each file is counted as it lands.
+   * Many files, one session - the mget shape. The controller's cost is per login, not per
+   * byte, so a backup is one session over FTP (or sequential GETs over HTTP).
    */
   async readBinaryMany(
     p: RobotProfile, files: string[], device: string,
     onFile: (name: string, result: { data: Uint8Array } | { error: string }, index: number) => void,
     isCancelled: () => boolean = () => false,
     signal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<TransferProtocol> {
     this.gate();
+    const opened = await this.openSession(p, device, { bulk: true });
+    const started = Date.now();
     const report: typeof onFile = (name, result, i) => {
-      this.count(p.name, `${device}${name}`, 'data' in result ? result.data.length : 0);
+      const bytes = 'data' in result ? result.data.length : 0;
+      this.noteFile(p, opened.session, 'RETR', name, device, bytes);
+      this.count(p.name, `${device}${name}`, bytes);
+      this.sample(p.name, 'read', `${device}${name}`, bytes, opened.session, Date.now() - started, i === 0 ? opened.loginMs : undefined);
       onFile(name, result, i);
     };
-    if (p.useFtp) {
-      const c = new FtpClient({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) });
-      const stop = () => isCancelled() || !!signal?.aborted;
-      try { await c.connect(); await c.cwd(device); await c.retrieveMany(files, report, stop); }
-      finally { await c.quit(); }
-      return;
-    }
-    for (let i = 0; i < files.length; i++) {
-      if (isCancelled() || signal?.aborted) return;
-      try { report(files[i], { data: await httpGetBinary({ host: p.host, port: p.httpPort }, device, files[i], signal) }, i); }
-      catch (e: any) { report(files[i], { error: e?.message ?? String(e) }, i); }
-    }
+    try { await opened.session.readMany(files, report, isCancelled, signal); }
+    finally { await opened.session.close(); }
+    return opened.session.protocol;
   }
   // ---- the device listing, remembered ----
   //
   // Whoever lists a device (the Files panel, on Get) leaves the listing here, so a CALL in
   // a program opened off the robot can be resolved against it without another request.
   private readonly listings = new Map<string, RemoteFile[]>();
+  /** a short-lived per-device listing, so a stat/directory open does not re-list the controller */
+  private readonly listingCache = new Map<string, { at: number; files: RemoteFile[] }>();
   setFiles(name: string, files: RemoteFile[] | undefined) { if (files) this.listings.set(name.toLowerCase(), files); else this.listings.delete(name.toLowerCase()); }
   hasListing(name: string): boolean { return this.listings.has(name.toLowerCase()); }
   cachedFiles(name: string): RemoteFile[] | undefined { return this.listings.get(name.toLowerCase()); }
+  private listingKey(name: string, device: string) { return `${name.toLowerCase()}|${device.toLowerCase()}`; }
+  cachedListing(name: string, device: string, maxAgeMs = 10_000): RemoteFile[] | undefined {
+    const hit = this.listingCache.get(this.listingKey(name, device));
+    return hit && Date.now() - hit.at < maxAgeMs ? hit.files : undefined;
+  }
+  invalidateListing(name?: string) {
+    if (!name) { this.listingCache.clear(); return; }
+    const prefix = name.toLowerCase() + '|';
+    for (const k of [...this.listingCache.keys()]) if (k.startsWith(prefix)) this.listingCache.delete(k);
+  }
 
   /**
    * `NAME` → the file on the robot's device that is that program: the ASCII `.LS` first,
@@ -703,18 +978,19 @@ export class RobotManager implements vscode.Disposable {
     return undefined;
   }
 
-  async listFiles(p: RobotProfile, device = p.device): Promise<RemoteFile[]> {
+  async listFiles(p: RobotProfile, device = p.device, session?: TransferSession, opts: { bulk?: boolean } = {}): Promise<RemoteFile[]> {
     this.gate();
     // Counted as one request even though httpList may read several index pages - the
     // interesting number is "how many times did we go and ask", and the bytes are exact.
     this.count(p.name, `list ${device}`);
-    if (p.useFtp) return ftpList({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) }, device);
-    try { return await httpList({ host: p.host, port: p.httpPort }, device); }
-    catch (e) {
-      // web server listing blocked -> fall back to FTP if a user is configured
-      if (p.ftpUser || await this.getPassword(p.name, p.host)) return ftpList({ host: p.host, port: p.ftpPort, user: p.ftpUser, password: await this.getPassword(p.name, p.host) }, device);
-      throw e;
-    }
+    if (session) { this.noteFile(p, session, 'LIST', '', device); const files = await session.list(); this.listingCache.set(this.listingKey(p.name, device), { at: Date.now(), files }); return files; }
+    const opened = await this.openSession(p, device, { bulk: opts.bulk });
+    try {
+      this.noteFile(p, opened.session, 'LIST', '', device);
+      const files = await opened.session.list();
+      this.listingCache.set(this.listingKey(p.name, device), { at: Date.now(), files });
+      return files;
+    } finally { await opened.session.close(); }
   }
 
   // ---- lookups used by hovers / decorations ----

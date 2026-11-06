@@ -31,7 +31,7 @@ import { boundRobot, profileNamed } from '@core/robotBinding';
 import type { CurrentPosition } from '@core/live/types';
 import { diffProgram } from '../tools/backupDiff';
 import { gated } from '@core/experimental';
-import { checkPushGate, captureRobotCopy, completePush, writeWorkingCopy, withSyncLock, type PullAfterPush, type CompletePushResult } from '@core/snapshotSync';
+import { checkPushGate, captureRobotCopy, completePush, writeWorkingCopy, withSyncLock, recordPushBackup, readPushBackup, recordSnapshotFile, comparedChanged, type PullAfterPush, type CompletePushResult } from '@core/snapshotSync';
 import { isFileDirty } from '@core/gitAware';
 import { fetchControllerErrors } from '@core/syncCommands';
 import { historyStamp, ROBOT_DIR, SNAPSHOT_HISTORY_DIR, type VerbatimDiff, type RobotMarker } from '@core/robotContainers';
@@ -47,6 +47,7 @@ export function registerEditorCommands(ctx: vscode.ExtensionContext, s: FanucSer
   reg('robotCode.tp.teachFromPosReg', (arg?: number) => teachFromPosReg(s, typeof arg === 'number' ? arg : undefined));
   reg('robotCode.tp.recordPosition', gated(() => recordPosition(ctx, s, robots)));
   reg('robotCode.sync.pushFile', gated((uri?: vscode.Uri) => uploadProgram(s, robots, uri)));
+  reg('robotCode.sync.restorePrePush', gated((uri?: vscode.Uri) => restorePrePush(s, robots, uri)));
   const live = new LiveEdit(s, robots);
   ctx.subscriptions.push(live);
   reg('robotCode.live.liveEdit', gated((uri?: vscode.Uri) => live.toggle(uri)));
@@ -500,11 +501,20 @@ async function uploadProgram(s: FanucServices, robots: RobotManager, uri?: vscod
   await sendProgram(s, robots, lp.doc, lp.name, { confirm: true });
 }
 
+/** What one push did, from inside the single session. */
+type PushRun =
+  | { kind: 'done'; result: CompletePushResult }
+  | { kind: 'refused'; message: string; log?: string }
+  | { kind: 'cancelled' }
+  | { kind: 'conflict'; robotText: string; diff: VerbatimDiff };
+
 /**
  * The upload itself, shared by Upload Program (asks first) and Live Edit (asks once, when
- * switched on). The guards that do not depend on asking are always applied: the file is
- * saved and must read as a TP program; a program the robot reports running or paused is
- * refused before anything is sent; every send is logged; the program is read back once.
+ * switched on). The modal comes first; then ONE FTP session does the preflight, the gate read
+ * (which is also the pre-push backup), the write, the read-back and the compiled partner.
+ * The gate compares normalized, so line numbers and metadata are not a conflict. Cancel is
+ * honoured before the write (nothing sent); after it, only the final pull can be skipped, and
+ * that prompts a revert.
  * Returns true when the controller took it.
  */
 async function sendProgram(s: FanucServices, robots: RobotManager, doc: vscode.TextDocument, name: string, opts: { confirm: boolean; quiet?: boolean }): Promise<boolean> {
@@ -532,127 +542,183 @@ async function sendProgram(s: FanucServices, robots: RobotManager, doc: vscode.T
     vscode.window.showWarningMessage(`${name} is write-locked in RUKUS, so nothing is uploaded to it. Unlock it in RUKUS (Cluster > Edit robot) first.`);
     return false;
   }
-  // Is the controller at this address still the profile's? Two can share an address; the F number decides.
-  try { await robots.verifyIdentity(name); }
-  catch (e: any) {
-    const why = e?.message ?? String(e);
-    audit('Refused', 0, { error: why });
-    robots.log(name, `UPLOAD ${file} REFUSED: ${why}`);
-    vscode.window.showErrorMessage(`Nothing was uploaded. ${why}`);
-    return false;
-  }
-  // Read the task states now (one small file), so the guard does not depend on someone having
-  // pressed Get on the robot page; a read that fails leaves the controller's own refusal as the guard.
-  await robots.fetch(name, ['tasks']).catch(() => undefined);
-  const active = robots.activeTpTasks().find(t => t.robot === name && t.task.stack.some(f => f.program.toUpperCase() === progName));
-  if (active) { vscode.window.showWarningMessage(`${progName} is ${active.task.status.toLowerCase()} on ${name} (task ${active.task.taskNo}, line ${active.task.current?.line}). The controller will not take a program that is running or paused; abort it on the pendant first.`); return false; }
-  // A .LS only loads on a controller with Ascii Upload (R507) or Ascii Program Loader (R796);
-  // without either the upload fails with nothing in the reply that says why. Unknown (the option
-  // list could not be read) lets the push go on.
-  const options = await readControllerOptions(robots, c.profile);
-  if (options && !canLoadAscii(options)) {
-    robots.log(name, `UPLOAD ${file} REFUSED: ${ORDER_FILE} lists neither ${ASCII_UPLOAD} (Ascii Upload) nor ${ASCII_PROGRAM_LOADER} (Ascii Program Loader)`);
-    vscode.window.showWarningMessage(`${name} has neither Ascii Upload (${ASCII_UPLOAD}) nor Ascii Program Loader (${ASCII_PROGRAM_LOADER}), so it cannot load a .LS program and nothing was sent. Load it as a compiled .TP (e.g. from ROBOGUIDE or a backup), or have one of the options added to the controller.`);
-    return false;
-  }
-  // The push gate: fetch the robot's copy and compare it to the snapshot VERBATIM. If the
-  // robot moved since the last fetch, the snapshot has never seen that change and pushing
-  // would overwrite it, so the push is refused until it is captured. (The working copy is
-  // compared to the snapshot separately, normalized, by the tree and the lens.)
   const marker = s.containers.markerForRobot(name);
-  // Serialise the network/snapshot phase per container, so two syncs on the same robot cannot
-  // interleave (a Fetch pressed a moment before this push used to run at the same time).
   const lockKey = marker ? marker.root.toLowerCase() : `robot:${name.toLowerCase()}`;
-  return withSyncLock(lockKey, async () => {
-  let isNew = false;
-  if (config<boolean>('containers.guardUpload', true) && marker) {
-    const gate = await vscode.window.withProgress(
-      { location: opts.quiet ? vscode.ProgressLocation.Window : vscode.ProgressLocation.Notification, title: `Comparing ${progName} with the snapshot` },
-      () => checkPushGate(s, marker, c, file, target.fsPath));
-    if (gate.kind === 'error') {
-      const hint = connectionHint(gate.error, c.profile);
-      vscode.window.showWarningMessage(`${name} did not report its copy of ${progName}: ${gate.error}.${hint ? ` ${hint}` : ''} The push is held; nothing is sent until the robot's copy can be read.`);
-      return false;
-    }
-    if (gate.kind === 'conflict') {
-      await handlePushConflict(s, marker, name, file, doc, gate.robotText, gate.diff);
-      return false;
-    }
-    // a brand-new program: the robot has nothing of that name, so there is nothing to overwrite
-    if (gate.kind === 'not-on-robot') isNew = true;
-    // the copy just read says it is write-protected: the controller would refuse it, so say why now
-    if ((gate.kind === 'ok' || gate.kind === 'no-snapshot') && WRITE_PROTECTED.test(gate.robotText)) {
-      robots.log(name, `UPLOAD ${file} REFUSED: ${progName} is write-protected on ${name} (PROTECT = READ)`);
-      vscode.window.showWarningMessage(`${progName} is write-protected on ${name} (PROTECT = READ), so the controller would refuse it and nothing was sent. Turn Write protect OFF on the pendant (SELECT, ${progName}, DETAIL), then push again.`);
-      return false;
-    }
-    if (gate.kind === 'no-snapshot') {
-      // no baseline yet: the robot's current copy becomes the first snapshot entry
-      captureRobotCopy(s, marker, file, gate.robotText);
-      await Promise.all([s.data.refresh(), s.index.refresh()]);
-    }
-  }
+  const preBackup = config<boolean>('containers.prePushBackup', true);
+  const guard = config<boolean>('containers.guardUpload', true);
+  // `containers.gitAware`: note uncommitted changes before the modal. The git call never blocks
+  // the push on its own - a missing git or a file outside a repository reads as "clean".
+  const dirty = config<boolean>('containers.gitAware', false) && marker
+    ? await isFileDirty(path.dirname(target.fsPath), target.fsPath)
+    : false;
+  const gitNote = dirty ? '\n\nThis program has uncommitted changes in your git repository.' : '';
   if (opts.confirm) {
-    // `containers.gitAware`: note uncommitted changes in the user's own repository before the
-    // push and offer Source Control. The git call never blocks the push on its own - a missing
-    // git or a file outside a repository reads as "clean" - it only adds a line and a button.
-    const dirty = config<boolean>('containers.gitAware', false) && marker
-      ? await isFileDirty(path.dirname(target.fsPath), target.fsPath)
-      : false;
-    const gitNote = dirty ? '\n\nThis program has uncommitted changes in your git repository.' : '';
-    // the button names the outcome and the target; the title says virtual or live
     const kind = targetKindLabel(targetKindOfHost(c.profile.host));
-    const send = isNew ? `Upload ${progName} to ${name}` : `Replace ${progName} on ${name}`;
+    const send = `Upload ${progName} to ${name}`;
     const buttons = dirty ? [send, 'Open Source Control'] : [send];
     const ok = await vscode.window.showWarningMessage(
-      `${isNew ? 'Upload' : 'Replace'} ${progName} on ${kind.toLowerCase()} controller ${name}?`,
+      `Upload ${progName} to ${kind.toLowerCase()} controller ${name}?`,
       { modal: true, detail: `${kind} controller ${name}${kind === 'Virtual' ? ' (on this PC)' : ''}.
 
-${file} goes to ${c.profile.device} on ${name} (${c.profile.host}) over FTP ${isNew ? `as a NEW program - ${name} has no ${progName} yet` : 'and REPLACES the program of that name on the controller'}. The controller compiles it as it lands and refuses it if the program is selected on the pendant or write-protected.${diags.length ? `\n\nThis file has ${diags.length} error${diags.length === 1 ? '' : 's'} in Problems.` : ''}${gitNote}\n\nNothing else on the robot changes.` },
+${file} goes to ${c.profile.device} on ${name} (${c.profile.host}) over FTP. If a program of that name already exists it is replaced; otherwise it is created. The controller compiles it as it lands and refuses it if the program is selected on the pendant or write-protected.${diags.length ? `\n\nThis file has ${diags.length} error${diags.length === 1 ? '' : 's'} in Problems.` : ''}${gitNote}\n\nNothing else on the robot changes.` },
       ...buttons);
     if (ok === 'Open Source Control') { await vscode.commands.executeCommand('workbench.view.scm'); return false; }
     if (ok !== send) return false;
   }
-  const text = doc.getText();
-  const data = Buffer.from(text.replace(/\r?\n/g, '\r\n'), 'latin1');   // the controller's own line ending
-  const started = Date.now();
-  const digest = createHash('sha256').update(data).digest('hex').slice(0, 16);
+  let text = '';
+  let data = Buffer.alloc(0);
+  let started = Date.now();
+  let digest = '';
   const policy = config<PullAfterPush>('containers.pullAfterPush', 'always');
-  // Upload, read back, verify and sync as one phased push. The controller's copy wins the round
-  // trip: an explicit push (not a live-edit save) also writes it back into the working file, so
-  // workspace = snapshot = robot.
-  let done: CompletePushResult;
+  // A source push can skip the compiled partner separately; the general setting still wins.
+  const sourcePush = /\.(ls|kl)$/i.test(file);
+  const partner = config<string>('containers.pullPartnerAfterPush', 'always') !== 'never'
+    && (!sourcePush || config<boolean>('containers.pullCompiledAfterSourcePush', true));
+  let run: PushRun | undefined;
   try {
-    done = await vscode.window.withProgress(
-      { location: opts.quiet ? vscode.ProgressLocation.Window : vscode.ProgressLocation.Notification, title: `Pushing ${progName} to ${name}`, cancellable: false },
-      async progress => {
-        progress.report({ message: `Uploading ${file}` });
-        await robots.writeBinary(c.profile, file, data);
-        audit('Ok', Date.now() - started, { newValue: `${data.length} bytes sha256:${digest}` });
-        robots.log(name, `UPLOAD ${file} (${data.length} bytes) to ${c.profile.device} - ${vscode.workspace.asRelativePath(target)}${opts.confirm ? '' : ' (live edit)'}`);
-        if (!marker) {
-          progress.report({ message: "Verifying the controller's copy" });
-          const back = await robots.readText(c.profile, file);
-          const change = diffProgram(progName, name, target.fsPath, back, text);
-          const verdict = !change ? 'read back identical' : change.kind === 'positions-only' ? `read back: ${change.positions.length} position(s) differ` : `read back: ${change.linesAdded} line(s) added, ${change.linesRemoved} removed on the controller's copy`;
-          return { ok: true, identical: !change, metadataOnly: false, normalizedDiffers: !!change, pulled: false, decision: 'off' as const, robotText: back, verdict };
-        }
-        const res = await completePush(s, marker, c, file, text, {
-          pull: policy, explicit: opts.confirm, workingPath: target.fsPath, preserveFocus: !!opts.quiet,
-          onPhase: message => progress.report({ message }),
-        });
-        if (res.ok) await Promise.all([s.data.refresh(), s.index.refresh(), s.containers.refresh()]);
-        return res;
-      });
+    run = await robots.withTransfer(name,
+      { kind: 'push', label: `Push ${progName} → ${name}`, file },
+      async (signal, item) => vscode.window.withProgress(
+        { location: opts.quiet ? vscode.ProgressLocation.Window : vscode.ProgressLocation.Notification, title: `Pushing ${progName} to ${name}`, cancellable: true },
+        (progress, token) => {
+          const cancelled = () => signal.aborted || token.isCancellationRequested;
+          const report = (message: string) => { item.report(message); progress.report({ message }); };
+          return withSyncLock(lockKey, () => robots.withSession(c.profile, c.profile.device, async (session): Promise<PushRun> => {
+            // A queued push may outlive the editor: read the file as it is when the entry starts.
+            const liveDoc = vscode.workspace.textDocuments.find(d => d.uri.toString() === target.toString())
+              ?? await vscode.workspace.openTextDocument(target);
+            if (liveDoc.isDirty && !(await liveDoc.save())) return { kind: 'refused', message: `${path.basename(target.fsPath)} could not be saved, so it was not uploaded.` };
+            text = liveDoc.getText();
+            data = Buffer.from(text.replace(/\r?\n/g, '\r\n'), 'latin1');
+            started = Date.now();
+            digest = createHash('sha256').update(data).digest('hex').slice(0, 16);
+            const proto = session.protocol.toUpperCase();
+            const refuse = (message: string, log?: string): PushRun => { item.fail(message); if (log) robots.log(name, log); return { kind: 'refused', message }; };
+            report(`Checking ${name} (${proto})`);
+            // Is the controller at this address still the profile's? Two can share an address; the F number decides.
+            try { await robots.verifyIdentity(name, session); }
+            catch (e: any) { return refuse(`Nothing was uploaded. ${e?.message ?? e}`, `UPLOAD ${file} REFUSED: ${e?.message ?? e}`); }
+            // Read the task states now (one small file), so the guard does not depend on someone
+            // having pressed Get on the robot page; a read that fails leaves the controller's own
+            // refusal as the guard.
+            await robots.fetch(name, ['tasks'], session).catch(() => undefined);
+            const active = robots.activeTpTasks().find(t => t.robot === name && t.task.stack.some(f => f.program.toUpperCase() === progName));
+            if (active) return refuse(`${progName} is ${active.task.status.toLowerCase()} on ${name} (task ${active.task.taskNo}, line ${active.task.current?.line}). The controller will not take a program that is running or paused; abort it on the pendant first.`);
+            // A .LS only loads on a controller with Ascii Upload (R507) or Ascii Program Loader (R796).
+            const options = await readControllerOptions({ readText: (_p, f, d) => robots.readText(c.profile, f, d ?? c.profile.device, session) }, c.profile);
+            if (options && !canLoadAscii(options)) {
+              return refuse(`${name} has neither Ascii Upload (${ASCII_UPLOAD}) nor Ascii Program Loader (${ASCII_PROGRAM_LOADER}), so it cannot load a .LS program and nothing was sent. Load it as a compiled .TP (e.g. from ROBOGUIDE or a backup), or have one of the options added to the controller.`, `UPLOAD ${file} REFUSED: ${ORDER_FILE} lists neither ${ASCII_UPLOAD} (Ascii Upload) nor ${ASCII_PROGRAM_LOADER} (Ascii Program Loader)`);
+            }
+            if (cancelled()) return { kind: 'cancelled' };
+            // The push gate, normalized: line numbers and metadata are irrelevant; a real text
+            // change on the robot still holds the push. This read is also the pre-push backup.
+            report(`Reading ${file} (${proto})`);
+            const gate = marker && (guard || preBackup)
+              ? await checkPushGate(s, marker, c, file, target.fsPath, { session, normalized: true })
+              : undefined;
+            if (gate?.kind === 'error') {
+              const hint = connectionHint(gate.error, c.profile);
+              return refuse(`${name} did not report its copy of ${progName}: ${gate.error}.${hint ? ` ${hint}` : ''} The push is held; nothing is sent until the robot's copy can be read.`);
+            }
+            if (gate?.kind === 'conflict') {
+              // Close the session before the dialog: the queue entry stays active.
+              if (guard) return { kind: 'conflict', robotText: gate.robotText, diff: gate.diff };
+              robots.log(name, `gate: ${file} differs on the robot (guard is off) - continuing`);
+            }
+            item.technical(gate?.kind === 'ok' ? 'compare: normalized equal' : gate?.kind === 'no-snapshot' ? 'compare: no snapshot yet' : `compare: ${gate && 'diff' in gate ? gate.diff.changed + gate.diff.added + gate.diff.deleted : 0} line(s) differ`);
+            // the copy just read says it is write-protected: the controller would refuse it
+            if ((gate?.kind === 'ok' || gate?.kind === 'no-snapshot') && WRITE_PROTECTED.test(gate.robotText)) {
+              return refuse(`${progName} is write-protected on ${name} (PROTECT = READ), so the controller would refuse it and nothing was sent. Turn Write protect OFF on the pendant (SELECT, ${progName}, DETAIL), then push again.`, `UPLOAD ${file} REFUSED: ${progName} is write-protected on ${name} (PROTECT = READ)`);
+            }
+            if (marker && preBackup && gate && 'robotText' in gate) {
+              try { recordPushBackup(marker.root, file, gate.robotText, { robot: name, host: c.profile.host, device: c.profile.device }); item.technical(`backup: write .robocode-robot/push-backup/${file}`); }
+              catch (e: any) { robots.log(name, `push backup: ${e?.message ?? e}`); }
+            }
+            if (gate?.kind === 'no-snapshot' && marker) {
+              // no baseline yet: the robot's current copy becomes the first snapshot entry
+              const snapPath = captureRobotCopy(s, marker, file, gate.robotText);
+              await s.index.refreshUri(vscode.Uri.file(snapPath));
+              await s.containers.refresh();
+              comparedChanged.fire();
+            }
+            if (cancelled()) return { kind: 'cancelled' };
+            report(`Uploading ${file} (${proto})`);
+            // From here the write is never aborted; a cancel only reaches the final pull.
+            await robots.writeBinary(c.profile, file, data, c.profile.device, session);
+            audit('Ok', Date.now() - started, { newValue: `${data.length} bytes sha256:${digest}` });
+            robots.log(name, `UPLOAD ${file} (${data.length} bytes) to ${c.profile.device} over ${proto} - ${vscode.workspace.asRelativePath(target)}${opts.confirm ? '' : ' (live edit)'}${session.fallback ? ' (fallback)' : ''}`);
+            if (!marker) {
+              report(`Verifying the controller's copy (${proto})`);
+              const back = await robots.readText(c.profile, file, c.profile.device, session);
+              const change = diffProgram(progName, name, target.fsPath, back, text);
+              const verdict = !change ? 'read back identical' : change.kind === 'positions-only' ? `read back: ${change.positions.length} position(s) differ` : `read back: ${change.linesAdded} line(s) added, ${change.linesRemoved} removed on the controller's copy`;
+              return { kind: 'done', result: { ok: true, identical: !change, metadataOnly: false, normalizedDiffers: !!change, pulled: false, decision: 'off' as const, robotText: back, verdict } };
+            }
+            const res = await completePush(s, marker, c, file, text, {
+              pull: policy, explicit: opts.confirm, workingPath: target.fsPath, preserveFocus: !!opts.quiet,
+              onPhase: message => { item.report(message); progress.report({ message }); },
+              session, partner, cancelPull: () => cancelled(),
+            });
+            if (!res.ok) item.fail('could not verify the controller copy');
+            if (res.ok) {
+              for (const p of res.snapshotPaths ?? []) await s.index.refreshUri(vscode.Uri.file(p));
+              await s.containers.refresh();
+              comparedChanged.fire();
+            }
+            return { kind: 'done', result: res };
+          }, { write: true })).then(async (result): Promise<PushRun> => {
+            if (result.kind !== 'conflict') return result;
+            item.waiting('Waiting for your decision');
+            await handlePushConflict(s, marker!, name, file, doc, result.robotText, result.diff, {
+              onPhase: message => { item.running(message); progress.report({ message }); },
+              signal,
+            });
+            return { kind: 'conflict', robotText: result.robotText, diff: result.diff };
+          });
+        }));
   } catch (e: any) {
+    if (e?.name === 'AbortError' || /aborted/i.test(e?.message ?? '')) {
+      vscode.window.setStatusBarMessage('$(circle-slash) Push cancelled - nothing was written', 6000);
+      return false;
+    }
     audit('Failed', Date.now() - started, { error: e?.message ?? String(e), newValue: `${data.length} bytes sha256:${digest}` });
     robots.log(name, `UPLOAD ${file} FAILED: ${e?.message ?? e}`);
     await reportPushFailure(s, c, file, e?.message ?? String(e));
     return false;
   }
+  if (!run || run.kind === 'cancelled') {
+    vscode.window.setStatusBarMessage(`$(circle-slash) Push cancelled - nothing was written`, 6000);
+    return false;
+  }
+  if (run.kind === 'refused') {
+    audit('Refused', Date.now() - started, { error: run.message });
+    if (run.log) robots.log(name, run.log);
+    vscode.window.showWarningMessage(run.message);
+    return false;
+  }
+  if (run.kind === 'conflict') return false;
+  const done = run.result;
   const { verdict, pulled, decision, robotText } = done;
   robots.log(name, `upload ${file}: ${verdict}${pulled ? ' (workspace updated)' : ''}`);
-  const summary = `${progName} is on ${name} - ${verdict}${pulled ? ' · workspace updated' : ''}`;
+  if (!done.ok) {
+    // The write was sent but the read-back failed: say so, and offer the backup.
+    const pick = await vscode.window.showWarningMessage(
+      `${progName} was sent to ${name}, but its copy could not be read back (${verdict}). It may have landed; check before trusting it.`,
+      'Restore Pre-Push Copy', 'Open Output');
+    if (pick === 'Restore Pre-Push Copy') await restorePrePush(s, robots, target);
+    else if (pick === 'Open Output') s.output.show(true);
+    return true;
+  }
+  // The pull is the last step: only its failure or a cancel prompts a revert.
+  if (done.pullError) {
+    const why = done.pullError === 'cancelled' ? 'the final sync to your working file was cancelled' : `the final sync to your working file failed (${done.pullError})`;
+    const pick = await vscode.window.showWarningMessage(
+      `${progName} is on ${name}, but ${why}. Revert the push on the robot?`,
+      'Revert Push', 'Keep');
+    if (pick === 'Revert Push') await restorePrePush(s, robots, target);
+    return true;
+  }
+  const summary = `${progName} is on ${name} - ${verdict}${pulled ? ' · workspace updated' : ''} · FTP`;
   if (opts.quiet) {
     // live edit: quiet, status bar only
     vscode.window.setStatusBarMessage(`$(cloud-upload) ${summary}`, 8000);
@@ -674,16 +740,77 @@ ${file} goes to ${c.profile.device} on ${name} (${c.profile.host}) over FTP ${is
       'Pull Robot Copy', 'Show Diff');
     if (pick === 'Pull Robot Copy') {
       await writeWorkingCopy(target, robotText, '\n');
-      await Promise.all([s.data.refresh(), s.index.refresh()]);
+      await s.index.refreshUri(target);
+      comparedChanged.fire();
       vscode.window.setStatusBarMessage(`$(cloud-upload) ${progName}: working copy synced to ${name}'s copy · Ctrl+Z undoes it`, 8000);
     } else if (pick === 'Show Diff') {
       await showSentVsControllerDiff(progName, text, robotText);
     }
+  } else if (done.normalizedDiffers) {
+    // `pullAfterPush: never`: the push succeeded, the read-back is different, and the working
+    // file was intentionally left alone. Warn only.
+    const pick = await vscode.window.showWarningMessage(
+      `${progName} is on ${name}, but the controller's copy differs from what you sent (${verdict}). Your working file was left unchanged.`,
+      'Show Diff');
+    if (pick === 'Show Diff' && robotText !== undefined) await showSentVsControllerDiff(progName, text, robotText);
   } else {
     vscode.window.setStatusBarMessage(`$(cloud-upload) ${summary}`, 8000);
   }
   return true;
-  });
+}
+
+/**
+ * Put the pre-push copy back on the controller. This is the recovery for a push whose final
+ * pull failed or was cancelled, and it is also a normal command. The working file is left as
+ * the user had it (their edits) so they can retry; the snapshot is advanced from the read-back.
+ */
+async function restorePrePush(s: FanucServices, robots: RobotManager, uri?: vscode.Uri): Promise<void> {
+  if (!config<boolean>('live.upload', false)) { uploadsOff('nothing was restored'); return; }
+  const target = uri ?? vscode.window.activeTextEditor?.document.uri;
+  if (!target || target.scheme !== 'file') { vscode.window.showInformationMessage('Open the program whose pre-push copy you want to restore.'); return; }
+  const marker = s.containers.markerOf(target.fsPath);
+  if (!marker) { vscode.window.showInformationMessage('That file is not in a robot container.'); return; }
+  const backup = readPushBackup(marker.root);
+  if (!backup) { vscode.window.showInformationMessage(`No pre-push copy is kept for ${marker.name}.`); return; }
+  const name = backup.meta.robot;
+  const c = robots.get(name);
+  if (!c || c.state !== 'connected') { vscode.window.showWarningMessage(`${name} is not connected, so the pre-push copy cannot be restored.`); return; }
+  if (s.rukus?.available && s.rukus.robot(name)?.isWriteLocked) {
+    vscode.window.showWarningMessage(`${name} is write-locked in RUKUS, so the pre-push copy cannot be restored. Unlock it in RUKUS (Cluster > Edit robot) first.`);
+    return;
+  }
+  const file = backup.meta.file;
+  const ok = await vscode.window.showWarningMessage(
+    `Restore ${file} on ${name} from the pre-push copy?`,
+    { modal: true, detail: `This writes the controller copy read before the last push (${backup.meta.at}) back over ${c.profile.device} on ${name} (${c.profile.host}). Your working file is left as it is.` },
+    'Restore');
+  if (ok !== 'Restore') return;
+  const progName = file.replace(/\.[^.]+$/, '').toUpperCase();
+  const data = Buffer.from(backup.text.replace(/\r?\n/g, '\r\n'), 'latin1');
+  try {
+    const snapPath = await robots.withTransfer(name,
+      { kind: 'restore', label: `Restore ${file} → ${name}`, file },
+      () => withSyncLock(marker.root.toLowerCase(), () => robots.withSession(c.profile, c.profile.device, async session => {
+        await robots.verifyIdentity(name, session);
+        await robots.fetch(name, ['tasks'], session).catch(() => undefined);
+        const active = robots.activeTpTasks().find(t => t.robot === name && t.task.stack.some(f => f.program.toUpperCase() === progName));
+        if (active) throw new Error(`${progName} is ${active.task.status.toLowerCase()} on ${name}; abort it on the pendant first.`);
+        await robots.writeBinary(c.profile, file, data, c.profile.device, session);
+        const back = await robots.readText(c.profile, file, c.profile.device, session);
+        const rel = recordSnapshotFile(s, marker, file, back);
+        robots.log(name, `RESTORE ${file} from the pre-push copy (${data.length} bytes)`);
+        return path.join(marker.snapshotDir, rel);
+      }, { write: true })));
+    if (snapPath === undefined) return;
+    await s.index.refreshUri(vscode.Uri.file(snapPath));
+    await s.containers.refresh();
+    comparedChanged.fire();
+    vscode.window.setStatusBarMessage(`$(history) ${file} restored on ${name} from the pre-push copy`, 8000);
+  } catch (e: any) {
+    const why = e?.message ?? String(e);
+    const hint = connectionHint(why, c.profile);
+    vscode.window.showErrorMessage(`Could not restore ${file} on ${name}: ${why}${hint ? ` ${hint}` : ''}`);
+  }
 }
 
 /** a program's /ATTR saying the controller will not let it be replaced */
@@ -706,14 +833,18 @@ async function showSentVsControllerDiff(progName: string, sent: string, controll
  * the robot's change (the reflog keeps the snapshot's old copy), or to look at it first.
  * Nothing is pushed either way - the user fetches, reviews and pushes again.
  */
-async function handlePushConflict(s: FanucServices, marker: RobotMarker, robotName: string, file: string, doc: vscode.TextDocument, robotText: string, diff: VerbatimDiff): Promise<void> {
+async function handlePushConflict(
+  s: FanucServices, marker: RobotMarker, robotName: string, file: string, doc: vscode.TextDocument,
+  robotText: string, diff: VerbatimDiff,
+  opts: { onPhase?: (message: string) => void; signal?: AbortSignal } = {},
+): Promise<void> {
   const n = diff.changed + diff.added + diff.deleted;
   const what = diff.metadataOnly ? 'only metadata (date/time) differs' : `${n} line${n === 1 ? '' : 's'} differ`;
   const pick = await vscode.window.showWarningMessage(
     `The robot's copy of ${file} differs from the snapshot - it changed on the pendant and was never fetched.`,
     {
       modal: true,
-      detail: `Verbatim compare: ${what}. Pushing now would overwrite that change, so it is refused.\n\nFetch the robot's copy into the snapshot, review the diff, then push again.${diff.metadataOnly ? '\n\nOnly metadata lines differ, but the gate is verbatim - look before you push.' : ''}`,
+      detail: `Normalized compare: ${what}. Pushing now would overwrite that change, so it is refused.\n\nFetch the robot's copy into the snapshot, review the diff, then push again.`,
     },
     'Update Snapshot from Robot', 'Show Diff');
   if (pick === 'Show Diff') {
@@ -721,12 +852,17 @@ async function handlePushConflict(s: FanucServices, marker: RobotMarker, robotNa
     const tmp = vscode.Uri.joinPath(dir, `${historyStamp()}_${file}`);
     await vscode.workspace.fs.createDirectory(dir);
     await vscode.workspace.fs.writeFile(tmp, Buffer.from(robotText, 'latin1'));
-    await vscode.commands.executeCommand('vscode.diff', tmp, doc.uri, `${file}: robot (just read) ⟷ your working copy`);
+    await vscode.commands.executeCommand('vscode.diff', tmp, doc.uri, `${file}: robot (just read) ? your working copy`);
     return;
   }
   if (pick === 'Update Snapshot from Robot') {
-    captureRobotCopy(s, marker, file, robotText);
-    await Promise.all([s.data.refresh(), s.index.refresh()]);
+    opts.onPhase?.('Updating snapshot');
+    // One file, one index entry: the old full data+index refresh was the ~10 s silence.
+    const snapPath = captureRobotCopy(s, marker, file, robotText);
+    if (!opts.signal?.aborted) {
+      await s.index.refreshUri(vscode.Uri.file(snapPath));
+      comparedChanged.fire();
+    }
     vscode.window.setStatusBarMessage(`$(cloud-download) Snapshot: ${file} captured from ${robotName} - review, then push again`, 8000);
   }
 }
@@ -737,7 +873,9 @@ async function handlePushConflict(s: FanucServices, marker: RobotMarker, robotNa
  * With RUKUS installed the Error Watcher is offered instead of a weaker copy here.
  */
 async function reportPushFailure(s: FanucServices, conn: { profile: { name: string; useFtp: boolean } }, file: string, message: string): Promise<void> {
-  const alarms = conn.profile.useFtp ? [] : await fetchControllerErrors(s, conn as any).catch(() => []);
+  // Read the controller's error log over whichever transport the profile uses: an FTP push
+  // that the controller refused usually explains itself only in ERRALL/ERRCURR.
+  const alarms = await fetchControllerErrors(s, conn as any).catch(() => []);
   const first = alarms[0];
   // The newest alarm is not necessarily this push's (ROBOGUIDE 2026-10-01: a write-protect 550
   // came back with an unrelated SRVO-408 e-stop on top), so it is labelled as such and the hint
@@ -818,8 +956,10 @@ class LiveEdit implements vscode.Disposable {
       if (gate.kind === 'error') { vscode.window.showWarningMessage(`${name} did not report its copy of ${progName}: ${gate.error}. Live edit was not started.`); return; }
       if (gate.kind === 'conflict') { await handlePushConflict(this.s, marker, name, file, doc, gate.robotText, gate.diff); return; }
       if (gate.kind === 'no-snapshot') {
-        captureRobotCopy(this.s, marker, file, gate.robotText);
-        await Promise.all([this.s.data.refresh(), this.s.index.refresh()]);
+        const snapPath = captureRobotCopy(this.s, marker, file, gate.robotText);
+        await this.s.index.refreshUri(vscode.Uri.file(snapPath));
+        await this.s.containers.refresh();
+        comparedChanged.fire();
       }
     }
     const kind = targetKindLabel(targetKindOfHost(c.profile.host)).toLowerCase();

@@ -59,10 +59,11 @@ They are different questions and must not be conflated:
 | Compare | Used for | Rule |
 |---|---|---|
 | **W ↔ S** (working vs snapshot) | the tree marker, the status bar, the snapshot view | **normalized** - line numbers, terminators and `LINE_COUNT` are ignored, so a renumber reads as identical |
-| **R′ ↔ S** (robot vs snapshot) | the **push gate** | **verbatim** - nothing is stripped; a metadata-only difference still blocks, but is labelled |
+| **R′ ↔ S** (robot vs snapshot) | the **push gate** | **normalized** - line numbers, `DATE`/`MODIFIED`/`TIME`, `LINE_COUNT` and the controller's own stamps are ignored; a real text change still blocks |
 
-The verbatim rule is the safety feature: a pendant touch-up that changes only a taught position
-is exactly the change that must be seen before a push, and no normalization may hide it.
+The normalized rule is the safety feature without the false conflicts: a pendant touch-up that
+changes a taught position is a real text change and is seen; a robot that only renumbered lines
+or re-stamped a date is not. The gate read is also the **pre-push copy** (see below).
 
 Blank lines are not stripped: a scaffolded empty line (`   :  ;`) normalizes to an empty line, but
 the line itself is kept, so adding or removing one is a real difference. The same-kind **source**
@@ -71,33 +72,77 @@ folder carries no text and must not make every edit read as identical.
 
 ## Push algorithm
 
-1. Save and parse; the existing guards (running program, RUKUS write lock, `live.upload`); no
-   snapshot yet -> the robot's current copy becomes the first snapshot entry.
-2. Read the robot's copy R′ (`CURPOS`-style: one read, on the button).
-3. Compare **R′ ↔ S verbatim**:
-   - equal -> show the W ↔ S summary in the confirm, push;
-   - unequal -> **refuse**. Offer `Update Snapshot from Robot` (S <- R′, previous S to the
-     history) or `Show Diff`; the user reviews, then pushes again.
-4. On success, read the program back (R″), set **S <- R″** verbatim, and check the round trip with
-   the **metadata-insensitive** compare (`stripTpMetadata`: CREATE/MODIFIED stamps, `LINE_COUNT`,
-   `PROG_SIZE`, `MEMORY_SIZE` ignored) so a controller that only re-stamped the date is not called
-   a difference. An explicit push then **pulls R″ into the working copy**, so workspace = snapshot
-   = robot and a post-push "compare with snapshot" has nothing to show. `containers.pullAfterPush`
-   chooses how aggressively: `always` (default) overwrites the working file even when R″ differs
-   from what was sent (the common case - DATE/MODIFIED, line numbers, variable labels), reporting
-   the difference; `when-identical` keeps the local copy on a difference; `never` leaves it alone.
-   Live edit never pulls - the editor is the source there, and a save is not a user-initiated sync.
+1. Save and parse; the existing guards (running program, RUKUS write lock, `live.upload`); the
+   local diagnostics and git note; then **one modal** naming the robot, device and program.
+2. **One FTP session** does the rest, so the controller sees **one login** instead of one per step:
+   identity (`VERSION.DG`), tasks (`PRGSTATE.DG`), options (cached), the gate read R′, the backup,
+   the write, the read-back R″ and (by default) the compiled partner.
+3. Compare **R′ ↔ S normalized** (`roundTripCompare`):
+   - equal -> the gate passes; write the **pre-push copy** (one file, overwritten) and push;
+   - unequal -> **refuse** (unless `containers.guardUpload` is off). Offer
+     `Update Snapshot from Robot` (S <- R′, previous S to the history) or `Show Diff`; the user
+     reviews, then pushes again.
+4. On success, set **S <- R″** and check the round trip with the same normalized compare, so a
+   controller that only re-stamped the date (or added `LOCAL_REGISTERS = 0,0,0;`) is not called a
+   difference. A compile normally rewrites the source (and a source with no point data can read
+   back with a different line layout), so R″ differing from what was sent is a **warning**, not a
+   failed push. An explicit push **pulls R″ into the working copy** (the last step) according to
+   `containers.pullAfterPush`: `always` (default) overwrites even when the compile rewrote it,
+   `when-identical` keeps your file on a difference, `never` leaves it alone. Only a controller
+   error (the STOR is refused) fails the push and is captured from `ERRCURR`/`ERRALL`.
+   `containers.pullPartnerAfterPush` controls the partner representation read;
+   `containers.pullCompiledAfterSourcePush` controls the compiled `.TP`/`.PC` read after a
+   source `.LS`/`.KL` push, fetch or pull.
+5. **Cancel** is honoured before the write (nothing is sent) and during the final pull. The write
+   itself is never aborted. If the pull fails or is cancelled, the push offers **Revert** from the
+   pre-push copy, and `robotCode.sync.restorePrePush` is always available.
 
-Both the push gate (R′ ↔ S) and the round-trip check (R″ ↔ sent) read the robot; the W ↔ S
-compare that drives the marker is normalized on top of that.
+Both the push gate (R′ ↔ S) and the round-trip check (R″ ↔ sent) use the normalized compare; the
+W ↔ S compare that drives the marker is the same family.
 
 Live Edit is gated once at pairing by the same compare; each save sets S <- read-back.
 
+## Transports
+
+Bulk file work - single-file fetch/pull, folder fetch/pull (including its listing), backup,
+snapshot-from-robot and compare-all - prefers **FTP** (`robotCode.transfers.preferFtp`, default
+true), even when the robot profile uses HTTP for single reads. A controller's cost is per session,
+not per byte. If FTP is unavailable or its login is refused, reads fall back to HTTP when
+`live.protocolFallback: auto`; writes are always FTP. Single reads and the connection probe keep
+the profile's `useFtp`, and the sticky last-good transport is reset on reconnect.
+
+## Transfer queue and status
+
+Every controller operation and long local job is one entry in `TransferQueue`
+(`packages/core/src/transferQueue.ts`), serialised per key (`robot:<name>`, `container:<root>`,
+`index`):
+
+- **Status bar** (left): foreground operations always; long background work (index/data refresh,
+  snapshot from backup, container init) only when no foreground item is active; sub-second reads
+  are in the QuickPick only. The line names the action and the real step, e.g.
+  `Push MAIN.LS — ftp(s3): STOR MD:MAIN.LS`.
+- **QuickPick** (`robotCode.transfers.show`, the status item's click): Active/Queued/Recent,
+  per-item remove/cancel, `Cancel all`, and the technical log; recent entries stay
+  `transfers.recentSeconds` (default 120 s).
+- **Cancel**: a queued item is removed only; a running item is aborted through its signal and
+  the operation applies its own rule (preflight/gate abort, `STOR` finishes then offers a revert).
+- **Conflict update**: `handlePushConflict` runs inside the push's queue entry (session closed
+  during the modal), and `WorkspaceIndex.refreshUri` indexes the one snapshot file instead of
+  rescanning the workspace. The second push is visibly queued behind it.
+- **Heartbeat**: while a transfer owns a robot, the beat is paused (not failed) and the robot
+  item shows `$(sync~spin)`/`$(clock)`, never the red disconnect slash.
+- **Future**: a dedicated Transfers panel (GitHub issue), and moving the heartbeat to an
+  isolated channel so it never shares the transfer path.
+
 ## Snapshot history (the reflog)
 
-`.robocode-robot/snapshot-history/<stamp>/<relpath>` keeps the copy a fetch replaced, and the
-pre-push R′. Bounded by `robotCode.containers.snapshotHistory` (default 50, 0 = keep
-everything), gitignored. Nothing is ever both overwritten and unrecoverable.
+`.robocode-robot/snapshot-history/<stamp>/<relpath>` keeps the copy a fetch replaced. Bounded by
+`robotCode.containers.snapshotHistory` (default 50, 0 = keep everything), gitignored. Nothing is
+ever both overwritten and unrecoverable.
+
+The **pre-push copy** is separate: one file for the last push only, in
+`.robocode-robot/push-backup/<FILE>` with a small manifest. It exists to recover from a push whose
+final pull failed or was cancelled, not to version programs - the snapshot history is for that.
 
 ## `snapshot.json`
 
@@ -120,12 +165,14 @@ file's mtime. `updatedAt` is the last time any part changed.
 
 - **Editor tab**: git-shaped buttons in a fixed order - (Revert) Fetch (`repo-fetch`),
   Pull (`repo-pull`), (Push `repo-push`, confirms), Compare (`git-compare`), History
-  (`history`) - plus Show Program Flow for TP. Revert appears only when the working copy differs
-  from the snapshot; Push only when there is something to send (`robotCode.syncPushable`: a local
-  difference, or a program the snapshot has never seen). Our items use `navigation@0.x` so they
-  pack before another extension's Git **Open Changes** (`navigation@2`), which the user's own git
-  layer contributes; a `fanuc://` file adds Download first. Karel adds Check/Compile. Age and
-  state are in the tooltip and the status bar.
+  (`history`) - plus Show Program Flow for TP. Fetch, Pull and Push are shown together for any
+  working file in a robot container whose controller has an address (`robotCode.fileHasRobot`),
+  whether or not it is connected; Revert appears only when the working copy differs from the
+  snapshot, and Push stays visible when there is nothing to send (the command says so). A Push
+  with `robotCode.live.upload` off is visible too and explains how to turn uploads on. Our items
+  use `navigation@0.x` so they pack before another extension's Git **Open Changes**
+  (`navigation@2`), which the user's own git layer contributes; a `fanuc://` file adds Download
+  first. Karel adds Check/Compile. Age and state are in the tooltip and the status bar.
 - **One Compare command**: the tab, the status-bar click, the tree inline action and every context
   menu all run `robotCode.sync.compareFile`; `sync.diffOpen` and `containers.diffWithSnapshot` are
   its internal implementation and are hidden from the palette. It always opens the diff, identical
@@ -154,13 +201,22 @@ file's mtime. `updatedAt` is the last time any part changed.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `robotCode.containers.guardUpload` | `true` | the verbatim push gate |
+| `robotCode.containers.guardUpload` | `true` | the normalized push gate (the gate read is also the pre-push backup) |
+| `robotCode.containers.prePushBackup` | `true` | keep the last pre-push copy in `.robocode-robot/push-backup/` |
+| `robotCode.containers.pullPartnerAfterPush` | `always` | read the partner representation after a push |
+| `robotCode.containers.pullCompiledAfterSourcePush` | `true` | read the compiled `.TP`/`.PC` after a source `.LS`/`.KL` push, fetch or pull |
+| `robotCode.containers.unchangedCheck` | `auto` | skip a fetch when size/mtime match the last one |
+| `robotCode.live.protocolFallback` | `auto` | read-only fallback between HTTP and FTP (network or FTP login refusal) |
+| `robotCode.transfers.preferFtp` | `true` | bulk transfers try FTP first, regardless of the profile protocol |
+| `robotCode.transfers.recentSeconds` | `120` | how long a finished queue entry stays in the QuickPick |
 | `robotCode.containers.snapshotHistory` | `50` | reflog stamps to keep (0 = all) |
 | `robotCode.containers.gitAware` | `false` | on push, note uncommitted git changes |
 
 ## Out of scope / follow-ups
 
 Tracked as their own issues and in `docs/ux-audit.md`:
+
+- Dedicated Transfers panel and an isolated heartbeat channel: GitHub issue #77.
 
 - Full RUKUS integration: a cluster imported into a robot cell (this is why the containers
   exist). Where RUKUS is linked, a push failure offers RUKUS's Error Watcher.

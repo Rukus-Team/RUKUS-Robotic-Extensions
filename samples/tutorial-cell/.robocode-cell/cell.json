@@ -1,0 +1,13 @@
+{
+  "name": "Tutorial Cell",
+  "controllers": {
+    "S002R01": {
+      "host": "127.0.0.2",
+      "device": "MD:"
+    },
+    "S002R05": {
+      "host": "127.0.0.3",
+      "device": "MD:"
+    }
+  }
+}

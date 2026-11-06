@@ -88,7 +88,7 @@ async function main() {
   check('workspace index has ENTERZON (all copies)', !!indexed, `${indexed} vs ${lsAll.length} files`);
 
   // ---- sidebar: six sections, each with a header summary and the right rows ----
-  for (const v of ['robotCode.robots', 'robotCode.snapshot', 'robotCode.programs', 'robotCode.pcPrograms', 'robotCode.macros', 'robotCode.registers']) {
+  for (const v of ['robotCode.cell', 'robotCode.snapshot', 'robotCode.programs', 'robotCode.pcPrograms', 'robotCode.macros', 'robotCode.registers']) {
     let ok = true;
     try { await vscode.commands.executeCommand(`${v}.focus`); } catch (e) { ok = false; }
     check(`sidebar: section ${v} exists`, ok);
@@ -646,7 +646,7 @@ async function main() {
       const l44 = lines.findIndex(l => /^\s*44:/.test(l));
       tpEd.selection = new vscode.Selection(l44, 0, l44, 0);
       tpEd.revealRange(new vscode.Range(l44, 0, l44, 0), vscode.TextEditorRevealType.InCenter);
-      await vscode.commands.executeCommand('robotCode.robots.focus');
+      await vscode.commands.executeCommand('robotCode.cell.focus');
       await sleep(1500);
       await shot('live-robots-view-running-line', 2500);
       // Fetch: one read of the open program into the snapshot, and nothing else. The mock

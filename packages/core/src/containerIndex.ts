@@ -194,8 +194,8 @@ export class ContainerIndex implements vscode.Disposable {
     // `exclude`, another `controller` - or a controller's host in cell.json changed nothing until
     // a manual Refresh: the new markers were stored, but nothing was told to rescan.
     const signature = (ms: readonly RobotMarker[], cs: readonly CellMarker[]) => JSON.stringify([
-      ms.map(m => [m.root, m.name, m.programDirs ?? null, m.excludeDirs, m.snapshotDir, m.controller ?? null]),
-      cs.map(c => [c.root, c.name, c.controllers]),
+      ms.map(m => [m.root, m.name, m.brand ?? null, m.programDirs ?? null, m.excludeDirs, m.snapshotDir, m.controller ?? null]),
+      cs.map(c => [c.root, c.name, c.brand ?? null, c.rukus ?? null, c.controllers]),
     ]);
     const changed = signature(markers, cells) !== signature(this._markers, this._cells);
 

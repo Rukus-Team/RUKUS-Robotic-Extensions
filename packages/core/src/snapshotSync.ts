@@ -15,7 +15,7 @@ import * as vscode from 'vscode';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { Services } from './services';
-import type { RobotConnection } from './live/robotManager';
+import type { RobotConnection, TransferSession } from './live/robotManager';
 import type { ProgramInfo } from './workspaceIndex';
 import { config } from './util';
 import { brandForFile } from './brand';
@@ -23,9 +23,10 @@ import {
   readSnapshotFile, writeSnapshotFile, pushSnapshotFileToHistory,
   pruneSnapshotHistory, listSnapshotFiles, snapshotRelKey, readProvenance, writeProvenance,
   verbatimCompare, readSnapshotProgram, roundTripCompare, findSnapshotProgram, isCompiledProgram,
-  pairedProgramName, type VerbatimDiff, type RobotMarker, type SnapshotProvenance,
+  pairedProgramName, shouldFetchCompiledPartner, type VerbatimDiff, type RobotMarker, type SnapshotProvenance,
 } from './robotContainers';
 import { snapshotRefFor } from './containerCompare';
+import { isMissingOnRobotError } from './live/connectionHints';
 
 // ── state of the open file against its snapshot ─────────────────────────────
 
@@ -181,13 +182,17 @@ export function targetFromUri(s: Services, uri: vscode.Uri): SyncTarget | undefi
  * and record the fetch time. This is the ONLY way snapshot files advance.
  */
 export function recordSnapshotFile(s: Services, marker: RobotMarker, name: string, data: Uint8Array | string, at = new Date()): string {
+  // Count from the one file, not a full snapshot walk: a conflict update used to re-list every
+  // snapshot file for this count and then do it again for the index.
+  const existed = readSnapshotFile(marker.snapshotDir, name) !== undefined;
   pushSnapshotFileToHistory(marker.root, marker.snapshotDir, name);
   const rel = writeSnapshotFile(marker.snapshotDir, name, data);
   const prov = readProvenance(marker.root) ?? defaultProvenance(marker, at);
   prov.files = prov.files ?? {};
   prov.files[snapshotRelKey(rel)] = at.toISOString();
   prov.updatedAt = at.toISOString();
-  prov.fileCount = listSnapshotFiles(marker.snapshotDir).length;
+  if (!existed) prov.fileCount = (prov.fileCount ?? 0) + 1;
+  else if (prov.fileCount === undefined) prov.fileCount = 0;
   writeProvenance(marker.root, prov);
   pruneSnapshotHistory(marker.root, config<number>('containers.snapshotHistory', 50));
   return rel;
@@ -204,12 +209,19 @@ export function snapshotCopy(s: Services, marker: RobotMarker, name: string): st
   return readSnapshotFile(marker.snapshotDir, name);
 }
 
+// The pre-push copy lives with the other pure container file helpers (robotContainers.ts).
+export { PUSH_BACKUP_DIR, pushBackupPath, recordPushBackup, readPushBackup, type PushBackupMeta } from './robotContainers';
+
 // ── fetching from the robot ─────────────────────────────────────────────────
 
 export interface FetchOutcome {
   ok: number;
   failed: number;
   changed: number;
+  /** files known to be unchanged (skipped by size/mtime, or read and identical) */
+  unchanged: number;
+  /** the transport the batch actually used, for the status banner */
+  protocol?: 'ftp' | 'http';
   /** device file names that failed, for the log */
   errors: string[];
 }
@@ -225,40 +237,80 @@ export interface FetchProgress {
 }
 
 /**
- * Pull the listed files from the controller into the snapshot, in place. A file that is the
- * same as the snapshot's copy is not written and does not touch the history; a changed one
- * is archived first. Returns what happened.
+ * Pull the listed files from the controller into the snapshot, in place. Files whose size
+ * (and mtime, when the controller lists one) match the last fetch are not read at all;
+ * a read file identical to the snapshot is not written and does not touch the history;
+ * a changed one is archived first. Provenance is written ONCE per batch.
+ *
+ * Passing the controller's `listing` is what makes the skip possible; without it every
+ * file is read (the old behavior).
  */
-export async function fetchFilesFromRobot(s: Services, marker: RobotMarker, conn: RobotConnection, deviceNames: string[], progress?: FetchProgress): Promise<FetchOutcome> {
+export async function fetchFilesFromRobot(
+  s: Services, marker: RobotMarker, conn: RobotConnection, deviceNames: string[], progress?: FetchProgress,
+  listing?: Array<{ name: string; size?: number; mtime?: number }>,
+): Promise<FetchOutcome> {
   const live = s.live;
-  if (!live) return { ok: 0, failed: 0, changed: 0, errors: ['no robot connection'] };
+  if (!live) return { ok: 0, failed: 0, changed: 0, unchanged: 0, errors: ['no robot connection'] };
   const profile = conn.profile;
   const at = new Date();
-  const out: FetchOutcome = { ok: 0, failed: 0, changed: 0, errors: [] };
-  const archive = new Map<string, Uint8Array>();
+  const out: FetchOutcome = { ok: 0, failed: 0, changed: 0, unchanged: 0, errors: [] };
+  const provBefore = readProvenance(marker.root);
+  const mode = config<string>('containers.unchangedCheck', 'auto');
+  const sizes = new Map((listing ?? []).map(f => [f.name.toUpperCase(), f]));
+  const skipped = new Set<string>();
+  const toRead: string[] = [];
+  for (const name of deviceNames) {
+    const key = snapshotRelKey(name);
+    const meta = sizes.get(name.toUpperCase());
+    const prevSize = provBefore?.sizes?.[key];
+    const prevMtime = provBefore?.mtimes?.[key];
+    const sizeSame = meta?.size !== undefined && prevSize !== undefined && meta.size === prevSize;
+    const timeSame = meta?.mtime !== undefined && prevMtime !== undefined && meta.mtime === prevMtime;
+    const skip = mode !== 'never' && sizeSame && (
+      mode === 'size' ? true
+        : mode === 'size-time' ? timeSame
+          : (meta?.mtime === undefined || prevMtime === undefined || timeSame)
+    );
+    if (skip) skipped.add(name); else toRead.push(name);
+  }
   let done = 0;
-  await live.readBinaryMany(profile, deviceNames, profile.device, (name, result) => {
+  for (const name of skipped) {
+    done++;
+    out.ok++; out.unchanged++;
+    progress?.onFile?.(done, deviceNames.length, name);
+  }
+  const archive = new Map<string, Uint8Array>();
+  const readOk = new Set<string>();
+  out.protocol = await live.readBinaryMany(profile, toRead, profile.device, (name, result) => {
     done++;
     if (!('data' in result)) { out.failed++; out.errors.push(`${name}: ${result.error}`); progress?.onFile?.(done, deviceNames.length, name); return; }
     const before = readSnapshotFile(marker.snapshotDir, name);
     const after = Buffer.from(result.data).toString('latin1');
-    if (before !== undefined && before !== after) out.changed++;
-    archive.set(name, result.data);
+    readOk.add(name);
     out.ok++;
+    if (before === after) out.unchanged++;
+    else { out.changed++; archive.set(name, result.data); }
     progress?.onFile?.(done, deviceNames.length, name);
   }, progress?.isCancelled, progress?.signal);
   // write once, off the callback, so the history copy is of the pre-fetch file
   for (const [name, data] of archive) {
     pushSnapshotFileToHistory(marker.root, marker.snapshotDir, name);
     writeSnapshotFile(marker.snapshotDir, name, data);
-    const prov = readProvenance(marker.root) ?? defaultProvenance(marker, at);
-    prov.files = prov.files ?? {};
-    prov.files[snapshotRelKey(name)] = at.toISOString();
-    prov.updatedAt = at.toISOString();
-    writeProvenance(marker.root, prov);
   }
-  if (archive.size) {
-    const prov = readProvenance(marker.root)!;
+  if (deviceNames.length) {
+    const prov = provBefore ?? defaultProvenance(marker, at);
+    prov.files = prov.files ?? {};
+    prov.sizes = prov.sizes ?? {};
+    prov.mtimes = prov.mtimes ?? {};
+    for (const name of deviceNames) {
+      if (!skipped.has(name) && !readOk.has(name)) continue;
+      const key = snapshotRelKey(name);
+      const meta = sizes.get(name.toUpperCase());
+      prov.files[key] = at.toISOString();
+      if (meta?.size !== undefined) prov.sizes[key] = meta.size;
+      if (meta?.mtime !== undefined) prov.mtimes[key] = meta.mtime;
+    }
+    prov.updatedAt = at.toISOString();
     prov.fileCount = listSnapshotFiles(marker.snapshotDir).length;
     writeProvenance(marker.root, prov);
     pruneSnapshotHistory(marker.root, config<number>('containers.snapshotHistory', 50));
@@ -271,7 +323,7 @@ export async function fetchFilesFromRobot(s: Services, marker: RobotMarker, conn
  * file (the Pull that follows a Fetch, say) reuses the read instead of asking the controller
  * again, so the robot is read once and both callers see the same result.
  */
-const inFlightFetches = new Map<string, Promise<{ ok: boolean; changed: boolean; error?: string }>>();
+const inFlightFetches = new Map<string, Promise<{ ok: boolean; changed: boolean; error?: string; protocol?: 'ftp' | 'http' }>>();
 
 /**
  * Read one file from the controller into the snapshot, and its paired representation too: a
@@ -280,7 +332,7 @@ const inFlightFetches = new Map<string, Promise<{ ok: boolean; changed: boolean;
  * best-effort: a controller that does not have it simply leaves the pair one-sided. Concurrent
  * fetches of the same file share the one read.
  */
-export function fetchFileFromRobot(s: Services, marker: RobotMarker, conn: RobotConnection, fileName: string): Promise<{ ok: boolean; changed: boolean; error?: string }> {
+export function fetchFileFromRobot(s: Services, marker: RobotMarker, conn: RobotConnection, fileName: string): Promise<{ ok: boolean; changed: boolean; error?: string; protocol?: 'ftp' | 'http' }> {
   const key = `${marker.root.toLowerCase()}|${conn.profile.device.toLowerCase()}|${fileName.toUpperCase()}`;
   const existing = inFlightFetches.get(key);
   if (existing) return existing;
@@ -289,27 +341,34 @@ export function fetchFileFromRobot(s: Services, marker: RobotMarker, conn: Robot
   return run;
 }
 
-async function doFetchFileFromRobot(s: Services, marker: RobotMarker, conn: RobotConnection, fileName: string): Promise<{ ok: boolean; changed: boolean; error?: string }> {
+async function doFetchFileFromRobot(s: Services, marker: RobotMarker, conn: RobotConnection, fileName: string): Promise<{ ok: boolean; changed: boolean; error?: string; protocol?: 'ftp' | 'http' }> {
   const live = s.live;
   if (!live) return { ok: false, changed: false, error: 'no robot connection' };
-  let data: Uint8Array;
+  let changed = false;
+  let protocol: 'ftp' | 'http' | undefined;
   try {
-    data = await live.readBinary(conn.profile, fileName, conn.profile.device);
+    // One login for the source and its compiled partner (was two).
+    await live.withSession(conn.profile, conn.profile.device, async session => {
+      protocol = session.protocol;
+      const data = await live.readBinary(conn.profile, fileName, conn.profile.device, session);
+      const before = readSnapshotFile(marker.snapshotDir, fileName);
+      const after = Buffer.from(data).toString('latin1');
+      recordSnapshotFile(s, marker, fileName, data);
+      // keep the pair: also record the compiled/source partner when the controller has it, unless
+      // the source setting says to skip the extra (often slow) compiled transfer on a manual fetch/pull
+      const partner = pairedProgramName(fileName);
+      if (partner && shouldFetchCompiledPartner(fileName, config<boolean>('containers.pullCompiledAfterSourcePush', true))) {
+        try {
+          const pdata = await live.readBinary(conn.profile, partner, conn.profile.device, session);
+          recordSnapshotFile(s, marker, partner, pdata);
+        } catch { /* no partner on the controller: a source without its compiled copy, or vice versa */ }
+      }
+      changed = before !== after;
+    }, { bulk: true });
   } catch (e: unknown) {
     return { ok: false, changed: false, error: e instanceof Error ? e.message : String(e) };
   }
-  const before = readSnapshotFile(marker.snapshotDir, fileName);
-  const after = Buffer.from(data).toString('latin1');
-  recordSnapshotFile(s, marker, fileName, data);
-  // keep the pair: also record the compiled/source partner when the controller has it
-  const partner = pairedProgramName(fileName);
-  if (partner) {
-    try {
-      const pdata = await live.readBinary(conn.profile, partner, conn.profile.device);
-      recordSnapshotFile(s, marker, partner, pdata);
-    } catch { /* no partner on the controller: a source without its compiled copy, or vice versa */ }
-  }
-  return { ok: true, changed: before !== after };
+  return { ok: true, changed, protocol };
 }
 
 function defaultProvenance(marker: RobotMarker, at: Date): SnapshotProvenance {
@@ -342,7 +401,8 @@ export async function revertFromSnapshot(s: Services, marker: RobotMarker, fileN
   if (snap === undefined) return false;
   await writeWorkingCopy(uri, snap, '\n');
   clearRobotCompare(uri.fsPath);
-  await Promise.all([s.data.refresh(), s.index.refresh()]);
+  await s.index.refreshUri(uri);
+  comparedChanged.fire();
   return true;
 }
 
@@ -361,33 +421,37 @@ export type PushGate =
  * differs - including metadata - is a conflict: someone changed the program since the last
  * fetch, and pushing now would overwrite a change the snapshot has never seen.
  */
-export async function checkPushGate(s: Services, marker: RobotMarker, conn: RobotConnection, fileName: string, workingPath?: string): Promise<PushGate> {
+export async function checkPushGate(
+  s: Services, marker: RobotMarker, conn: RobotConnection, fileName: string, workingPath?: string,
+  opts: { session?: TransferSession; normalized?: boolean } = {},
+): Promise<PushGate> {
   const live = s.live;
   if (!live) return { kind: 'error', error: 'no robot connection' };
   const snap = snapshotCopy(s, marker, fileName);
   let robotText: string;
   try {
-    robotText = await live.readText(conn.profile, fileName, conn.profile.device);
+    robotText = await live.readText(conn.profile, fileName, conn.profile.device, opts.session);
   } catch (e: unknown) {
-    // A read can fail because the program is not there (a brand-new program) or because the
-    // robot did not answer. Only a listing that answers and does not name the file proves the
-    // first; anything else holds the push, as before.
-    try {
-      const files = await live.listFiles(conn.profile, conn.profile.device);
-      if (files.length && !files.some(f => !f.isDir && f.name.toUpperCase() === fileName.toUpperCase())) return { kind: 'not-on-robot' };
-    } catch { /* the listing failed too: report the read error */ }
-    return { kind: 'error', error: e instanceof Error ? e.message : String(e) };
+    const message = e instanceof Error ? e.message : String(e);
+    // A 550/404 is proof the file is not there (a brand-new program). No listing needed: the
+    // old fallback did a full `LIST MD:` just to answer the same question.
+    if (isMissingOnRobotError(message)) return { kind: 'not-on-robot' };
+    return { kind: 'error', error: message };
   }
   if (snap === undefined) return { kind: 'no-snapshot', robotText };
   const diff = verbatimCompare(robotText, snap);
-  noteRobotCompare(workingPath ?? marker.root, { differs: !diff.same, metadataOnly: diff.metadataOnly, changed: diff.changed + diff.added + diff.deleted });
+  // The gate decision is normalized: line numbers, stamps and a controller-added
+  // LOCAL_REGISTERS are not a robot-side change. The byte diff is still there for the dialog.
+  const kind = /\.kl$/i.test(fileName) ? 'karel' : 'tp';
+  const same = opts.normalized ? roundTripCompare(robotText, snap, kind).equal : diff.same;
+  noteRobotCompare(workingPath ?? marker.root, { differs: !same, metadataOnly: diff.metadataOnly, changed: diff.changed + diff.added + diff.deleted });
   comparedChanged.fire();
-  return diff.same ? { kind: 'ok', robotText } : { kind: 'conflict', robotText, diff };
+  return same ? { kind: 'ok', robotText } : { kind: 'conflict', robotText, diff };
 }
 
-/** Capture the robot's copy into the snapshot (the "Update Snapshot from Robot" answer to a conflict). */
-export function captureRobotCopy(s: Services, marker: RobotMarker, fileName: string, robotText: string): void {
-  recordSnapshotFile(s, marker, fileName, robotText);
+/** Capture the robot's copy into the snapshot; returns the snapshot file's absolute path. */
+export function captureRobotCopy(s: Services, marker: RobotMarker, fileName: string, robotText: string): string {
+  return path.join(marker.snapshotDir, recordSnapshotFile(s, marker, fileName, robotText));
 }
 
 export interface CompletePushOptions {
@@ -397,6 +461,12 @@ export interface CompletePushOptions {
   explicit?: boolean;
   workingPath?: string;
   preserveFocus?: boolean;
+  /** reuse the push's one session for the read-back and the compiled partner */
+  session?: TransferSession;
+  /** refresh the compiled `.TP`/`.PC` partner too (`containers.pullPartnerAfterPush`) */
+  partner?: boolean;
+  /** the user asked to stop at the last step: the pull is skipped, the caller offers a revert */
+  cancelPull?: () => boolean;
   /** phase messages while verifying and syncing, for the push progress */
   onPhase?: (message: string) => void;
 }
@@ -413,6 +483,10 @@ export interface CompletePushResult {
   /** the controller's copy, as read back (present when the read succeeded) */
   robotText?: string;
   verdict: string;
+  /** the final pull failed or was cancelled; the caller may offer a revert */
+  pullError?: string;
+  /** the snapshot files this push wrote (source, plus the compiled partner) */
+  snapshotPaths?: string[];
 }
 
 /**
@@ -427,30 +501,35 @@ export async function completePush(s: Services, marker: RobotMarker, conn: Robot
   if (!live) return { ok: false, identical: false, metadataOnly: false, normalizedDiffers: false, pulled: false, decision: 'off', verdict: 'no robot connection' };
   try {
     opts.onPhase?.("Verifying the controller's copy");
-    const back = await live.readText(conn.profile, fileName, conn.profile.device);
+    const back = await live.readText(conn.profile, fileName, conn.profile.device, opts.session);
     // The snapshot only ever advances from the robot: whatever the controller holds now IS it.
-    recordSnapshotFile(s, marker, fileName, back);
-    // Keep the pair: the controller just compiled the pushed .LS into a fresh .TP, so pull that
-    // into the snapshot too (best-effort) rather than leave the compiled copy stale.
+    const snapshotPaths: string[] = [path.join(marker.snapshotDir, recordSnapshotFile(s, marker, fileName, back))];
     const partner = pairedProgramName(fileName);
-    if (partner) {
-      try {
-        const pdata = await live.readBinary(conn.profile, partner, conn.profile.device);
-        recordSnapshotFile(s, marker, partner, pdata);
-      } catch { /* no compiled partner on the controller */ }
-    }
     const kind = /\.kl$/i.test(fileName) ? 'karel' : 'tp';
     const cmp = roundTripCompare(back, sentText, kind);
     const d = verbatimCompare(back, sentText);
-    // normalized equality, metadata-insensitive: the same view "Compare with Snapshot" shows, so
-    // a metadata-only round trip is not reported as a difference worth a warning
+    // A successful compile rewrites the source (and a program without point data can read back
+    // with different section/line layout). A read-back difference is a WARNING, never a failed
+    // push: the pull below still runs per `containers.pullAfterPush`.
     const normalizedDiffers = !cmp.equal;
     const decision = pullAfterPushDecision(!!opts.explicit, opts.pull ?? 'never', cmp.equal);
     let pulled = false;
+    let pullError: string | undefined;
     if (decision === 'overwrite' && opts.workingPath) {
       opts.onPhase?.('Syncing the working copy');
-      try { await writeWorkingCopy(vscode.Uri.file(opts.workingPath), back, '\n', { preserveFocus: opts.preserveFocus }); pulled = true; }
-      catch { /* the snapshot still advanced; the working copy is left as it was */ }
+      if (opts.cancelPull?.()) pullError = 'cancelled';
+      else {
+        try { await writeWorkingCopy(vscode.Uri.file(opts.workingPath), back, '\n', { preserveFocus: opts.preserveFocus }); pulled = true; }
+        catch (e) { pullError = e instanceof Error ? e.message : String(e); }
+      }
+    }
+    // Keep the pair AFTER the working file is synced: the compiled .TP read is the slow last RETR,
+    // and it must not delay the source pull. A refusal has nothing new to pair.
+    if (!pullError && partner && opts.partner !== false) {
+      try {
+        const pdata = await live.readBinary(conn.profile, partner, conn.profile.device, opts.session);
+        snapshotPaths.push(path.join(marker.snapshotDir, recordSnapshotFile(s, marker, partner, pdata)));
+      } catch { /* no compiled partner on the controller */ }
     }
     // Snapshot = read-back, so the robot matches the snapshot by definition.
     noteRobotCompare(opts.workingPath ?? marker.root, { differs: false });
@@ -458,7 +537,7 @@ export async function completePush(s: Services, marker: RobotMarker, conn: Robot
     const verdict = cmp.equal
       ? (cmp.metadataOnly ? 'read back identical (metadata refreshed)' : 'read back identical')
       : `read back differs (${d.changed + d.added + d.deleted} line(s))`;
-    return { ok: true, identical: cmp.equal, metadataOnly: cmp.metadataOnly, normalizedDiffers, pulled, decision, robotText: back, verdict };
+    return { ok: true, identical: cmp.equal, metadataOnly: cmp.metadataOnly, normalizedDiffers, pulled, decision, robotText: back, verdict, pullError, snapshotPaths };
   } catch (e: unknown) {
     return { ok: false, identical: false, metadataOnly: false, normalizedDiffers: false, pulled: false, decision: 'off', verdict: `could not read it back: ${e instanceof Error ? e.message : String(e)}` };
   }

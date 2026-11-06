@@ -266,6 +266,16 @@ export class WorkspaceIndex implements vscode.Disposable {
     return this.refreshing;
   }
 
+  /**
+   * Re-index ONE file (a snapshot copy a fetch/push just wrote) instead of rescanning the
+   * workspace. This is the difference between a 10 s refresh after a conflict and an instant one.
+   */
+  async refreshUri(uri: vscode.Uri): Promise<void> {
+    if (uri.scheme === 'file' && this.partitionResolver(uri) === 'excluded') { this.remove(uri); this.changed(); return; }
+    try { await this.indexUri(uri, uri.scheme === 'file' && this.partitionResolver(uri) === 'reference'); }
+    finally { this.changed(); }
+  }
+
   private queue(uri: vscode.Uri) {
     // A file that became 'excluded' (marker appeared, or was already there) must not be
     // indexed even if it was before - the watcher fires for it like any other.

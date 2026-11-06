@@ -1,7 +1,9 @@
 /**
  * Which brands the Robot Code side bar shows. A FANUC-only workspace shows the FANUC views, an
- * ABB-only one the ABB views, a mixed one both. An empty workspace shows both and, the first time
- * the side bar is opened, asks which the user works with; the answer is kept for that workspace.
+ * ABB-only one the ABB views, a mixed one both. These are the brands the loader decided on
+ * (brandAuto.ts), so the side bar cannot disagree with what is registered. An empty workspace
+ * loads FANUC and, the first time the side bar is opened, asks which brand the user works with;
+ * the answer is kept for that workspace.
  *
  * `robotCode.views.brands` overrides it: auto (the default) / fanuc / abb / both. The views read the
  * context keys robotCode.hideFanuc and robotCode.hideAbb (unset = shown, so nothing is hidden
@@ -49,8 +51,9 @@ export function registerBrandViews(ctx: vscode.ExtensionContext, s: Services, lo
     if (choice !== 'auto') { needsAsk = false; await set(choice !== 'abb', choice !== 'fanuc'); return; }
     const p = await present(s);
     needsAsk = !p.fanuc && !p.abb && !!vscode.workspace.workspaceFolders?.length && !ctx.workspaceState.get(ASKED);
-    if (p.fanuc || p.abb) await set(p.fanuc, p.abb);
-    else await set(true, true);
+    // The loader already decided which brands this window has (brandAuto.ts); showing what present()
+    // notices would let the side bar disagree with what actually loaded.
+    await set(loaded.fanuc, loaded.abb);
     // ABB support loads at start when the workspace has ABB files; files that arrive later, or a setting
     // that turned it off, get one offer (loading it takes a window reload)
     if (p.abb && !abbLoaded && !ctx.workspaceState.get(OFFERED_ABB)) {

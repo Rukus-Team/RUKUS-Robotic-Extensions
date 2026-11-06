@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'node:path';
 import { WorkspaceIndex } from './workspaceIndex';
 import { ContainerIndex } from './containerIndex';
+import { TransferQueue } from './transferQueue';
 import type { RobotManager } from './live/robotManager';
 import type { RukusClusters } from './rukus/clusters';
 import type { RobotMarker } from './robotContainers';
@@ -39,6 +40,8 @@ export interface ControllerData extends vscode.Disposable {
 export class Services<D extends ControllerData = ControllerData> implements vscode.Disposable {
   readonly containers = new ContainerIndex();
   readonly index = new WorkspaceIndex();
+  /** every long controller/local operation: status bar, queue, cancel */
+  readonly transfers = new TransferQueue();
   readonly output = vscode.window.createOutputChannel('RUKUS Robotic Extensions');
   /** live-controller tier; set by the extension after construction */
   live: RobotManager | undefined;
@@ -73,13 +76,31 @@ export class Services<D extends ControllerData = ControllerData> implements vsco
       }
       // a marker appearing or disappearing changes the partition: a full index rescan,
       // not just a regroup (files may need to be added or dropped)
-      void this.data.refresh().then(() => void this.index.refresh());
+      void this.refreshAll('Refresh after a container change');
     });
     this.data.onDidChange(() => this.index.regroup());
     // cell.json controllers are skipped until the folder is trusted
     vscode.workspace.onDidGrantWorkspaceTrust(() => {
       const defs = this.containers.controllerDefs();
       if (this.live && Object.keys(defs).length) this.live.mergeCellProfiles(defs);
+    });
+  }
+
+  /**
+   * A full data + index refresh, as one visible background queue entry. Long scans used to run
+   * with no feedback; this is where they show up (and where they can be canceled between steps).
+   */
+  async refreshAll(reason = 'Refresh workspace index'): Promise<void> {
+    await this.transfers.enqueue({
+      key: 'index', kind: 'index', visibility: 'background', label: reason,
+      run: async (signal, item) => {
+        item.technical('index: scan started');
+        await this.data.refresh();
+        item.technical(`data: ${this.data.datasets.length} backup folder(s)`);
+        if (signal.aborted) return;
+        await this.index.refresh();
+        item.technical(`index: ${this.index.list().length} program(s)`);
+      },
     });
   }
 

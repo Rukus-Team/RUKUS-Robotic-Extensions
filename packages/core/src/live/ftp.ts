@@ -132,15 +132,19 @@ class FtpControl {
 
 export class FtpClient {
   private ctl: FtpControl;
+  /** how long the login + CWD took, for the transfer log */
+  loginMs = 0;
   constructor(private opts: FtpOptions) { this.ctl = new FtpControl(opts); }
 
   async connect(): Promise<void> {
+    const started = Date.now();
     const hello = await this.ctl.connect();
     if (hello.code !== 220) throw new Error(`FTP greeting ${hello.code} ${hello.text}`);
     const u = await this.ctl.cmd(`USER ${this.opts.user || 'anonymous'}`);
     if (u.code === 331) await this.ctl.expect(`PASS ${this.opts.password ?? ''}`, c => c === 230 || c === 202);
     else if (u.code !== 230) throw new Error(`FTP login failed: ${u.code} ${u.text}`);
     await this.ctl.cmd('TYPE I');   // binary, once - it holds for the session
+    this.loginMs = Date.now() - started;
   }
 
   async cwd(device: string): Promise<void> {
@@ -188,7 +192,7 @@ export class FtpClient {
     // sends its 426 (or 226) for that transfer, and leaving it in the stream would answer
     // the next PASV, whose 227 would then answer the next RETR, and so on down the backup.
     if (start.code < 200) {
-      const fin = await this.ctl.reply();
+      const fin = await this.ctl.reply(timeoutMs);
       if (dataError) throw new Error(`FTP ${verb} failed: ${dataError.message} (${fin.code} ${fin.text})`);
       if (fin.code >= 400) throw new Error(`FTP ${verb} failed: ${fin.code} ${fin.text}`);
     } else if (dataError) {
@@ -197,30 +201,54 @@ export class FtpClient {
     return Buffer.concat(chunks);
   }
 
+  /** `SIZE NAME` (RFC 3659); undefined when the controller does not support it. */
+  async size(name: string): Promise<number | undefined> {
+    const r = await this.ctl.cmd(`SIZE ${name}`);
+    if (r.code !== 213) return undefined;
+    const m = /(\d+)\s*$/.exec(r.text);
+    return m ? parseInt(m[1], 10) : undefined;
+  }
+
+  /** `MDTM NAME` → the controller's UTC mtime, when it answers with one. */
+  async mdtm(name: string): Promise<number | undefined> {
+    const r = await this.ctl.cmd(`MDTM ${name}`);
+    const m = r.code === 213 ? /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(r.text.trim()) : undefined;
+    if (!m) return undefined;
+    return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+  }
+
+  /** Keep an idle session alive across a modal or a slow step. */
+  async noop(): Promise<void> { await this.ctl.cmd('NOOP'); }
+
   async list(): Promise<RemoteFile[]> {
     let text = '';
     try { text = (await this.transfer('LIST')).toString('latin1'); } catch { text = ''; }
-    const out = new Map<string, RemoteFile>();
-    for (const line of text.split(/\r?\n/)) {
-      const t = line.trim(); if (!t) continue;
-      // Unix style: -rw-r--r-- 1 owner group 1234 Jan 01 12:00 NAME
-      const unix = /^([-dl])\S+\s+\d+\s+\S+\s+\S+\s+(\d+)\s+\S+\s+\d+\s+[\d:]+\s+(.+)$/.exec(t);
-      if (unix) { out.set(unix[3].toUpperCase(), { name: unix[3], size: parseInt(unix[2], 10), isDir: unix[1] === 'd' }); continue; }
-      // DOS style: 01-01-24  12:00PM   1234 NAME   or   <DIR>
-      const dos = /^\d{2}-\d{2}-\d{2,4}\s+\d{2}:\d{2}(?:[AP]M)?\s+(<DIR>|\d+)\s+(.+)$/.exec(t);
-      if (dos) { out.set(dos[2].toUpperCase(), { name: dos[2], size: dos[1] === '<DIR>' ? undefined : parseInt(dos[1], 10), isDir: dos[1] === '<DIR>' }); continue; }
-      // FANUC style: "NAME.EXT      1234" or just the name
-      const fanuc = /^([A-Za-z0-9_\-$]+\.[A-Za-z0-9]+)\s*(\d+)?/.exec(t);
-      if (fanuc) out.set(fanuc[1].toUpperCase(), { name: fanuc[1], size: fanuc[2] ? parseInt(fanuc[2], 10) : undefined, isDir: false });
-    }
-    if (out.size === 0) {
+    let files = parseFtpListing(text);
+    if (files.length === 0) {
+      // A server that answers LIST with nothing may still answer NLST with names.
       const names = (await this.transfer('NLST')).toString('latin1');
+      const out = new Map<string, RemoteFile>();
       for (const n of names.split(/\r?\n/)) { const t = n.trim(); if (t) out.set(t.toUpperCase(), { name: t, isDir: false }); }
+      files = [...out.values()];
     }
-    return [...out.values()].sort((a, b) => a.name.localeCompare(b.name));
+    return files.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  async retrieve(name: string): Promise<Buffer> { return this.transfer(`RETR ${name}`); }
+  /**
+   * `RETR`, with the wait scaled by the file's size when it is known. Without this the data
+   * socket used the 30 s floor for every read, so a large `.va` over a slow link was cut off
+   * while a write of the same file was not.
+   */
+  async retrieve(name: string, sizeHint?: number): Promise<Buffer> {
+    return this.transfer(`RETR ${name}`, transferTimeout(this.opts.timeoutMs ?? 10000, sizeHint ?? 0));
+  }
+
+  /** `SIZE` then `RETR`, so a read is scaled even when the caller has no listing. */
+  async retrieveSized(name: string): Promise<Buffer> {
+    let size: number | undefined;
+    try { size = await this.size(name); } catch { /* SIZE unsupported: use the floor */ }
+    return this.retrieve(name, size);
+  }
 
   /**
    * `put`: one file onto the device the session is in (`STOR`). The controller takes an
@@ -261,7 +289,7 @@ export class FtpClient {
   ): Promise<void> {
     for (let i = 0; i < names.length; i++) {
       if (isCancelled()) return;
-      try { onFile(names[i], { data: await this.retrieve(names[i]) }, i); }
+      try { onFile(names[i], { data: await this.retrieveSized(names[i]) }, i); }
       catch (e: any) {
         const error = e?.message ?? String(e);
         onFile(names[i], { error }, i);
@@ -276,11 +304,64 @@ export class FtpClient {
 /** One-shot helpers */
 export async function ftpGetText(opts: FtpOptions, device: string, file: string): Promise<string> {
   const c = new FtpClient(opts);
-  try { await c.connect(); await c.cwd(device); return (await c.retrieve(file)).toString('latin1'); } finally { await c.quit(); }
+  try { await c.connect(); await c.cwd(device); return (await c.retrieveSized(file)).toString('latin1'); } finally { await c.quit(); }
 }
 export async function ftpList(opts: FtpOptions, device: string): Promise<RemoteFile[]> {
   const c = new FtpClient(opts);
   try { await c.connect(); await c.cwd(device); return await c.list(); } finally { await c.quit(); }
+}
+
+/**
+ * Parse an FTP LIST body into files. Kept separate from the socket so it is unit-tested:
+ * the Unix form is the one a FANUC controller actually returns
+ * (`-rw-r--r-- 1 robot robot 1234 Jan 01 00:00 NAME`).
+ */
+export function parseFtpListing(text: string): RemoteFile[] {
+  const out = new Map<string, RemoteFile>();
+  for (const line of text.split(/\r?\n/)) {
+    const t = line.trim(); if (!t) continue;
+    // Unix style: -rw-r--r-- 1 owner group 1234 Jan 01 12:00 NAME   (or Jan 01 2024)
+    const unix = /^([-dl])\S+\s+\d+\s+\S+\s+\S+\s+(\d+)\s+(\S+)\s+(\d{1,2})\s+([\d:]+|(\d{4}))\s+(.+)$/.exec(t);
+    if (unix) {
+      const name = unix[7];
+      if (!name) continue;
+      out.set(name.toUpperCase(), { name, size: parseInt(unix[2], 10), mtime: parseUnixDate(unix[3], unix[4], unix[5]), isDir: unix[1] === 'd' });
+      continue;
+    }
+    // DOS style: 01-01-24  12:00PM   1234 NAME   or   <DIR>
+    const dos = /^(\d{2})-(\d{2})-(\d{2,4})\s+(\d{2}):(\d{2})(?:([AP]M))?\s+(<DIR>|\d+)\s+(.+)$/i.exec(t);
+    if (dos) {
+      const name = dos[8];
+      if (!name) continue;
+      out.set(name.toUpperCase(), { name, size: dos[7] === '<DIR>' ? undefined : parseInt(dos[7], 10), mtime: parseDosDate(dos[1], dos[2], dos[3], dos[4], dos[5], dos[6]), isDir: dos[7] === '<DIR>' });
+      continue;
+    }
+    // FANUC style: "NAME.EXT      1234" or just the name
+    const fanuc = /^([A-Za-z0-9_\-$]+\.[A-Za-z0-9]+)\s*(\d+)?/.exec(t);
+    if (fanuc) out.set(fanuc[1].toUpperCase(), { name: fanuc[1], size: fanuc[2] ? parseInt(fanuc[2], 10) : undefined, isDir: false });
+  }
+  return [...out.values()];
+}
+
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+/** `Jan 01 12:00` (this year) or `Jan 01 2024` → ms, or undefined when unparseable. */
+function parseUnixDate(month: string, day: string, timeOrYear: string): number | undefined {
+  const m = MONTHS.indexOf(month.slice(0, 3).toLowerCase());
+  if (m < 0) return undefined;
+  if (/^\d{4}$/.test(timeOrYear)) return Date.UTC(Number(timeOrYear), m, Number(day));
+  const t = /^(\d{1,2}):(\d{2})/.exec(timeOrYear);
+  if (!t) return undefined;
+  return Date.UTC(new Date().getUTCFullYear(), m, Number(day), Number(t[1]), Number(t[2]));
+}
+
+/** `01-01-24 12:00PM` → ms, or undefined when unparseable. */
+function parseDosDate(month: string, day: string, year: string, hour: string, minute: string, ampm?: string): number | undefined {
+  let y = Number(year);
+  if (year.length === 2) y += y >= 70 ? 1900 : 2000;
+  let h = Number(hour);
+  if (ampm) { if (/pm/i.test(ampm) && h < 12) h += 12; if (/am/i.test(ampm) && h === 12) h = 0; }
+  return Date.UTC(y, Number(month) - 1, Number(day), h, Number(minute));
 }
 
 /**

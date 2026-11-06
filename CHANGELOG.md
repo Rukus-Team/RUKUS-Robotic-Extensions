@@ -1,5 +1,193 @@
 # Changelog
 
+## 26.111.2076 - 2026-11-06 - Cell view, tutorials, faster transfers, and minor changes
+
+At a glance: the Cell view and page become the home for controllers, robots and setup;
+onboarding is now a hands-on tutorial path; transfers use one FTP session, a visible queue
+and a safer gate; the remaining paper cuts are fixed.
+
+### Cell view
+
+**What**
+- **The Cell view** replaces the Controllers view and deepens it: one rung per `.robocode-cell`
+  (multi-cell workspaces included), that cell's robots under it, and an **Open Cell Page** icon.
+  Robots without a cell fall under *Unassigned*; user-settings profiles under *User settings*.
+- **The Cell page** (`Robot Code: Open Cell Page`, the cell rung, the `.robocode-cell` folder, or
+  the robot page's **Cell…** button): controllers, robots (initialize, reinitialize/edit, remove),
+  the RUKUS link, and the settings that enable sync and writes - including **Allow Push to Robot**
+  - each with its safety note and the scope it writes.
+- **Brand in the container**: `robot.json` gains `brand` (`fanuc`/`abb`); `cell.json` aggregates it
+  (`fanuc`/`abb`/`mixed`), inferred and confirmed when the container is initialized. The loader
+  and the side bar read the markers instead of guessing from files; the side bar now shows exactly
+  what loaded, so FANUC cannot load while its views hide.
+- **Cell ↔ RUKUS cluster linking**: a cell is linked at initialization (prompted only when
+  `robotCode.rukus.enabled` and RUKUS is available) or from the Cell page. Linking makes the
+  cluster's robots the cell's controllers and reconciles each robot container to the cluster's
+  IP/device/name/brand - with a merge confirmation for containers that already exist. The RUKUS
+  Clusters view then shows only the linked cluster(s).
+
+**Why**
+- The cell is the real unit of work; controllers, robots, linking and safety settings now live in
+  one place instead of being inferred from files.
+- The loader and side bar show exactly what loaded, so a brand cannot load while its views hide.
+
+**Where**
+- Activity Bar -> **RUKUS Robotic Extensions** -> **Cell**.
+- The cell rung, the `.robocode-cell` folder, or **Robot Code: Open Cell Page**.
+- The robot page's **Cell…** button; the RUKUS Clusters view for the linked cluster.
+
+### Tutorials and onboarding
+
+**What**
+- **Three walkthroughs** on the Get Started page, linked from the empty sidebar views:
+  **Edit Robot Programs** (offline), **Set Up a Robot** (robot-first, including a step that turns
+  on the experimental robot-connections switch) and **Robot Code + RUKUS** (optional; needs the
+  separate RUKUS app). Every step has a **verb action** and a **completion event**, and each says
+  **what you should see**. The old single walkthrough's two broken completion events - an
+  unsupported `onLanguage:` and a step gated by the very switch it was meant to introduce - are gone.
+- **Theme-aware illustrations** in the walkthroughs (sidebar, the snapshot/index/remote model, the
+  push gate, a flow chart), drawn as SVG with VS Code theme colours so they match any theme.
+- **A bundled tutorial cell** (`Robot Code: Open the Tutorial Cell`): two test robots
+  (`S002R01` on 127.0.0.2 and `S002R05` on 127.0.0.3) in a cell with a snapshot each - one program
+  differs from its snapshot, one matches, and one (`BAD.LS`) has a mistake to find - plus a KAREL
+  file and register comments to hover. It is copied to a writable place under your user profile
+  (no administrator rights) and opened in its own window; an existing copy offers Open / Reset.
+- **Robot Code: Enable Experimental Robot Connections** turns the switch on without opening
+  Settings, then reveals the Cell view.
+- A meta step, **Read Tutorials as Previews**, teaches reading the tutorial cell's `README.md`
+  as a rendered Markdown preview (`Ctrl+Shift+V`) instead of source, and **Robot Code: Read the
+  Tutorial (Markdown Preview)** opens it that way for you.
+- **How-to guides** (`docs/how-to/`): move/offset positions, frames, refactoring, analysis,
+  pendant changes, and cell containers.
+- **A downloadable deep-tutorial bundle** (`robot-code-tutorials-<version>.zip`, built by
+  `npm run tutorial:bundle`, attached to each GitHub release) with five in-depth lessons.
+- A documentation map, `docs/README.md` (tutorial / how-to / reference / explanation).
+
+**Why**
+- The walkthroughs replace guesswork and the old broken completion events with a guided path that
+  works; the tutorial cell gives new users a safe place to try compare, sync and diagnostics before
+  touching a real controller.
+
+**Where**
+- Get Started page; the empty sidebar views.
+- **Robot Code: Open the Tutorial Cell**, **Read the Tutorial (Markdown Preview)**, and
+  **Enable Experimental Robot Connections**.
+- `docs/how-to/`; `robot-code-tutorials-<version>.zip`; `samples/tutorial-cell`.
+- The walkthroughs are consolidated from four to three: the **Cell Containers** preview is
+  removed until RUKUS cluster integration makes it worth teaching (the feature and its commands
+  stay, documented in `docs/how-to/cell-containers.md`). The empty sidebar views are shorter, the
+  stale "Fetch All" wording is corrected, and the feature picker's **More** section lists the
+  three walkthroughs.
+
+### File transfer optimization
+
+**What**
+- **A visible transfer queue**: the status bar shows the running operation and its real step
+  (`Push MAIN.LS — ftp(s3): STOR MD:MAIN.LS`), with queued/background counts. Click it for
+  `robotCode.transfers.show`: Active/Queued/Recent, per-item remove/cancel, **Cancel all**, and
+  the technical log. Queued cancels remove the command; a running one applies the operation's
+  safe rule. Long background work (index/data refresh, snapshot from backup, container init) shows
+  when nothing foreground is active; quick reads are in the QuickPick only.
+- **Heartbeat paused, not disconnected**: while a transfer owns a robot, the status shows
+  `$(sync~spin)`/`$(clock)` ("heartbeat paused") instead of the red slash.
+- **Restore Pre-Push Copy on Robot** (`robotCode.sync.restorePrePush`): the controller copy read
+  immediately before the last push is kept (one file, overwritten) and can be written back when
+  the final sync fails or is cancelled.
+- **Transfer log** (`robotCode.live._transferStats`, hidden): bytes, protocol, session, login and
+  transfer time per request. `robotCode.transfers.recentSeconds` controls how long a finished
+  queue entry stays in the QuickPick.
+- **A push is one FTP login.** The modal comes first; then one session does the identity, task
+  and option checks, the gate read, the write, the read-back and (by default) the compiled
+  partner. Each step used to open its own session.
+- **The push gate compares normalized**, so line numbers, `DATE`/`MODIFIED` and controller stamps
+  are not a conflict; a real text change still holds the push.
+- **The gate read is the pre-push backup**: the last copy is kept under
+  `.robocode-robot/push-backup/` (`containers.prePushBackup`, default on); snapshot history remains
+  the versioning reflog.
+- **A differing read-back is a warning, not a failed push.** A compile normally rewrites the
+  source (and a source with no point data can read back with a different line layout); the push
+  succeeds, the difference is reported, and `pullAfterPush` still runs (`always` overwrites the
+  controller's copy). Only a controller error (STOR refused) fails the push and reads
+  `ERRCURR`/`ERRALL`.
+- **The gate no longer issues `LIST MD:`** to decide whether a program is new: FTP `550` and
+  HTTP `404` already say it is not on the controller.
+- **A conflict update indexes one file**, not the workspace: the old full data+index refresh was
+  the ~10 s silence after "Update Snapshot from Robot". The push entry stays visible through the
+  decision and the update, and a second push is queued visibly behind it.
+- **Cancel is honoured before the write** (nothing is sent). The write is never aborted; a cancel
+  or a failed final sync prompts a revert.
+- **Reads size-scale their timeout** (HTTP included, 30 s floor) and can fall back between HTTP and
+  FTP when the preferred transport does not answer (`robotCode.live.protocolFallback`). Writes are
+  always FTP; status banners name the transport.
+- **A fetch skips files whose size/mtime match** the last fetch
+  (`robotCode.containers.unchangedCheck`), and snapshot provenance is written once per batch.
+- **Bulk transfers prefer FTP** (`transfers.preferFtp`, default true): single-file fetch/pull,
+  folder fetch/pull (and its listing), backup, snapshot-from-robot and compare-all try FTP first,
+  even when the profile uses HTTP for single reads. If FTP is unavailable or its login is refused,
+  reads fall back to HTTP (`live.protocolFallback: auto`); writes stay FTP. The profile protocol is
+  now the single-read/connection preference, and the sticky fallback resets on reconnect.
+- **The FTP heartbeat is a bare TCP check**, not a login every 10 seconds.
+- **Session ids come from the set of open sessions** (s1 when none is open) instead of climbing
+  forever.
+- `containers.pullPartnerAfterPush` (`always` default) controls the partner representation read;
+  `containers.pullCompiledAfterSourcePush` (default on) controls the compiled `.TP`/`.PC` read
+  after a source `.LS`/`.KL` push, **fetch or pull**. Turn it off to skip that extra (often slow)
+  transfer when you only want the source; the compiled copy is refreshed on the next full fetch.
+  It is also on the Cell page.
+- **Fetch, Pull and Push are one group**, shown for any container file whose controller has an
+  address, whether or not it is connected. Push is no longer hidden when the file matches the
+  snapshot; with `robotCode.live.upload` off it stays visible and explains how to turn it on.
+
+**Why**
+- Cuts push latency and repeated logins, protects the last controller copy, and avoids false
+  conflicts after a compile.
+- Long transfers become visible and cancellable; large or slow controllers stop timing out at a
+  fixed 30 s.
+- FTP-first bulk transfers are much faster where HTTP is only the single-read preference.
+
+**Where**
+- Status bar transfer item -> **Show Transfer Queue**; **Cancel All Transfers**.
+- Sync/Fetch/Pull/Push menus.
+- Settings under `robotCode.containers.*`, `robotCode.live.protocolFallback`,
+  `robotCode.transfers.*`; the compiled-partner toggle is also on the Cell page.
+
+### Minor changes
+
+**What**
+- **TP terminator warning**: a `.ls` line without its trailing `;` is reported even when
+  auto-renumber is on (the default); the quick fix renumbers and adds it.
+- **Folder fetch/pull over FTP no longer crashes** on a Unix-style `LIST` line
+  (`Cannot read properties of undefined (reading 'toUpperCase')`); the name is read from the right
+  capture group and `parseFtpListing` is covered by tests.
+- `fanuc://` `stat` no longer downloads the whole file; it uses the recent listing.
+- A large `RETR` over FTP no longer dies at the 30 s floor; it scales with the file size like `STOR`.
+- **`push-backup/` is appended to an existing `.robocode-robot/.gitignore`** on the first push, so
+  the pre-push copy never reaches git.
+- The status item shows waiting/cancelling before the last FTP verb.
+- **A `zero` line-number mode**: `robotCode.tp.autoRenumber` gains `zero`, the scaffold with a
+  real `0` in the number field (`   0:`) for tools that want a number on every line. Existing
+  lines are left alone, and `LINE_COUNT` still updates.
+- The `robotCode.robots` **view id** is now `robotCode.cell` (the legacy `robotCode.robots`
+  setting is unchanged). Personal menu/keybinding `when` clauses that named the view need updating.
+
+**Why**
+- Removes paper cuts and surprising failures without changing the main workflows; keeps local
+  recovery data out of git and gives tools a true zero-numbered scaffold.
+
+**Where**
+- TP editor diagnostics and quick fix.
+- Folder fetch/pull; `fanuc://` file stats; `.robocode-robot/.gitignore`.
+- `robotCode.tp.autoRenumber`; personal menu/keybinding `when` clauses for the old view id.
+
+### Verification
+- `test/clusterLink.test.ts`: the link/merge planner, brand aggregation, and the `brand`/`rukus`
+  schema round-trip.
+- `test/walkthrough.test.ts` holds every walkthrough against the manifest: media files exist,
+  every `command:` link and completion event resolves, every step has an action and a completion,
+  SVGs use only theme variables, and the how-to links resolve.
+- `test/transferQueue.test.ts`, `test/protocol.test.ts`, and the snapshot/sync tests cover the
+  queue, protocol order, normalized gate, pre-push copy, compiled partner and read-back behavior.
+
 ## 26.109.15 - 2026-10-30 - Find Robots finds more, and says what it saw
 
 ### Fixed
@@ -482,6 +670,7 @@ workspace holds. Checked against RobotStudio virtual controllers: IRC5 RobotWare
 ### Fixed
 - Parameter names `file__var`, `attr__mask` and `term__char` in three KAREL signatures.
 - Completion of a built-in with an optional parameter put a stray `[` in the inserted name.
+
 
 ## 26.109.4 - 2026-10-05 - Color themes, RUKUS skin themes; CALL list by installed options
 

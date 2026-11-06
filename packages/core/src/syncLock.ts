@@ -29,9 +29,10 @@ export type PullDecision = 'overwrite' | 'keep' | 'off';
 /**
  * Whether an explicit push writes the controller's read-back into the working file. Only an
  * explicit push pulls - a live-edit save never rewrites the file being edited. `always` syncs the
- * working copy to the controller even when the read-back differs (it usually will - DATE/MODIFIED,
- * line numbers, variable labels); `when-identical` keeps the local copy on a difference; `never`
- * leaves the working copy alone entirely. Pure (no VS Code), so it is unit-tested.
+ * working copy to the controller even when the read-back differs from what was sent (a compile
+ * usually rewrites it - line numbers, labels, metadata, or a source with no point data);
+ * `when-identical` keeps the local copy on a difference; `never` leaves it alone. Pure (no VS
+ * Code), so it is unit-tested.
  */
 export function pullAfterPushDecision(explicit: boolean, policy: PullAfterPush, identical: boolean): PullDecision {
   if (!explicit || policy === 'never') return 'off';

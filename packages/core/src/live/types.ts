@@ -86,6 +86,26 @@ export interface ControllerOptionEntry { code: string; name: string }
 /** `ok` true = installed, false = missing, undefined = a plain fact (application, robot model) */
 export interface OptionHighlight { label: string; ok?: boolean; detail: string }
 
-export interface RemoteFile { name: string; size?: number; isDir: boolean }
+export interface RemoteFile { name: string; size?: number; mtime?: number; isDir: boolean }
+
+/** Which transport moved a file. Reads may fall back; writes are FTP-only. */
+export type TransferProtocol = 'ftp' | 'http';
+
+/** One measured request, for the transfer log and the hidden stats command. */
+export interface TransferSample {
+  at: number;
+  robot: string;
+  op: string;
+  file?: string;
+  bytes: number;
+  protocol: TransferProtocol;
+  /** this read used the non-preferred transport */
+  fallback: boolean;
+  /** session id, so several files read over one login can be grouped */
+  session: number;
+  ms: number;
+  /** time spent opening the session, when this call opened one */
+  loginMs?: number;
+}
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';

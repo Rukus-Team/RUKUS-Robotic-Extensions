@@ -18,8 +18,8 @@ export interface FeatureGroup {
 
 export const FEATURE_GROUPS: FeatureGroup[] = [
   {
-    title: 'Start here', hint: 'a new program, a backup to read comments from, a robot to connect to',
-    commands: ['robotCode.tp.newProgram', 'robotCode.karel.newProgram', 'robotCode.data.addBackupFolder', 'robotCode.live.addRobot', 'robotCode.containers.initCell', 'robotCode.containers.initRobot'],
+    title: 'Start here', hint: 'the tutorial cell, a new program, a backup to read comments from, a robot to connect to',
+    commands: ['robotCode.tutorial.open', 'robotCode.tutorial.openReadme', 'robotCode.tp.newProgram', 'robotCode.karel.newProgram', 'robotCode.data.addBackupFolder', 'robotCode.live.addRobot', 'robotCode.containers.initCell', 'robotCode.containers.initRobot', 'robotCode.experimental.enableRobotConnections'],
   },
   {
     title: 'Edit this TP program', hint: 'numbering, comments, motion lines',
@@ -39,15 +39,15 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
   },
   {
     title: 'Robot - only when you ask', hint: 'connect, read, open and download files; push is the one write',
-    commands: ['robotCode.live.connect', 'robotCode.live.searchRobots', 'robotCode.live.disconnect', 'robotCode.live.dashboard', 'robotCode.live.getAll', 'robotCode.live.refresh', 'robotCode.live.getPosition', 'robotCode.live.getTasks', 'robotCode.live.getRegisters', 'robotCode.live.getUserAlarms', 'robotCode.live.getIo', 'robotCode.live.getInfo', 'robotCode.live.getOptions', 'robotCode.live.showOptions', 'robotCode.live.getFiles', 'robotCode.live.openRobotFile', 'robotCode.live.compareWithRobot', 'robotCode.live.downloadFile', 'robotCode.live.liveEdit','robotCode.live.pullBackup', 'robotCode.data.snapshotFromRobot', 'robotCode.live.openAsWorkspaceFolder', 'robotCode.live.revealRunning', 'robotCode.live.toggleFilesShow', 'robotCode.live.toggleAutoRefresh', 'robotCode.live.manageRobots', 'robotCode.live.setPassword', 'robotCode.live.forgetIdentity', 'robotCode.live.removeRobot', 'robotCode.live.focusView'],
+    commands: ['robotCode.live.connect', 'robotCode.live.searchRobots', 'robotCode.live.disconnect', 'robotCode.live.dashboard', 'robotCode.live.getAll', 'robotCode.live.refresh', 'robotCode.live.getPosition', 'robotCode.live.getTasks', 'robotCode.live.getRegisters', 'robotCode.live.getUserAlarms', 'robotCode.live.getIo', 'robotCode.live.getInfo', 'robotCode.live.getOptions', 'robotCode.live.showOptions', 'robotCode.live.getFiles', 'robotCode.live.openRobotFile', 'robotCode.live.compareWithRobot', 'robotCode.live.downloadFile', 'robotCode.live.liveEdit','robotCode.live.pullBackup', 'robotCode.data.snapshotFromRobot', 'robotCode.live.openAsWorkspaceFolder', 'robotCode.live.revealRunning', 'robotCode.live.toggleFilesShow', 'robotCode.live.toggleAutoRefresh', 'robotCode.live.manageRobots', 'robotCode.live.setPassword', 'robotCode.live.forgetIdentity', 'robotCode.live.removeRobot', 'robotCode.live.focusView', 'robotCode.transfers.show', 'robotCode.transfers.cancelAll'],
   },
   {
     title: 'Keep it in sync', hint: 'the snapshot is the last known robot state: fetch it, pull it into your file, push your file back',
-    commands: ['robotCode.sync.fetch', 'robotCode.sync.fetchFile', 'robotCode.sync.pullFile', 'robotCode.sync.pushFile', 'robotCode.sync.compareFile', 'robotCode.sync.comparePositions', 'robotCode.sync.compareRegisters', 'robotCode.sync.revertFile', 'robotCode.sync.pullToWorking', 'robotCode.sync.history', 'robotCode.sync.fetchFolder', 'robotCode.sync.pullFolder', 'robotCode.sync.fetchCompareAll', 'robotCode.sync.errors'],
+    commands: ['robotCode.sync.fetch', 'robotCode.sync.fetchFile', 'robotCode.sync.pullFile', 'robotCode.sync.pushFile', 'robotCode.sync.restorePrePush', 'robotCode.sync.compareFile', 'robotCode.sync.comparePositions', 'robotCode.sync.compareRegisters', 'robotCode.sync.revertFile', 'robotCode.sync.pullToWorking', 'robotCode.sync.history', 'robotCode.sync.fetchFolder', 'robotCode.sync.pullFolder', 'robotCode.sync.fetchCompareAll', 'robotCode.sync.errors'],
   },
   {
     title: 'Backups and robot containers', hint: 'controller data, snapshots, working copy against snapshot',
-    commands: ['robotCode.data.refresh', 'robotCode.data.removeBackupFolder', 'robotCode.data.restoreBackupFolders', 'robotCode.data.snapshotFromBackup', 'robotCode.views.toggleLatestOnly'],
+    commands: ['robotCode.cell.open', 'robotCode.data.refresh', 'robotCode.data.removeBackupFolder', 'robotCode.data.restoreBackupFolders', 'robotCode.data.snapshotFromBackup', 'robotCode.views.toggleLatestOnly'],
   },
   { title: 'Lint', hint: 'every TP, KAREL and RAPID program in a folder at once; rules in .robotlint.json (robot-lint runs the same from a command line)', commands: ['robotCode.lint.folder', 'robotCode.lint.clear', 'robotCode.lint.createConfig'] },
   { title: 'KAREL', hint: 'check, then compile with ktrans; look up any built-in, statement or directive', commands: ['robotCode.karel.precheck', 'robotCode.karel.compile', 'robotCode.karel.showFlow', 'robotCode.karel.showReference'] },
@@ -60,7 +60,9 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
 ];
 
 /** contributed, but not something a person runs by name: tree-row plumbing, test hooks, this picker itself */
-export const NOT_LISTED = new Set(['robotCode.showFeatures', 'robotCode.views.revealInEditor', 'robotCode.rapid.open', 'robotCode.abb.openPointer', 'robotCode.abb.openModule', 'robotCode.live.openTaskLine', 'robotCode.live.getSection', 'robotCode.live._state', 'robotCode.tp._teachPlan', 'robotCode.sync.diffOpen', 'robotCode.containers.diffWithSnapshot']);
+export const NOT_LISTED = new Set(['robotCode.showFeatures', 'robotCode.views.revealInEditor', 'robotCode.rapid.open', 'robotCode.abb.openPointer', 'robotCode.abb.openModule', 'robotCode.live.openTaskLine', 'robotCode.live.getSection', 'robotCode.live._state', 'robotCode.live._transferStats', 'robotCode.tp._teachPlan', 'robotCode.sync.diffOpen', 'robotCode.containers.diffWithSnapshot',
+  // the walkthrough openers are link targets (empty views, this picker), not palette commands
+  'robotCode.openGettingStarted', 'robotCode.openRobotWalkthrough', 'robotCode.openRukusWalkthrough']);
 
 /** `ctrl+alt+shift+t` -> `Ctrl+Alt+Shift+T`, as the keyboard shortcuts editor writes it */
 export function prettyKey(key: string): string {

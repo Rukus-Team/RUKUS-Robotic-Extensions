@@ -5,6 +5,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { createHash } from 'node:crypto';
 import { robotNameFromFolder, folderDate, ROBOT_FOLDER_PATTERNS } from './backupFolders';
 import { looksLikeAnyBackup, isAnyBrandDataFile } from './brand';
 
@@ -21,6 +22,19 @@ export const SNAPSHOT_JSON = 'snapshot.json';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
+/** The robot language a container holds. Always known once the container is initialized. */
+export type RobotBrand = 'fanuc' | 'abb';
+/** A cell's brand: one robot brand, or a mixed-brand cell. */
+export type CellBrand = RobotBrand | 'mixed';
+
+/** The RUKUS cluster a cell is linked to (written by the link/sync flow). */
+export interface CellRukusLink {
+  cluster: string;
+  clustersFolder?: string;
+  /** when the link was last synced from RUKUS */
+  syncedUtc?: string;
+}
+
 /** Raw content of a robot.json file. */
 export interface RobotMarkerSpec {
   name?: string;
@@ -28,6 +42,8 @@ export interface RobotMarkerSpec {
   exclude?: string[];
   /** Name of a controller defined in the cell's cell.json controllers map. */
   controller?: string;
+  /** Which robot brand this folder holds. Absent = detect (older containers). */
+  brand?: RobotBrand;
 }
 
 /** Connection details for a controller declared in cell.json. */
@@ -59,12 +75,18 @@ export interface RobotMarker {
   markerPath: string;
   /** Name of the controller this robot binds to (from cell.json controllers map). */
   controller?: string;
+  /** Which robot brand this folder holds. Absent = detect (older containers). */
+  brand?: RobotBrand;
 }
 
 /** Raw content of a cell.json file. */
 export interface CellMarkerSpec {
   name?: string;
   controllers?: Record<string, CellControllerSpec>;
+  /** The cell's robot brand, or mixed. Absent = aggregate the robots (older cells). */
+  brand?: CellBrand;
+  /** The RUKUS cluster this cell is linked to. */
+  rukus?: CellRukusLink;
 }
 
 /** A resolved, validated cell marker. */
@@ -75,6 +97,10 @@ export interface CellMarker {
   name: string;
   /** Controller definitions from cell.json, keyed by name. */
   controllers: Record<string, CellControllerSpec>;
+  /** The cell's robot brand, or mixed. Absent = aggregate the robots (older cells). */
+  brand?: CellBrand;
+  /** The RUKUS cluster this cell is linked to. */
+  rukus?: CellRukusLink;
 }
 
 /** Content of snapshot.json (generated, never authored by hand). */
@@ -93,6 +119,10 @@ export interface SnapshotProvenance {
    * and updated on each partial fetch; absence falls back to the file's mtime.
    */
   files?: Record<string, string>;
+  /** file size at the last fetch, keyed like `files`; lets a fetch skip an unchanged read */
+  sizes?: Record<string, number>;
+  /** controller mtime from the listing at the last fetch, keyed like `files` */
+  mtimes?: Record<string, number>;
 }
 
 /** Partition classification of a file path. */
@@ -120,7 +150,7 @@ export function parseRobotJson(
 
   // Unknown keys → warnings (don't fail, future-proof)
   for (const k of Object.keys(raw)) {
-    if (!['name', 'programs', 'exclude', 'controller'].includes(k)) {
+    if (!['name', 'programs', 'exclude', 'controller', 'brand'].includes(k)) {
       warnings.push(`Unknown key "${k}" in robot.json (ignored)`);
     }
   }
@@ -170,10 +200,18 @@ export function parseRobotJson(
 
   if (errors.length) return { errors };
 
+  let brand: RobotBrand | undefined;
+  if (raw.brand !== undefined) {
+    if (raw.brand === 'fanuc' || raw.brand === 'abb') brand = raw.brand;
+    else errors.push('"brand" must be "fanuc" or "abb"');
+  }
+
+  if (errors.length) return { errors };
+
   const markerPath = path.join(rootAbs, ROBOT_DIR, ROBOT_JSON);
 
   return {
-    marker: { root: rootAbs, name, programDirs, excludeDirs, snapshotDir, markerPath, controller },
+    marker: { root: rootAbs, name, programDirs, excludeDirs, snapshotDir, markerPath, controller, brand },
     errors: warnings.length ? warnings : [],
   };
 }
@@ -228,8 +266,30 @@ export function parseCellJson(
     }
   }
 
+  let brand: CellBrand | undefined;
+  if (raw.brand !== undefined) {
+    if (raw.brand === 'fanuc' || raw.brand === 'abb' || raw.brand === 'mixed') brand = raw.brand;
+    else errors.push('"brand" must be "fanuc", "abb" or "mixed"');
+  }
+
+  let rukus: CellRukusLink | undefined;
+  if (raw.rukus !== undefined) {
+    if (typeof raw.rukus !== 'object' || raw.rukus === null || Array.isArray(raw.rukus)) {
+      errors.push('"rukus" must be an object with the linked cluster');
+    } else {
+      const r = raw.rukus as Record<string, unknown>;
+      if (typeof r.cluster !== 'string' || !r.cluster.trim()) {
+        errors.push('"rukus.cluster" must be the linked cluster name');
+      } else {
+        rukus = { cluster: r.cluster.trim() };
+        if (typeof r.clustersFolder === 'string' && r.clustersFolder.trim()) rukus.clustersFolder = r.clustersFolder.trim();
+        if (typeof r.syncedUtc === 'string' && r.syncedUtc.trim()) rukus.syncedUtc = r.syncedUtc.trim();
+      }
+    }
+  }
+
   if (errors.length) return { errors };
-  return { cell: { root: rootAbs, name, controllers }, errors: [] };
+  return { cell: { root: rootAbs, name, controllers, brand, rukus }, errors: [] };
 }
 
 // ── Path helpers ────────────────────────────────────────────────────────────
@@ -927,6 +987,16 @@ export function pairedProgramName(fileName: string): string | undefined {
   return `${m[1]}.${pair}`;
 }
 
+/**
+ * Should a source fetch/pull also read the compiled partner? Controlled by
+ * `containers.pullCompiledAfterSourcePush` (now also used for manual fetch/pull). A compiled
+ * source (`.tp`/`.pc`) still pulls its editable `.ls`/`.kl` partner; the setting is about the
+ * extra compiled transfer after a source.
+ */
+export function shouldFetchCompiledPartner(fileName: string, pullCompiledAfterSource: boolean): boolean {
+  return !/\.(ls|kl)$/i.test(fileName) || pullCompiledAfterSource;
+}
+
 // ── Verbatim comparison (the push gate) ─────────────────────────────────────
 //
 // Strictly NOT normalised: line numbers, terminators and metadata all count. Only line
@@ -985,7 +1055,7 @@ function isMetadataLine(s: string): boolean {
 export function stripTpMetadata(text: string): string {
   return text
     .replace(/^(\s*(?:LINE_COUNT|PROG_SIZE|MEMORY_SIZE)\s*=\s*)[^;\r\n]*/gim, '$1#')
-    .replace(/^(\s*(?:CREATE|MODIFIED)\s*=\s*)[^;\r\n]*/gim, '$1#');
+    .replace(/^(\s*(?:CREATE|MODIFIED|DATE|TIME)\s*=\s*)[^;\r\n]*/gim, '$1#');
 }
 
 /**
@@ -1011,7 +1081,49 @@ export function roundTripCompare(a: string, b: string, kind: 'tp' | 'karel'): { 
 }
 
 /** What the container's .gitignore keeps out of git - see writeRobotGitignore. */
-export const ROBOT_GITIGNORE_LINES: readonly string[] = ['snapshot/', SNAPSHOT_JSON, 'snapshot.tmp-*/', 'snapshot.old-*/', `${SNAPSHOT_HISTORY_DIR}/`];
+export const ROBOT_GITIGNORE_LINES: readonly string[] = ['snapshot/', SNAPSHOT_JSON, 'snapshot.tmp-*/', 'snapshot.old-*/', `${SNAPSHOT_HISTORY_DIR}/`, 'push-backup/'];
+
+// ── the pre-push copy (abort/failure recovery only) ─────────────────────────
+//
+// The gate read IS the robot's pre-push copy, so keeping it costs no extra request.
+// Exactly one is kept per container (the last push); versioning is the snapshot history.
+
+export const PUSH_BACKUP_DIR = 'push-backup';
+
+export interface PushBackupMeta {
+  file: string;
+  robot: string;
+  host: string;
+  device: string;
+  at: string;
+  bytes: number;
+  sha256: string;
+}
+
+export function pushBackupPath(containerRoot: string): string {
+  return path.join(containerRoot, ROBOT_DIR, PUSH_BACKUP_DIR);
+}
+
+export function recordPushBackup(containerRoot: string, fileName: string, robotText: string, meta: Omit<PushBackupMeta, 'file' | 'at' | 'bytes' | 'sha256'>): string {
+  const dir = pushBackupPath(containerRoot);
+  fs.mkdirSync(dir, { recursive: true });
+  // An existing container may predate the push-backup/ line: append it before the first copy.
+  writeRobotGitignore(containerRoot);
+  const data = Buffer.from(robotText, 'latin1');
+  fs.writeFileSync(path.join(dir, fileName), data);
+  const record: PushBackupMeta = { ...meta, file: fileName, at: new Date().toISOString(), bytes: data.length, sha256: createHash('sha256').update(data).digest('hex') };
+  fs.writeFileSync(path.join(dir, 'push-backup.json'), JSON.stringify(record, null, 2));
+  return path.join(dir, fileName);
+}
+
+export function readPushBackup(containerRoot: string, fileName?: string): { text: string; meta: PushBackupMeta } | undefined {
+  const dir = pushBackupPath(containerRoot);
+  try {
+    const meta = JSON.parse(fs.readFileSync(path.join(dir, 'push-backup.json'), 'utf8')) as PushBackupMeta;
+    const file = fileName ?? meta.file;
+    return { text: fs.readFileSync(path.join(dir, file), 'latin1'), meta };
+  } catch { return undefined; }
+}
 
 /**
  * Write the .gitignore inside .robocode-robot/: the snapshot, and everything that only makes
@@ -1053,20 +1165,47 @@ export function writeRobotJson(containerRoot: string, spec: RobotMarkerSpec): vo
 }
 
 /**
- * Create a cell.json file.
+ * Write a whole cell.json: name, controllers, brand and the RUKUS link. A caller that changes
+ * one field should read the current CellMarker and pass it back, so the rest is preserved.
  */
+export function writeCellMarker(containerRoot: string, spec: CellMarkerSpec): void {
+  const p = path.join(containerRoot, CELL_DIR, CELL_JSON);
+  const dir = path.dirname(p);
+  fs.mkdirSync(dir, { recursive: true });
+  hideDir(dir);
+  const content: Record<string, unknown> = { name: spec.name ?? path.basename(containerRoot) };
+  if (spec.controllers && Object.keys(spec.controllers).length) content.controllers = spec.controllers;
+  if (spec.brand) content.brand = spec.brand;
+  if (spec.rukus?.cluster) content.rukus = spec.rukus;
+  fs.writeFileSync(p, JSON.stringify(content, null, 2) + '\n', 'utf8');
+}
+
+/** Create/overwrite cell.json with a name and controllers (the init wizard). */
 export function writeCellJson(
   containerRoot: string,
   name: string,
   controllers?: Record<string, CellControllerSpec>
 ): void {
-  const p = path.join(containerRoot, CELL_DIR, CELL_JSON);
+  writeCellMarker(containerRoot, { name, controllers });
+}
+
+/** Link or unlink a cell to/from a RUKUS cluster, preserving every other field. */
+export function setCellRukusLink(cellRoot: string, link: CellRukusLink | undefined): void {
+  const p = path.join(cellRoot, CELL_DIR, CELL_JSON);
+  let raw: Record<string, unknown> = {};
+  try { raw = JSON.parse(fs.readFileSync(p, 'utf8')); } catch { /* new or invalid: start fresh */ }
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) raw = {};
+  if (link?.cluster) {
+    raw.rukus = {
+      cluster: link.cluster,
+      ...(link.clustersFolder ? { clustersFolder: link.clustersFolder } : {}),
+      ...(link.syncedUtc ? { syncedUtc: link.syncedUtc } : {}),
+    };
+  } else delete raw.rukus;
   const dir = path.dirname(p);
   fs.mkdirSync(dir, { recursive: true });
   hideDir(dir);
-  const content: Record<string, unknown> = { name };
-  if (controllers && Object.keys(controllers).length) content.controllers = controllers;
-  fs.writeFileSync(p, JSON.stringify(content, null, 2) + '\n', 'utf8');
+  fs.writeFileSync(p, JSON.stringify(raw, null, 2) + '\n', 'utf8');
 }
 
 /**

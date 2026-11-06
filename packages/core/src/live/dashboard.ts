@@ -51,6 +51,7 @@ export function openDashboard(ctx: vscode.ExtensionContext, s: Services, robots:
         case 'getInfo': await vscode.commands.executeCommand('robotCode.live.getInfo', name); break;
         case 'toggleAuto': await vscode.commands.executeCommand('robotCode.live.toggleAutoRefresh', name); break;
         case 'edit': openRobotForm(ctx, s, robots, name); break;
+    case 'cellPage': await vscode.commands.executeCommand('robotCode.cell.open'); break;
         case 'backup': await vscode.commands.executeCommand('robotCode.live.pullBackup', name); break;
         case 'snapshot': await vscode.commands.executeCommand('robotCode.data.snapshotFromRobot', name); break;
         case 'compare': await vscode.commands.executeCommand('robotCode.live.compareWithRobot'); break;
@@ -152,6 +153,7 @@ ${ROBOT_PAGE_CSS}</style></head><body>
     <button id="getAll" title="Read every panel from the controller, once" aria-label="Read all panels from the controller once">Read all</button>
     <button id="toggleAuto" title="Keep re-reading what is already loaded" aria-label="Toggle automatic re-reading">Auto</button>
     <button id="edit" title="Connection settings" aria-label="Edit connection settings">Edit…</button>
+    <button id="cellPage" title="Open the cell page: controllers, robots, sync settings and the RUKUS link" aria-label="Open the cell page">Cell…</button>
     <button id="backup" title="Download programs and data to a folder" aria-label="Back up programs and data to a folder">Backup…</button>
     <button id="snapshot" title="Overwrite the robot container's snapshot from this controller, with its metadata" aria-label="Snapshot from the robot">Snapshot…</button>
     <button id="compare" title="Diff the open program against the robot's copy" aria-label="Compare the open program with the robot">Compare…</button>
@@ -167,7 +169,7 @@ ${ACTIVATE_JS}
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   let st = null, ioQuery = '', ioKind = '', regQuery = '';
-  for (const id of ['refresh','edit','backup','snapshot','openFile','getAll','toggleAuto','compare']) $(id).onclick = () => vscode.postMessage({ type: id });
+  for (const id of ['refresh','edit','backup','snapshot','openFile','getAll','toggleAuto','compare','cellPage']) $(id).onclick = () => vscode.postMessage({ type: id });
   $('toggle').onclick = () => vscode.postMessage({ type: st && st.state === 'connected' ? 'disconnect' : 'connect' });
   const fmt = n => (Math.round(n * 100) / 100).toFixed(2);
   const ago = at => { const s = Math.round((Date.now() - at) / 1000); return s < 60 ? s + ' s ago' : s < 3600 ? Math.round(s / 60) + ' min ago' : Math.round(s / 3600) + ' h ago'; };

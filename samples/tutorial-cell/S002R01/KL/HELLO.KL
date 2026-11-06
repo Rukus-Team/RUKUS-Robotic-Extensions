@@ -1,0 +1,12 @@
+PROGRAM hello
+%NOLOCKGROUP
+
+VAR
+  count : INTEGER
+
+BEGIN
+  count = 0
+  IF count = 0 THEN
+    count = 1
+  ENDIF
+END hello

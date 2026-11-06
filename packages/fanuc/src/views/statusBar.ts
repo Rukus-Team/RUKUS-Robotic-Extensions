@@ -50,9 +50,6 @@ export function registerContextStatus(ctx: vscode.ExtensionContext, s: FanucServ
     const st = uri ? syncStateOf(s, uri) : undefined;
     // the conditional Revert (discard) tab button keys off this: only a saved difference counts
     void vscode.commands.executeCommand('setContext', 'robotCode.syncModified', st?.state === 'modified');
-    // the editor tab's Push button: something to send (a local difference, or a program the
-    // snapshot has never seen). Context menus are not gated by this.
-    void vscode.commands.executeCommand('setContext', 'robotCode.syncPushable', st?.state === 'modified' || st?.state === 'not-in-snapshot');
     if (!ed || !uri || !st) { sync.hide(); return; }
     const name = path.basename(uri.fsPath).replace(/\.[^.]+$/, '').toUpperCase();
     const ext = path.extname(uri.fsPath).replace(/^\./, '').toUpperCase();
@@ -112,6 +109,10 @@ export function registerContextStatus(ctx: vscode.ExtensionContext, s: FanucServ
     void vscode.commands.executeCommand('setContext', 'robotCode.fileInContainer', !!marker);
     const wanted = marker ? (marker.controller ?? marker.name).toLowerCase() : undefined;
     const focused = wanted ? all.find(x => x.profile.name.toLowerCase() === wanted) : undefined;
+    // The file's container names a controller that has an address: the transfer buttons (Fetch,
+    // Pull, Push) are relevant whether or not it is connected right now. A command that needs the
+    // connection says so when it runs.
+    void vscode.commands.executeCommand('setContext', 'robotCode.fileHasRobot', !!focused);
     const c = focused?.state === 'connected' && focused.snapshot ? focused : live[0];
     if (!c && !focused && !marker && !robotFile) {
       conn.hide(); updateSync(); return;
@@ -144,7 +145,15 @@ export function registerContextStatus(ctx: vscode.ExtensionContext, s: FanucServ
         displayName = `${targetKindLabel(kind)} ${focused.profile.name}`;
         const ping = focused.pingedAt ? ` · checked ${ago(focused.pingedAt)}` : '';
         const run = (s.live?.activeTpTasks() ?? []).find(t => t.robot.toLowerCase() === focused.profile.name.toLowerCase());
-        if (focused.reachable === false) {
+        const key = `robot:${focused.profile.name.toLowerCase()}`;
+        const transfer = s.transfers.items().find(i => !i.endedAt && (i.key.toLowerCase() === key || i.robot?.toLowerCase() === focused.profile.name.toLowerCase()));
+        if (focused.heartbeatPaused || transfer) {
+          // A transfer owns the wire. The heartbeat is queued, not dead: never show the red slash.
+          glyph = transfer?.state === 'running' || transfer?.state === 'waiting' ? '$(sync~spin)' : '$(clock)';
+          color = undefined;
+          command = 'robotCode.transfers.show';
+          tips.unshift(`**${displayName}** — transfer in progress; heartbeat paused${transfer ? ` (${transfer.label})` : ''}${ping}. **Click to open the transfer queue.**`);
+        } else if (focused.reachable === false) {
           // the heartbeat got no answer: connected on paper, but the controller is not replying now
           glyph = '$(circle-slash)';
           color = new vscode.ThemeColor('errorForeground');

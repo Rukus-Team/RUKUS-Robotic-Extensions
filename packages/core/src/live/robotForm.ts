@@ -171,7 +171,7 @@ function html(): string {
     <div class="grid" id="fanucGrid">
       <label>Robot name</label><input type="text" id="name" placeholder="S002R01" maxlength="32">
       <label>IP address</label><input type="text" id="host" placeholder="192.168.0.10">
-      <label>Read files over</label><div class="proto"><label><input type="radio" name="proto" value="http" checked> Web server (HTTP) — no login</label><label><input type="radio" name="proto" value="ftp"> FTP — needs user/password</label></div>
+      <label>Single reads and connection over</label><div class="proto"><label><input type="radio" name="proto" value="http" checked> Web server (HTTP) — no login</label><label><input type="radio" name="proto" value="ftp"> FTP — needs user/password</label></div><div class="help">File transfers (fetch, pull, backup, snapshots) use FTP by default; single reads keep this choice.</div>
       <label>Ports</label><div class="inline">HTTP <input type="number" id="httpPort" value="80" min="1" max="65535"> FTP <input type="number" id="ftpPort" value="21" min="1" max="65535"></div>
       <label id="lUser">FTP user</label><input type="text" id="ftpUser" placeholder="anonymous">
       <label id="lPass">FTP password</label><input type="password" id="ftpPass" placeholder="(unchanged)" autocomplete="off">
