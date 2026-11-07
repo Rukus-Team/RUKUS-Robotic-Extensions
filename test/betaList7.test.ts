@@ -77,7 +77,7 @@ export function run(check: (cond: unknown, msg: string) => void): void {
     ];
     check(sortData(rows).map(r => r.type).join(',') === 'bool,num,dnum,tooldata', 'beta7 #2: bool, num, dnum first, then the structured types');
     const table = formatRapidData('IRC5', rows, new Date(0));
-    check(/IRC5 - 4 RAPID data/.test(table) && /T_ROB1\s+user\s+VAR\s+num\s+reg1\s+42/.test(table) && /bool\{8\}\s+flags/.test(table) && /\(not read: HTTP 400\)/.test(table) && /\(task\)|BASE/.test(table), 'beta7 #2: the RAPID data table');
+    check(/IRC5 - 4 RAPID data/.test(table) && /T_ROB1\s+user\s+VAR\s+num\s+reg1\s+42/.test(table) && /bool\{8\}\s+flags/.test(table) && table.includes('(not readable over RWS)') && /: HTTP 400$/m.test(table) &&/\(task\)|BASE/.test(table), 'beta7 #2: the RAPID data table');
 
     const va = [
       '[*SYSTEM*]$MAXUALRMNUM  Storage: CMOS  Access: RW  : INTEGER = 4',

@@ -102,11 +102,16 @@ async function kindMessage(kind: ConnectionKind, m: any) {
     }
     case 'connect': try { await kind.connect(m.name); } catch (e: any) { await post({ type: 'error', text: `${m.name}: ${e?.message ?? e}` }); } break;
     case 'disconnect': await kind.disconnect(m.name); break;
+    case 'action': {
+      const r = await kind.runAction?.(String(m.id), m.profile ?? {}, m.password || undefined);
+      await post({ type: 'kindValues', values: r?.values, text: r?.text });
+      break;
+    }
   }
 }
 
 function brandsForView() {
-  return [{ id: 'fanuc', label: 'FANUC' }, ...connectionKinds().map(k => ({ id: k.id, label: k.label, fields: k.fields(), defaults: k.defaults(), note: k.note }))];
+  return [{ id: 'fanuc', label: 'FANUC' }, ...connectionKinds().map(k => ({ id: k.id, label: k.label, fields: k.fields(), defaults: k.defaults(), note: k.note, actions: k.actions?.() ?? [] }))];
 }
 
 function toProfile(p: any): RobotProfile {
@@ -171,7 +176,7 @@ function html(): string {
     <div class="grid" id="fanucGrid">
       <label>Robot name</label><input type="text" id="name" placeholder="S002R01" maxlength="32">
       <label>IP address</label><input type="text" id="host" placeholder="192.168.0.10">
-      <label>Single reads and connection over</label><div class="proto"><label><input type="radio" name="proto" value="http" checked> Web server (HTTP) — no login</label><label><input type="radio" name="proto" value="ftp"> FTP — needs user/password</label></div><div class="help">File transfers (fetch, pull, backup, snapshots) use FTP by default; single reads keep this choice.</div>
+      <label>Single reads and connection over</label><div><div class="proto"><label><input type="radio" name="proto" value="http" checked> Web server (HTTP) — no login</label><label><input type="radio" name="proto" value="ftp"> FTP — needs user/password</label></div><div class="help">File transfers (fetch, pull, backup, snapshots) use FTP by default; single reads keep this choice.</div></div>
       <label>Ports</label><div class="inline">HTTP <input type="number" id="httpPort" value="80" min="1" max="65535"> FTP <input type="number" id="ftpPort" value="21" min="1" max="65535"></div>
       <label id="lUser">FTP user</label><input type="text" id="ftpUser" placeholder="anonymous">
       <label id="lPass">FTP password</label><input type="password" id="ftpPass" placeholder="(unchanged)" autocomplete="off">
@@ -181,6 +186,7 @@ function html(): string {
       <label>Refresh every</label><div class="inline"><input type="range" id="poll" min="1000" max="30000" step="500" value="5000" style="flex:1"><span id="pollLabel">5.0 s</span></div>
     </div>
     <div class="grid" id="kindGrid" style="display:none"></div>
+    <div class="actions" id="kindActions" style="display:none"></div>
     <p class="help" id="kindNote" style="display:none"></p>
     <div class="actions">
       <button id="test" aria-label="Test the connection to this robot">Test connection</button>
@@ -232,6 +238,10 @@ ${ACTIVATE_JS}
       const o = (f.options || []).find(x => x.value === e.target.value);
       if (o && o.sets) setKindValues(o.sets);
     };
+    const acts = k.actions || [];
+    $('kindActions').innerHTML = acts.map(a => '<button data-act="' + esc(a.id) + '"' + (a.title ? ' title="' + esc(a.title) + '"' : '') + '>' + esc(a.label) + '</button>').join('');
+    $('kindActions').style.display = acts.length ? '' : 'none';
+    for (const b of $('kindActions').querySelectorAll('button')) b.onclick = () => { b.disabled = true; const r = readKind(); vscode.postMessage({ type: 'action', brand, id: b.dataset.act, profile: r.profile, password: r.password }); };
     $('kindNote').textContent = k.note || ''; $('kindNote').style.display = k.note ? '' : 'none';
   }
   function setKindValues(v) {
@@ -271,7 +281,7 @@ ${ACTIVATE_JS}
   // the form for p (null = a new controller) in the selected brand
   function show(p) {
     renderBrands();
-    $('fanucGrid').style.display = isFanuc() ? '' : 'none'; $('kindGrid').style.display = isFanuc() ? 'none' : '';
+    $('fanucGrid').style.display = isFanuc() ? '' : 'none'; $('kindGrid').style.display = isFanuc() ? 'none' : ''; if (isFanuc()) $('kindActions').style.display = 'none';
     if (isFanuc()) { fill(p); $('kindNote').style.display = 'none'; } else fillKind(p);
     $('delete').style.display = p ? '' : 'none';
     $('toggle').style.display = p ? '' : 'none'; if (p) $('toggle').textContent = p.state === 'connected' ? 'Disconnect' : 'Connect';
@@ -342,8 +352,13 @@ ${ACTIVATE_JS}
       res.innerHTML = '<b>' + (m.ok ? '✓ Connected in ' : '✗ Could not connect (') + m.ms + ' ms' + (m.ok ? '' : ')') + '</b>' + esc(m.text) + (m.hint ? '<div class="hint">' + esc(m.hint) + '</div>' : '');
       if (m.ok && m.suggestedName && $('k_name') && !$('k_name').value) $('k_name').value = m.suggestedName;
     }
+    if (m.type === 'kindValues') {
+      for (const b of $('kindActions').querySelectorAll('button')) b.disabled = false;
+      if (m.values) setKindValues(m.values);
+      if (m.text) toast(m.text);
+    }
     if (m.type === 'saved') { brand = m.brand || 'fanuc'; current = m.name; toast('Saved ' + m.name); renderList(); }
-    if (m.type === 'error') { toast(m.text); }
+    if (m.type === 'error') { toast(m.text); for (const b of $('kindActions').querySelectorAll('button')) b.disabled = false; }
   });
   show(null); vscode.postMessage({ type: 'ready' });
 </script></body></html>`;

@@ -41,7 +41,33 @@ export const CODES = {
   extCommentWidth: 'tp.extendedCommentWidth',
   integerAxis: 'tp.integerAxisValue',
   doubleTerminator: 'tp.doubleTerminator',
+  missingOperand: 'tp.missingOperand',
 } as const;
+
+/**
+ * An operator with nothing after it: `R[1:Edit test]=    ;` (an assignment with no value),
+ * `R[1]=R[2]+ ;`, `IF R[1]> ,JMP LBL[1] ;`. The controller refuses the whole program when it
+ * loads it (ASBN-092 Undefined instruction, ROBOGUIDE V9.40 2026-11-07), so it is an error.
+ * Bracket contents (comments, indexes) and quoted strings are blanked first, so a `=` or `-`
+ * inside them never counts. `+ - * /` only count after a value (`]`, `)`, a number): a program
+ * name such as `-BCKEDT-` is not an expression. Answers the operator's column in the body.
+ */
+export function missingOperand(body: string): { col: number; op: string } | undefined {
+  // same length as the body, so columns stay true: strings and bracket contents become spaces
+  let masked = body.replace(/'[^']*'|"[^"]*"/g, m => m[0] + ' '.repeat(Math.max(0, m.length - 2)) + m[m.length - 1]);
+  for (let prev = ''; prev !== masked;) {
+    prev = masked;
+    // innermost first (R[R[1]]); braces mark a masked pair, so a "<>" in the body is never taken for one
+    masked = masked.replace(/\[[^\[\]]*\]/g, m => '{' + '_'.repeat(m.length - 2) + '}');
+  }
+  masked = masked.replace(/\{_*\}/g, m => '[' + ' '.repeat(m.length - 2) + ']');
+  const re = /(<>|<=|>=|=|<|>)\s*(?=$|,|\)|\bTHEN\b)|([\])\d.])\s*([+\-*/])\s*(?=$|,|\))/g;
+  for (const m of masked.matchAll(re)) {
+    if (m[1]) return { col: m.index!, op: m[1] };
+    return { col: m.index! + m[0].indexOf(m[3], m[2].length), op: m[3] };
+  }
+  return undefined;
+}
 
 /** The robot's .va data, as far as the checks need it (the editor's Dataset fits). */
 export interface TpDataset {
@@ -220,6 +246,15 @@ export function tpChecks(text: string, prog: TpProgram, env: TpCheckEnv = {}): L
     if (dbl && l.kind !== 'comment' && l.kind !== 'remark' && !l.ext) {
       const at = raw.length - dbl[0].length;
       add(range(l.line, at, raw.length), 'More than one ";" at the end of the line - the controller will not load the program (ASBN-031).', 'error', CODES.doubleTerminator);
+    }
+    // an operator with nothing after it: the controller will not load the program (ASBN-092)
+    if (l.kind === 'instruction') {
+      const miss = missingOperand(l.body);
+      const start = miss ? l.raw.indexOf(l.body, l.bodyCol) : -1;
+      if (miss && start >= 0) {
+        const what = miss.op === '=' ? 'Nothing after "=" - the assignment has no value' : `Nothing after "${miss.op}" - a value is missing`;
+        add(range(l.line, start + miss.col, start + l.body.length), `${what}. The controller will not load the program (ASBN-092 Undefined instruction).`, 'error', CODES.missingOperand);
+      }
     }
     if (l.kind === 'instruction') {
       if (/^IF\b.*\bTHEN\s*$/.test(l.body) || /^FOR\b/.test(l.body)) blockStack.push({ kind: l.body.startsWith('IF') ? 'IF' : 'FOR', line: l.line });

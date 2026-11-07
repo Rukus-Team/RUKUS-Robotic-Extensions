@@ -36,6 +36,7 @@ defineLintRules([
   check('tp.lineCount', 'warning', 'LINE_COUNT does not match the program'),
   check('tp.missingTerminator', 'warning', 'a line without its " ;"'),
   check('tp.doubleTerminator', 'error', 'more than one ";" at the end of a line'),
+  check('tp.missingOperand', 'error', 'an operator with nothing after it ("R[1]=" with no value): the controller will not load the program'),
   check('tp.block', 'error', 'IF/FOR blocks that are not closed or closed by the wrong word'),
   check('tp.speed', 'error', 'speeds and CNT values out of range'),
   check('tp.cntBeforeOperation', 'warning', 'a CNT move right before an operation that has to happen at the point'),

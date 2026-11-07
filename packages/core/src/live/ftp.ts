@@ -217,6 +217,12 @@ export class FtpClient {
     return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
   }
 
+  /** `DELE NAME`: one file off the device; the controller's refusal comes back as the error. */
+  async delete(name: string): Promise<void> {
+    const r = await this.ctl.cmd(`DELE ${name}`);
+    if (r.code >= 400) throw new Error(`FTP DELE failed: ${r.code} ${r.text}`);
+  }
+
   /** Keep an idle session alive across a modal or a slow step. */
   async noop(): Promise<void> { await this.ctl.cmd('NOOP'); }
 

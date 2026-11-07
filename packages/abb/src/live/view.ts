@@ -25,14 +25,14 @@ import * as vscode from 'vscode';
 import * as path from 'node:path';
 import type { Services } from '@core/services';
 import { icon } from '@core/views/typeStyle';
-import { viewDeclared } from '@core/util';
+import { addCellSection, shownBrands } from '@core/views/sideBar';
 import { registerConnectionKind } from '@core/live/connectionKinds';
 import { ctrlStateLabel, opModeLabel, execStateLabel, runModeLabel, taskTypeLabel } from './names';
-import { controllerLabel } from './identity';
+import { controllerLabel, shortRobotWare } from './identity';
 import { discoverVirtualControllers, matchEndpoint, MANUAL_STEPS, type VcEndpoint } from './vcDiscovery';
 import { searchAbbControllers, sourceLabel, type AbbFound } from './search';
 import { abbRobotType, groupAbbOptions } from './optionDocs';
-import { sortData, formatRapidData, oneLine, type RapidDatum } from './rapidData';
+import { sortData, formatRapidData, oneLine, UNREADABLE, unreadableDetail, unreadableHoverAt, type RapidDatum } from './rapidData';
 import { SERVICE_PORT_IP } from './network';
 import { chooseScanScope, scopeSummary, withScanProgress, logScanResult, askScanRange, type ScanScope } from '@core/live/scanPrompt';
 import type { ScanMiss } from '@core/live/netScan';
@@ -73,6 +73,8 @@ type Node =
 const INFO = 'abb-info';
 type Readout = 'eventlog' | 'signals' | 'data';
 const INFO_FILE: Record<Readout, string> = { eventlog: 'eventlog.log', signals: 'signals.txt', data: 'data.txt' };
+/** the snapshot's time key for a readout page, so its row can say when it was last read */
+const readoutKey = (which: Readout) => `readout:${which}`;
 const infoUri = (ctrl: string, which: Readout) => vscode.Uri.from({ scheme: INFO, path: `/${encodeURIComponent(ctrl)}/${INFO_FILE[which]}` });
 
 /** Read every data declaration of `tasks` and its value; values one by one on the controller's queue. */
@@ -150,7 +152,7 @@ class AbbTree implements vscode.TreeDataProvider<Node> {
       // the controller by its own name first: many share 192.168.125.1, so the address alone says little
       const who = c.state === 'connected' ? this.ctrls.identityOf(c) : undefined;
       const known = who ? controllerLabel(who) : this.ctrls.expected(c)?.name;
-      const bits = [known && known !== c.profile.name ? known : '', `${c.profile.host}${c.profile.port ? `:${c.profile.port}` : ''}`, c.profile.family === 'omnicore' ? 'OmniCore' : '', who?.virtual ? 'virtual' : '', lost ? 'not answering' : c.state];
+      const bits = [known && known !== c.profile.name ? known : '', who ? shortRobotWare(who.robotWare) ?? '' : '', `${c.profile.host}${c.profile.port ? `:${c.profile.port}` : ''}`, c.profile.family === 'omnicore' ? 'OmniCore' : '', who?.virtual ? 'virtual' : '', lost ? 'not answering' : c.state];
       if (c.state === 'connected' && s.panel) bits.push(ctrlStateLabel(s.panel.ctrlState) ?? '', opModeLabel(s.panel.opMode) ?? '', s.panel.speedRatio !== undefined ? `${s.panel.speedRatio}%` : '');
       if (c.state === 'connected' && s.execution?.state) bits.push(`RAPID ${execStateLabel(s.execution.state)}${s.execution.cycle ? ` (${runModeLabel(s.execution.cycle)})` : ''}`);
       if (c.state === 'connected' && s.access) bits.push((s.access.free ? 'write access free' : `write access: ${this.ctrls.holdsAccess(c.profile.name) ? 'this PC' : s.access.holder}`) + (s.access.externalControl === false ? ' · remote access off' : ''));
@@ -220,8 +222,9 @@ class AbbTree implements vscode.TreeDataProvider<Node> {
     if (el.type === 'readout') {
       const r = READOUT[el.which];
       const it = new vscode.TreeItem(r.label, vscode.TreeItemCollapsibleState.None);
-      it.description = 'click to read';
-      it.tooltip = r.tooltip;
+      const at = el.c.snapshot.at.get(readoutKey(el.which));
+      it.description = at ? `read ${ago(at)}` : 'click to read';
+      it.tooltip = r.tooltip + (at ? ` Last read ${ago(at)}; click to read it again.` : '');
       it.iconPath = icon(r.icon);
       it.command = { command: r.command, title: 'Open', arguments: [el.c.profile.name] };
       return it;
@@ -236,9 +239,9 @@ class AbbTree implements vscode.TreeDataProvider<Node> {
     if (el.type === 'datum') {
       const d = el.d;
       const it = new vscode.TreeItem(d.name, vscode.TreeItemCollapsibleState.None);
-      it.description = `${d.type}${d.dims ? `{${d.dims}}` : ''} = ${d.error ? '(not read)' : oneLine(d.value ?? '')}`;
+      it.description = `${d.type}${d.dims ? `{${d.dims}}` : ''} = ${d.error ? UNREADABLE : oneLine(d.value ?? '')}`;
       it.tooltip = new vscode.MarkdownString().appendCodeblock(`${d.local ? 'LOCAL ' : ''}${d.storage} ${d.type} ${d.name}${d.dims ? `{${d.dims}}` : ''} := ${d.value ?? '?'};`, 'abb-rapid')
-        .appendMarkdown(`\n\n${d.module ? `module \`${d.module}\` · ` : ''}task \`${d.task}\`${d.error ? `\n\nNot read: ${d.error}` : ''}`);
+        .appendMarkdown(`\n\n${d.module ? `module \`${d.module}\` · ` : ''}task \`${d.task}\`${d.error ? `\n\n${unreadableDetail(d.error)}` : ''}`);
       it.iconPath = icon(d.storage === 'CONST' ? 'symbol-constant' : d.storage === 'PERS' ? 'symbol-field' : 'symbol-variable');
       it.contextValue = 'abb-datum';
       return it;
@@ -290,7 +293,13 @@ function findModule(s: Services, name: string): vscode.Uri | undefined {
 export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services): AbbControllers {
   const ctrls = new AbbControllers(ctx.secrets, s.output, ctx.globalState);
   const tree = new AbbTree(ctrls);
-  const view = viewDeclared(ctx, 'robotCode.abbControllers') ? vscode.window.createTreeView('robotCode.abbControllers', { treeDataProvider: tree }) : undefined;
+  // The controllers are rows of the Cell view, beside the FANUC robots (VSC test 2026-11-07, item 17):
+  // the separate ABB Controllers view sat off the bottom of the side bar. Its commands are unchanged.
+  addCellSection({
+    id: 'abb', provider: tree, order: 10, visible: () => shownBrands().abb,
+    badge: (el: Node) => (el.type === 'ctrl' ? 'ABB' : undefined),
+    counts: () => { const all = ctrls.list(); return { live: all.filter(c => c.state === 'connected').length, total: all.length, failed: all.filter(c => c.state === 'error').length }; },
+  });
   const reg = commandRegistrar(ctx, s.output);
   const nameOf = async (node?: any, only?: (c: AbbConnection) => boolean): Promise<string | undefined> => {
     if (typeof node === 'string') return node;
@@ -301,7 +310,7 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   };
   const show = (e: unknown) => void vscode.window.showErrorMessage(`ABB: ${(e as any)?.message ?? e}`);
 
-  ctx.subscriptions.push(ctrls, ...(view ? [view] : []));
+  ctx.subscriptions.push(ctrls);
 
   // ABB's tab of the Robot Connections form (the FANUC / ABB selector)
   ctx.subscriptions.push(registerConnectionKind(abbConnectionKind(ctrls)));
@@ -334,6 +343,9 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   // a code in the event log page: its title, cause and remedy on hover
   ctx.subscriptions.push(vscode.languages.registerHoverProvider({ scheme: INFO }, {
     provideHover(doc, pos) {
+      // RAPID data: a value the controller would not give, in its own words
+      const why = doc.uri.path.endsWith(`/${INFO_FILE.data}`) ? unreadableHoverAt(doc.getText(), pos.line) : undefined;
+      if (why) return new vscode.Hover(new vscode.MarkdownString().appendText(why));
       const r = doc.getWordRangeAtPosition(pos, /\b\d{5,6}\b/);
       if (!r) return undefined;
       return new vscode.Hover(new vscode.MarkdownString(eventMarkdown(ctrls.eventCatalog(), Number(doc.getText(r)))), r);
@@ -413,7 +425,7 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
       }
       return false;
     };
-    const label = (ep: VcEndpoint) => ep.ctrlName ?? ep.systemName ?? `${ep.image} (PID ${ep.pid})`;
+    const label = (ep: VcEndpoint) => controllerLabel(ep) ?? `${ep.image} (PID ${ep.pid})`;
     if (c) {
       if (ctrls.clusterOf(c.profile.name)) { vscode.window.showInformationMessage(`${c.profile.name} comes from RUKUS: change its port there. Found: ${found.map(e => `${label(e)} on ${e.port}`).join(', ')}.`); return; }
       const want = ctrls.expected(c) ?? { name: c.profile.name };
@@ -456,7 +468,7 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
     const found = await withScanProgress('Searching for ABB controllers\u2026', (token, progress) =>
       searchAbbControllers({ adapters: scope.adapters, wifi: scope.wifi, hosts: scope.hosts, signal: token, progress, missed: m => missed.push(m) }));
     logScanResult('ABB', scope, found.map(f => `${f.host}:${f.port} ${f.family} ${f.ctrlName ?? f.systemName ?? ''}`.trim()), missed);
-    const label = (f: AbbFound) => f.ctrlName ?? f.systemName ?? f.host;
+    const label = (f: AbbFound) => controllerLabel(f) ?? f.host;
     const known = (f: AbbFound) => ctrls.list().find(x => x.profile.host === f.host && (x.profile.port ?? (x.profile.https ? 443 : 80)) === f.port)
       ?? ctrls.list().find(x => !!matchEndpoint([{ ...f, pid: 0, image: '' }], ctrls.expected(x) ?? { name: x.profile.name }));
     const items: Array<vscode.QuickPickItem & { f?: AbbFound; owner?: ReturnType<typeof known>; range?: boolean }> = found.map(f => {
@@ -524,17 +536,20 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
       const m = /^\/([^/]+)\/(eventlog\.log|signals\.txt|data\.txt)$/.exec(uri.path);
       if (!m) return '';
       const ctrl = decodeURIComponent(m[1]);
+      const which = (Object.keys(INFO_FILE) as Readout[]).find(k => INFO_FILE[k] === m[2])!;
+      // the tree row says when this page was last read, as Position does
+      const read = (text: string) => { ctrls.get(ctrl)?.snapshot.at.set(readoutKey(which), Date.now()); tree.refresh(); return text; };
       try {
         if (m[2] === 'eventlog.log') {
           const events = await ctrls.calc(ctrl, 'event log', c => c.eventLog(0, 100));
           await ctrls.rememberEvents(ctrl, events);   // the codes, for ABB: Look Up Event Code
-          return formatEventLog(ctrl, events);
+          return read(formatEventLog(ctrl, events));
         }
         if (m[2] === 'data.txt') {
           const tasks = ctrls.get(ctrl)?.snapshot.tasks?.map(t => t.name) ?? (await ctrls.calc(ctrl, 'tasks', c => c.tasks())).map(t => t.name);
-          return formatRapidData(ctrl, await readRapidData(ctrls, ctrl, tasks));
+          return read(formatRapidData(ctrl, await readRapidData(ctrls, ctrl, tasks)));
         }
-        return formatSignals(ctrl, await ctrls.calc(ctrl, 'signals', c => c.signals()));
+        return read(formatSignals(ctrl, await ctrls.calc(ctrl, 'signals', c => c.signals())));
       } catch (e: any) { return `Could not read from ${ctrl}: ${e?.message ?? e}\n`; }
     },
   }));
@@ -697,7 +712,7 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
       const inWorkspace = !!vscode.workspace.getWorkspaceFolder(where);
       const reveal = 'Reveal in File Explorer', add = 'Add to Workspace';
       const next = opts ? undefined : await vscode.window.showInformationMessage(
-        `Backup ${backupName}: ${r.files} files (${(r.bytes / 1024).toFixed(0)} KB) downloaded to ${r.local}${r.removed ? ', removed from the controller' : ''}.${inWorkspace ? ' It is in the workspace, so the RAPID view lists it.' : ''}`,
+        `Backup ${backupName}: ${r.files} files (${(r.bytes / 1024).toFixed(0)} KB) downloaded to ${r.local}${r.removed ? ', removed from the controller' : ''}.${inWorkspace ? ' It is in the workspace, so Backups > RAPID lists it.' : ''}`,
         reveal, ...(inWorkspace ? [] : [add]));
       if (next === reveal) void vscode.commands.executeCommand('revealFileInOS', where);
       if (next === add) vscode.workspace.updateWorkspaceFolders(vscode.workspace.workspaceFolders?.length ?? 0, 0, { uri: where });

@@ -17,8 +17,10 @@ import * as os from 'node:os';
 import { createHash } from 'node:crypto';
 import type { FanucServices } from '../services';
 import { appendAudit } from '@core/rukus/store';
-import type { RobotManager } from '@core/live/robotManager';
-import { connectionHint } from '@core/live/connectionHints';
+import * as fs from 'node:fs';
+import type { RobotManager, TransferSession } from '@core/live/robotManager';
+import type { RobotProfile } from '@core/live/types';
+import { connectionHint, isMissingOnRobotError } from '@core/live/connectionHints';
 import { config, showRecoverableError } from '@core/util';
 import { findPosition, frameLabel, type TpProgram } from '../tp/parser';
 import {
@@ -37,9 +39,12 @@ import { fetchControllerErrors } from '@core/syncCommands';
 import { historyStamp, ROBOT_DIR, SNAPSHOT_HISTORY_DIR, type VerbatimDiff, type RobotMarker } from '@core/robotContainers';
 import { ORDER_FILE, ASCII_UPLOAD, ASCII_PROGRAM_LOADER, readControllerOptions, canLoadAscii } from './controllerOptions';
 import { commandRegistrar } from '@core/commandBoundary';
+import { sendFileRefusal } from './sendFile';
+import { compiledForm, onRobot, putBackAfterRefusal, refusalFromAlarms, refusedWords, type KeptCopy, type PutBackIo, type PutBackResult, type Refusal } from './putBack';
 
 export function registerEditorCommands(ctx: vscode.ExtensionContext, s: FanucServices, robots: RobotManager) {
   const reg = commandRegistrar(ctx, s.output);
+  keptRoot = path.join(ctx.globalStorageUri.fsPath, 'kept-before-send');
 
   // Teach from PR[n] reads the backup's posreg.va, not the robot, so it stays on without the
   // experimental switch; everything else here talks to a controller.
@@ -51,6 +56,13 @@ export function registerEditorCommands(ctx: vscode.ExtensionContext, s: FanucSer
   const live = new LiveEdit(s, robots);
   ctx.subscriptions.push(live);
   reg('robotCode.live.liveEdit', gated((uri?: vscode.Uri) => live.toggle(uri)));
+  // Send File to Robot: Push under the name people look for, on any TP editor (sendFile.ts)
+  reg('robotCode.live.sendFile', async (uri?: vscode.Uri) => {
+    const target = uri instanceof vscode.Uri ? uri : vscode.window.activeTextEditor?.document.uri;
+    const why = target ? sendFileRefusal(path.basename(target.path)) : 'Open the TP (.ls) program to send first.';
+    if (why) { vscode.window.showInformationMessage(why); return; }
+    await vscode.commands.executeCommand('robotCode.sync.pushFile', target);
+  });
 
   /**
    * Hidden: what a teach WOULD do, without doing it or asking.
@@ -506,7 +518,8 @@ type PushRun =
   | { kind: 'done'; result: CompletePushResult }
   | { kind: 'refused'; message: string; log?: string }
   | { kind: 'cancelled' }
-  | { kind: 'conflict'; robotText: string; diff: VerbatimDiff };
+  | { kind: 'conflict'; robotText: string; diff: VerbatimDiff }
+  | { kind: 'rejected'; refused: SendRefused };
 
 /**
  * The upload itself, shared by Upload Program (asks first) and Live Edit (asks once, when
@@ -560,7 +573,7 @@ async function sendProgram(s: FanucServices, robots: RobotManager, doc: vscode.T
       `Upload ${progName} to ${kind.toLowerCase()} controller ${name}?`,
       { modal: true, detail: `${kind} controller ${name}${kind === 'Virtual' ? ' (on this PC)' : ''}.
 
-${file} goes to ${c.profile.device} on ${name} (${c.profile.host}) over FTP. If a program of that name already exists it is replaced; otherwise it is created. The controller compiles it as it lands and refuses it if the program is selected on the pendant or write-protected.${diags.length ? `\n\nThis file has ${diags.length} error${diags.length === 1 ? '' : 's'} in Problems.` : ''}${gitNote}\n\nNothing else on the robot changes.` },
+${file} goes to ${c.profile.device} on ${name} (${c.profile.host}) over FTP. If a program of that name already exists it is replaced (its current copy is kept on this PC first, and put back if the controller refuses the new one); otherwise it is created. The controller compiles it as it lands and refuses it if the program is selected on the pendant or write-protected.${diags.length ? `\n\nThis file has ${diags.length} error${diags.length === 1 ? '' : 's'} in Problems.` : ''}${gitNote}\n\nNothing else on the robot changes.` },
       ...buttons);
     if (ok === 'Open Source Control') { await vscode.commands.executeCommand('workbench.view.scm'); return false; }
     if (ok !== send) return false;
@@ -642,9 +655,16 @@ ${file} goes to ${c.profile.device} on ${name} (${c.profile.host}) over FTP. If 
               comparedChanged.fire();
             }
             if (cancelled()) return { kind: 'cancelled' };
+            // Keep the robot's current program first: a refused .LS takes it off the robot.
+            report(`Keeping ${name}'s copy of ${progName} (${proto})`);
+            const keep = await keepBeforeSend(robots, c.profile, session, file, gate && 'robotText' in gate ? gate.robotText : undefined);
+            if ('refuse' in keep) return refuse(keep.refuse, `UPLOAD ${file} REFUSED: ${keep.refuse}`);
+            if (keep.dir) item.technical(`kept: ${keep.kept.map(k => k.file).join(', ')} in ${keep.dir}`);
+            if (cancelled()) return { kind: 'cancelled' };
             report(`Uploading ${file} (${proto})`);
             // From here the write is never aborted; a cancel only reaches the final pull.
-            await robots.writeBinary(c.profile, file, data, c.profile.device, session);
+            const refused = await sendKeepingProgram(robots, c.profile, session, file, data, keep, report);
+            if (refused) { item.fail(`${name} refused ${file}`); return { kind: 'rejected', refused }; }
             audit('Ok', Date.now() - started, { newValue: `${data.length} bytes sha256:${digest}` });
             robots.log(name, `UPLOAD ${file} (${data.length} bytes) to ${c.profile.device} over ${proto} - ${vscode.workspace.asRelativePath(target)}${opts.confirm ? '' : ' (live edit)'}${session.fallback ? ' (fallback)' : ''}`);
             if (!marker) {
@@ -694,6 +714,11 @@ ${file} goes to ${c.profile.device} on ${name} (${c.profile.host}) over FTP. If 
     audit('Refused', Date.now() - started, { error: run.message });
     if (run.log) robots.log(name, run.log);
     vscode.window.showWarningMessage(run.message);
+    return false;
+  }
+  if (run.kind === 'rejected') {
+    audit('Failed', Date.now() - started, { error: run.refused.refusal?.alarms ?? run.refused.error, newValue: `${data.length} bytes sha256:${digest}` });
+    await showRefused(s, c.profile, target, file, progName, run.refused);
     return false;
   }
   if (run.kind === 'conflict') return false;
@@ -795,13 +820,18 @@ async function restorePrePush(s: FanucServices, robots: RobotManager, uri?: vsco
         await robots.fetch(name, ['tasks'], session).catch(() => undefined);
         const active = robots.activeTpTasks().find(t => t.robot === name && t.task.stack.some(f => f.program.toUpperCase() === progName));
         if (active) throw new Error(`${progName} is ${active.task.status.toLowerCase()} on ${name}; abort it on the pendant first.`);
-        await robots.writeBinary(c.profile, file, data, c.profile.device, session);
+        // the restore replaces the robot's program too: keep it first, put it back if refused
+        const keep = await keepBeforeSend(robots, c.profile, session, file);
+        if ('refuse' in keep) throw new Error(keep.refuse);
+        const refused = await sendKeepingProgram(robots, c.profile, session, file, data, keep, () => undefined);
+        if (refused) return { refused };
         const back = await robots.readText(c.profile, file, c.profile.device, session);
         const rel = recordSnapshotFile(s, marker, file, back);
         robots.log(name, `RESTORE ${file} from the pre-push copy (${data.length} bytes)`);
         return path.join(marker.snapshotDir, rel);
       }, { write: true })));
     if (snapPath === undefined) return;
+    if (typeof snapPath !== 'string') { await showRefused(s, c.profile, undefined, file, progName, snapPath.refused); return; }
     await s.index.refreshUri(vscode.Uri.file(snapPath));
     await s.containers.refresh();
     comparedChanged.fire();
@@ -811,6 +841,146 @@ async function restorePrePush(s: FanucServices, robots: RobotManager, uri?: vsco
     const hint = connectionHint(why, c.profile);
     vscode.window.showErrorMessage(`Could not restore ${file} on ${name}: ${why}${hint ? ` ${hint}` : ''}`);
   }
+}
+
+// ---------------------------------------------------------------- keep, send, put back
+
+/** Where the robot's copies are kept before a send replaces them (set from the extension's storage). */
+let keptRoot = path.join(os.tmpdir(), 'robot-code-kept-before-send');
+
+/** What was kept of the robot's program before a send: its copies (on this PC too) and the device listing. */
+interface KeptBeforeSend { kept: KeptCopy[]; before?: string[]; dir?: string }
+
+/**
+ * Keep the robot's current program before it is replaced: a FANUC controller takes the old
+ * program away when it starts loading a .LS, and keeps nothing when it then refuses the file
+ * (ROBOGUIDE V9.40, 2026-11-07). The compiled .TP (when the controller hands it out) and the
+ * .LS listing are read in this session and saved on this PC. A program the robot has whose copy
+ * cannot be read is a refusal: nothing is sent that could not be put back.
+ */
+async function keepBeforeSend(robots: RobotManager, p: RobotProfile, session: TransferSession, file: string, lsText?: string): Promise<KeptBeforeSend | { refuse: string }> {
+  let before: string[] | undefined;
+  try { before = (await session.list()).filter(f => !f.isDir).map(f => f.name); } catch { before = undefined; }
+  const prog = file.replace(/\.[^.]*$/, '').toUpperCase();
+  const listed = before ? !!onRobot(file, before) : undefined;
+  if (listed === false) return { kept: [], before };   // a new program: nothing to lose
+  const kept: KeptCopy[] = [];
+  let lsError: string | undefined;
+  const tp = compiledForm(file);
+  if (tp && (!before || before.some(n => n.toUpperCase() === tp))) {
+    try { kept.push({ file: tp, data: await robots.readBinary(p, tp, p.device, session) }); }
+    catch { /* not handed out on this controller: the .LS is the copy */ }
+  }
+  if (lsText !== undefined) kept.push({ file: file.toUpperCase(), data: Buffer.from(lsText, 'latin1') });
+  else {
+    try { kept.push({ file: file.toUpperCase(), data: Buffer.from(await robots.readText(p, file, p.device, session), 'latin1') }); }
+    catch (e: any) { if (!isMissingOnRobotError(e?.message ?? '')) lsError = e?.message ?? String(e); }
+  }
+  if (!kept.length) {
+    // listed, or a read that failed for another reason than "no such file": the program is there
+    if (listed || lsError) return { refuse: `${prog} is on ${p.name}, but its current copy could not be read${lsError ? ` (${lsError})` : ''}, so nothing was sent: a refused upload would leave the robot without it.` };
+    return { kept: [], before };
+  }
+  let dir: string | undefined;
+  try {
+    dir = path.join(keptRoot, p.name.replace(/[^\w.-]+/g, '_'), historyStamp());
+    fs.mkdirSync(dir, { recursive: true });
+    for (const k of kept) { k.path = path.join(dir, k.file); fs.writeFileSync(k.path, k.data); }
+    pruneKept(path.dirname(dir), 20);
+  } catch (e: any) { robots.log(p.name, `kept copy: could not save it on this PC (${e?.message ?? e}); it is kept in memory for this send`); }
+  return { kept, before, dir };
+}
+
+/** Keep the newest `n` kept-before-send folders of one robot. */
+function pruneKept(robotDir: string, n: number): void {
+  try {
+    const dirs = fs.readdirSync(robotDir).sort();
+    for (const d of dirs.slice(0, Math.max(0, dirs.length - n))) fs.rmSync(path.join(robotDir, d), { recursive: true, force: true });
+  } catch { /* a folder that cannot be tidied is not worth a message */ }
+}
+
+/**
+ * The robot's files for a put-back: this session first, and when it fails (a refusal can leave
+ * the FTP session out of step) a fresh write session for the rest. close() ends the fresh one.
+ */
+function putBackIo(robots: RobotManager, p: RobotProfile, session: TransferSession): PutBackIo & { readText(file: string): Promise<string>; close(): Promise<void> } {
+  let fresh: TransferSession | undefined;
+  const on = async <T>(fn: (s: TransferSession) => Promise<T>): Promise<T> => {
+    if (!fresh) { try { return await fn(session); } catch { /* retried on a fresh session below */ } }
+    fresh ??= (await robots.openSession(p, p.device, { write: true })).session;
+    return fn(fresh);
+  };
+  return {
+    list: () => on(async x => (await x.list()).filter(f => !f.isDir).map(f => f.name)),
+    write: (file, data) => on(x => robots.writeBinary(p, file, data, p.device, x)),
+    remove: file => on(x => x.remove(file)),
+    readText: file => on(x => robots.readText(p, file, p.device, x)),
+    close: async () => { if (fresh) await fresh.close().catch(() => undefined); },
+  };
+}
+
+/** A send the controller did not take, with what was done about it. */
+interface SendRefused { error: string; refusal?: Refusal; putBack: PutBackResult; keep: KeptBeforeSend }
+
+/**
+ * Send `data` as `file`; when the controller refuses it, read why (ERRALL.LS, before anything
+ * else raises an alarm), put the robot's previous copy back if the program is gone, and delete
+ * the -TMPASC- leftovers this send created. undefined when the controller took it.
+ */
+async function sendKeepingProgram(robots: RobotManager, p: RobotProfile, session: TransferSession, file: string, data: Uint8Array, keep: KeptBeforeSend, report: (m: string) => void): Promise<SendRefused | undefined> {
+  try {
+    await robots.writeBinary(p, file, data, p.device, session);
+    return undefined;
+  } catch (e: any) {
+    if (e?.name === 'AbortError') throw e;
+    const error = e?.message ?? String(e);
+    const prog = file.replace(/\.[^.]*$/, '').toUpperCase();
+    report(`${p.name} refused ${file} - checking ${prog} is still there`);
+    const io = putBackIo(robots, p, session);
+    try {
+      let refusal: Refusal | undefined;
+      try { refusal = refusalFromAlarms(await io.readText('ERRALL.LS')); } catch { /* no alarm log: the reply is all there is */ }
+      const putBack = await putBackAfterRefusal(io, file, keep.kept, keep.before);
+      robots.invalidateListing(p.name);
+      robots.log(p.name, `UPLOAD ${file} REFUSED: ${refusal ? refusal.alarms : error}`
+        + (putBack.needed ? (putBack.restored ? ` - ${prog} was gone; put back from ${putBack.from?.file}` : ` - ${prog} IS GONE: put-back failed (${putBack.error}); kept copy ${putBack.from?.path ?? '(not saved)'}`) : putBack.stillThere ? ` - ${prog} unchanged on the robot` : '')
+        + (putBack.removed.length ? ` - removed ${putBack.removed.join(', ')}` : '') + (putBack.left.length ? ` - left ${putBack.left.join(', ')}` : ''));
+      return { error, refusal, putBack, keep };
+    } finally { await io.close(); }
+  }
+}
+
+/** Put the caret on the line (and column) the controller stopped at, in the program that was sent. */
+async function revealRefusedLine(target: vscode.Uri, refusal: Refusal | undefined, progName: string): Promise<void> {
+  if (!refusal?.line || (refusal.program && refusal.program.toUpperCase() !== progName)) return;
+  try {
+    const doc = await vscode.workspace.openTextDocument(target);
+    const line = Math.min(doc.lineCount - 1, refusal.line - 1);
+    const col = Math.max(0, Math.min(doc.lineAt(line).text.length, (refusal.column ?? 1) - 1));
+    const at = new vscode.Position(line, col);
+    const ed = await vscode.window.showTextDocument(doc, { preserveFocus: false, preview: false });
+    ed.selection = new vscode.Selection(at, at);
+    ed.revealRange(new vscode.Range(at, at), vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+  } catch { /* the message still names the line */ }
+}
+
+/** Show a refused send: an error, a modal one when the robot lost the program; the editor (`target`, the file that was sent) goes to the line. */
+async function showRefused(s: FanucServices, profile: RobotProfile, target: vscode.Uri | undefined, file: string, progName: string, r: SendRefused): Promise<void> {
+  const words = refusedWords(profile.name, file, r, connectionHint(r.error, profile));
+  if (target) await revealRefusedLine(target, r.refusal, progName);
+  if (words.lost) {
+    // the .LS is the copy a person can open and send again
+    const saved = r.keep.kept.find(k => /\.LS$/i.test(k.file))?.path ?? r.putBack.from?.path;
+    const pick = await vscode.window.showErrorMessage(words.text, { modal: true }, ...(saved ? ['Open Saved Copy'] : []), 'Open Output');
+    if (pick === 'Open Saved Copy' && saved) await vscode.window.showTextDocument(vscode.Uri.file(saved), { preview: false });
+    else if (pick === 'Open Output') s.output.show(true);
+    return;
+  }
+  const buttons = ['Open Output'];
+  if (s.rukus?.available) buttons.push('Error Watcher in RUKUS');
+  const pick = await vscode.window.showErrorMessage(words.text, ...buttons);
+  if (pick === 'Open Output') s.output.show(true);
+  if (pick === 'Error Watcher in RUKUS') await vscode.commands.executeCommand('robotCode.rukus.alarms', profile.name);
 }
 
 /** a program's /ATTR saying the controller will not let it be replaced */
@@ -874,7 +1044,8 @@ async function handlePushConflict(
  */
 async function reportPushFailure(s: FanucServices, conn: { profile: { name: string; useFtp: boolean } }, file: string, message: string): Promise<void> {
   // Read the controller's error log over whichever transport the profile uses: an FTP push
-  // that the controller refused usually explains itself only in ERRALL/ERRCURR.
+  // that the controller refused usually explains itself only in the alarm list (ERRACT, or
+  // ERRALL where ERRACT is missing; ERRCURR is not an alarm list).
   const alarms = await fetchControllerErrors(s, conn as any).catch(() => []);
   const first = alarms[0];
   // The newest alarm is not necessarily this push's (ROBOGUIDE 2026-10-01: a write-protect 550

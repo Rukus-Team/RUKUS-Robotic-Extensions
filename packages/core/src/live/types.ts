@@ -47,7 +47,11 @@ export interface TaskState {
 
 export interface IoPoint { kind: string; index: number; value: 'ON' | 'OFF' | number; simulated: boolean; comment: string }
 
-export interface AlarmEntry { seq: number; time: string; code?: string; message: string; severity: string; isReset: boolean }
+export interface AlarmEntry {
+  seq: number; time: string; code?: string; message: string; severity: string; isReset: boolean;
+  /** the row's second column when it has one: the loader's cause under "ASBN-009 on line 26" ("ASBN-098 Invalid encoding of line") */
+  cause?: string;
+}
 
 export interface ControllerInfo { fNumber?: string; version?: string; application?: string; robotName?: string; date?: string }
 

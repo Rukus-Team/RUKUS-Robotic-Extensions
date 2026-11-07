@@ -28,6 +28,7 @@ import * as path from 'node:path';
 import type { Services } from '../services';
 import { config, viewDeclared, showRecoverableError } from '../util';
 import { rukusInstallDir, RUKUS_DOWNLOAD_URL } from './launch';
+import { locateStudio, isStudioWorkspace, detectRukus, parseStudioWorkspace, studioClusters, STUDIO_WORKSPACE_FILE, type RukusSource } from './studio';
 import { unprotectAll, resolvePassword, isProtected } from './dpapi';
 import {
   resolveDataRoot, readAppSettings, clustersFolder, backupsFolder, listClusters, clusterControllers,
@@ -70,22 +71,60 @@ export class RukusClusters implements vscode.Disposable {
     return resolveDataRoot(await rukusInstallDir(), documents, realFs);
   }
 
+  /**
+   * Where the clusters come from: RUKUS Studio's workspace (rukus-workspace.json) when Studio is
+   * here - it succeeds RUKUS - else RUKUS's data folder (studio.ts, detectRukus).
+   */
+  source: RukusSource = 'none';
+  /** RUKUS or RUKUS Studio is on this PC */
+  found = false;
+  /** what the side bar calls it: "RUKUS Studio" or "RUKUS" */
+  label: 'RUKUS Studio' | 'RUKUS' = 'RUKUS';
+  /** a Studio cluster's folder in its workspace, by lower-case cluster name */
+  private studioFolders = new Map<string, string>();
+
+  /** Studio is the source: its clusters are read, never written (Studio imports cell folders itself) */
+  get isStudio(): boolean { return this.source === 'studio'; }
+
   async refresh(): Promise<void> {
     try {
+      const override = config<string>('rukus.dataFolder', '').trim();
       this.dataRoot = await this.locate();
-      this.available = realFs.exists(this.dataRoot.root);
-      this.settings = readAppSettings(this.dataRoot.root);
-      this.clustersDir = clustersFolder(this.dataRoot.root, this.settings);
-      this.backupsRoot = backupsFolder(this.dataRoot.root, this.settings);
-      this.clusters = this.available ? listClusters(this.clustersDir) : [];
-      this.lastError = undefined;
-      // the naming preset RUKUS is set to is the one the wizard and the views read folders with
+      const studio = override ? { installed: false } : locateStudio({ localAppData: process.env.LOCALAPPDATA, documents: path.join(os.homedir(), 'Documents'), studioHome: process.env.RUKUS_STUDIO_HOME });
+      if (override) studio.installed = locateStudio({ localAppData: process.env.LOCALAPPDATA, documents: '' }).installed;
+      const d = detectRukus({ override, overrideIsStudio: !!override && isStudioWorkspace(override), studio, rukusRootExists: realFs.exists(this.dataRoot.root) });
+      this.source = d.source; this.found = d.found; this.label = d.label;
+      this.studioFolders = new Map();
       ROBOT_FOLDER_PATTERNS.length = 0;
-      if (this.available) { try { ROBOT_FOLDER_PATTERNS.push(templateToRegExp(this.settings.backupRobotFolderTemplate)); } catch { /* an unusable template is RUKUS's problem to report */ } }
+      if (d.source === 'studio' && d.studioWorkspace) {
+        // the workspace folder is both "clusters folder" and "backups root": <cluster path>\<robot>\<backup>
+        this.dataRoot = { root: d.studioWorkspace, portable: false };
+        this.settings = readAppSettings('', { exists: () => false, readText: () => undefined });
+        this.clustersDir = d.studioWorkspace;
+        this.backupsRoot = d.studioWorkspace;
+        const text = realFs.readText(path.join(d.studioWorkspace, STUDIO_WORKSPACE_FILE));
+        const ws = text === undefined ? undefined : parseStudioWorkspace(text, d.studioWorkspace);
+        if (!ws) throw new Error(`${path.join(d.studioWorkspace, STUDIO_WORKSPACE_FILE)} is not a RUKUS Studio workspace file this version reads`);
+        const read = studioClusters(ws);
+        this.clusters = read.clusters;
+        this.studioFolders = read.folders;
+        this.available = true;
+      } else {
+        this.available = d.source === 'rukus';
+        this.settings = readAppSettings(this.dataRoot.root);
+        this.clustersDir = clustersFolder(this.dataRoot.root, this.settings);
+        this.backupsRoot = backupsFolder(this.dataRoot.root, this.settings);
+        this.clusters = this.available ? listClusters(this.clustersDir) : [];
+        // the naming preset RUKUS is set to is the one the wizard and the views read folders with
+        if (this.available) { try { ROBOT_FOLDER_PATTERNS.push(templateToRegExp(this.settings.backupRobotFolderTemplate)); } catch { /* an unusable template is RUKUS's problem to report */ } }
+      }
+      this.lastError = undefined;
     } catch (e: any) {
       this.available = false; this.clusters = []; this.lastError = e?.message ?? String(e);
     }
-    void vscode.commands.executeCommand('setContext', 'robotCode.rukusAvailable', this.available);
+    // robotCode.rukusAvailable: RUKUS Studio or RUKUS is on this PC (the one key views and menus use).
+    // What writes RUKUS's own files (Send Cell) checks isStudio itself: Studio's workspace file is never written.
+    void vscode.commands.executeCommand('setContext', 'robotCode.rukusAvailable', this.found);
     this.watch();
     this._onDidChange.fire();
     // a cell whose workspace is open follows RUKUS's file without a step
@@ -99,6 +138,12 @@ export class RukusClusters implements vscode.Disposable {
     this.stopWatching();
     if (!this.available || !this.dataRoot) return;
     const schedule = () => { if (this.timer) clearTimeout(this.timer); this.timer = setTimeout(() => { this.timer = undefined; void this.refresh(); }, 400); };
+    if (this.isStudio) {
+      // Studio saves every change to its workspace file at once: a robot added there shows here
+      const w = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.file(this.dataRoot.root), STUDIO_WORKSPACE_FILE));
+      this.watchers.push(w, w.onDidChange(schedule), w.onDidCreate(schedule), w.onDidDelete(schedule));
+      return;
+    }
     for (const [dir, glob] of [[this.clustersDir, '*.json'], [this.dataRoot.root, 'AppSettings.json']] as const) {
       if (!realFs.exists(dir)) continue;
       const w = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(vscode.Uri.file(dir), glob));
@@ -130,6 +175,8 @@ export class RukusClusters implements vscode.Disposable {
 
   /** the cluster folder for `name` in the backup store, as RUKUS's batch template lays it out */
   folderOf(name: string): string {
+    // a Studio cluster is a folder of its workspace: <workspace>\<cluster path>
+    if (this.isStudio) return this.studioFolders.get(name.toLowerCase()) ?? path.join(this.backupsRoot, ...name.split('/'));
     return placeBackup(this.backupsRoot, this.settings, name, '', 'MD').clusterFolder;
   }
 
@@ -138,6 +185,12 @@ export class RukusClusters implements vscode.Disposable {
     if (!this.available) return undefined;
     const wf = vscode.workspace.workspaceFolders?.[0];
     if (!wf || wf.uri.scheme !== 'file') return undefined;
+    if (this.isStudio) {
+      const norm = (p: string) => path.resolve(p).replace(/[\\/]+$/, '').toLowerCase();
+      const here = norm(wf.uri.fsPath);
+      const cluster = this.clusters.find(c => norm(this.folderOf(c.name)) === here);
+      return cluster ? { cluster, folder: wf.uri.fsPath } : undefined;
+    }
     const name = clusterOfFolder(this.backupsRoot, wf.uri.fsPath);
     const cluster = name ? this.cluster(name) : undefined;
     return cluster ? { cluster, folder: wf.uri.fsPath } : undefined;
@@ -157,7 +210,7 @@ export class RukusClusters implements vscode.Disposable {
    */
   async linkCell(cellRoot: string, clusterName: string): Promise<void> {
     const cluster = this.cluster(clusterName);
-    if (!cluster) { vscode.window.showWarningMessage(`RUKUS has no cluster called "${clusterName}".`); return; }
+    if (!cluster) { vscode.window.showWarningMessage(`${this.label} has no cluster called "${clusterName}".`); return; }
     const cellFile = path.join(cellRoot, CELL_DIR, CELL_JSON);
     let cell: CellMarker | undefined;
     try { cell = parseCellJson(fs.readFileSync(cellFile, 'utf8'), cellRoot).cell; } catch { /* no cell.json yet */ }
@@ -291,7 +344,7 @@ export class RukusClusters implements vscode.Disposable {
    */
   async openCluster(name: string): Promise<void> {
     const cluster = this.cluster(name);
-    if (!cluster) { vscode.window.showWarningMessage(`RUKUS has no cluster called ${name}.`); return; }
+    if (!cluster) { vscode.window.showWarningMessage(`${this.label} has no cluster called ${name}.`); return; }
     const folder = this.folderOf(cluster.name);
     try { fs.mkdirSync(folder, { recursive: true }); } catch (e: any) { vscode.window.showErrorMessage(`Could not create ${folder}: ${e?.message ?? e}`); return; }
     const result = await this.applyCluster(cluster, folder);
@@ -377,6 +430,10 @@ export class RukusClusters implements vscode.Disposable {
    * when it starts or when its cluster list is refreshed, so the message says so.
    */
   async exportCell(): Promise<void> {
+    if (this.isStudio) {
+      vscode.window.showInformationMessage('RUKUS Studio reads this cell itself: in Studio, Clusters > Import, and pick this folder. Robot Code does not write into Studio\'s workspace file.');
+      return;
+    }
     if (!this.available) { vscode.window.showInformationMessage('RUKUS was not found on this PC, so there is nowhere to send the cell yet. It is remembered: when RUKUS is installed, this extension offers to send it.'); if (this.s.containers.cells[0]) this.rememberPending(this.s.containers.cells[0].root); return; }
     const cell = this.s.containers.cells[0];
     if (!cell) { vscode.window.showInformationMessage('No cell container is open. Initialize Cell Container… makes one, or click a cluster in RUKUS Clusters.'); return; }
@@ -408,7 +465,8 @@ export class RukusClusters implements vscode.Disposable {
 
   /** once per window, when RUKUS is there: the remembered cells that have not been sent */
   private async offerPending(): Promise<void> {
-    if (this.pendingOffered || !this.available || !this.state) return;
+    // Studio imports Robot Code cell folders itself (Clusters > Import); nothing is written into its workspace file
+    if (this.pendingOffered || !this.available || this.isStudio || !this.state) return;
     const cells: CellMarker[] = [];
     for (const root of this.state.get<string[]>(RukusClusters.PENDING, [])) {
       let text: string;
@@ -495,8 +553,11 @@ class ClustersTree implements vscode.TreeDataProvider<Node> {
 
   getChildren(el?: Node): Node[] {
     if (!el) {
-      if (!this.r.available) return [];   // the welcome text takes over
-      if (this.r.lastError) return [{ t: 'text', label: `RUKUS data could not be read: ${this.r.lastError}`, icon: 'warning' }];
+      if (this.r.lastError) return [{ t: 'text', label: `${this.r.label} data could not be read`, icon: 'warning', tip: this.r.lastError }];
+      if (!this.r.available) {
+        // Studio installed, no workspace yet: say so instead of "not found"
+        return this.r.found ? [{ t: 'text', label: `${this.r.label}: no workspace yet`, icon: 'info', tip: `Open or set up a workspace in ${this.r.label} (Clusters > Open workspace); its clusters then appear here.` }] : [];   // else the welcome text takes over
+      }
       // A linked cell is the only cluster that matters to the workspace: showing the rest would
       // invite opening a cluster that does not belong to the cell. Unlinked cells show them all.
       const linked = this.r.linkedClusterNames();
@@ -504,10 +565,10 @@ class ClustersTree implements vscode.TreeDataProvider<Node> {
         const found = linked.map(n => this.r.cluster(n)).filter((c): c is RukusCluster => !!c);
         const missing = linked.filter(n => !this.r.cluster(n));
         const out: Node[] = found.map(c => ({ t: 'cluster' as const, c }));
-        if (missing.length) out.push({ t: 'text', label: `Linked cluster(s) not found in RUKUS: ${missing.join(', ')}`, icon: 'warning', tip: 'Open the Cell page to link another cluster or unlink this cell.' });
+        if (missing.length) out.push({ t: 'text', label: `Linked cluster(s) not found in ${this.r.label}: ${missing.join(', ')}`, icon: 'warning', tip: 'Open the Cell page to link another cluster or unlink this cell.' });
         return out;
       }
-      if (!this.r.clusters.length) return [{ t: 'text', label: 'RUKUS has no clusters yet', icon: 'info', tip: this.r.clustersDir }];
+      if (!this.r.clusters.length) return [{ t: 'text', label: `${this.r.label} has no clusters yet`, icon: 'info', tip: this.r.clustersDir }];
       return this.r.clusters.map(c => ({ t: 'cluster' as const, c }));
     }
     if (el.t === 'cluster') return el.c.robots.map(r => ({ t: 'robot' as const, c: el.c, r }));
@@ -522,7 +583,7 @@ class ClustersTree implements vscode.TreeDataProvider<Node> {
       const folder = this.r.folderOf(el.c.name);
       const hasBackups = realFs.exists(folder);
       it.description = [`${el.c.robots.length} robot${el.c.robots.length === 1 ? '' : 's'}`, open ? 'open' : hasBackups ? '' : 'no backups yet'].filter(Boolean).join(' · ');
-      it.tooltip = new vscode.MarkdownString(`**${el.c.name}** - RUKUS cluster\n\n${el.c.file}\n\nBackups: ${folder}${el.c.savedBy ? `\n\nSaved by ${el.c.savedBy}${el.c.savedUtc ? ` at ${el.c.savedUtc.slice(0, 16).replace('T', ' ')} UTC` : ''}` : ''}\n\nClick to make this cluster the workspace.`);
+      it.tooltip = new vscode.MarkdownString(`**${el.c.name}** - ${this.r.label} cluster\n\n${el.c.file}\n\nBackups: ${folder}${el.c.savedBy ? `\n\nSaved by ${el.c.savedBy}${el.c.savedUtc ? ` at ${el.c.savedUtc.slice(0, 16).replace('T', ' ')} UTC` : ''}` : ''}\n\nClick to make this cluster the workspace.`);
       it.iconPath = new vscode.ThemeIcon(open ? 'folder-opened' : 'folder-library', open ? new vscode.ThemeColor('charts.green') : undefined);
       it.contextValue = open ? 'rukus-cluster-open' : 'rukus-cluster';
       it.command = { command: 'robotCode.rukus.openCluster', title: 'Open cluster as workspace', arguments: [el.c.name] };
@@ -535,7 +596,7 @@ class ClustersTree implements vscode.TreeDataProvider<Node> {
     const secret = (stored: string | undefined, what: string) => stored
       ? `\n${what} set in RUKUS${isProtected(stored) ? ' (encrypted for its Windows account)' : ''} - copied to VS Code secret storage on sync` : '';
     it.tooltip = abb
-      ? `${el.r.name} at ${where} · ABB ${abb.family === 'omnicore' ? 'OmniCore (RWS 2.0)' : 'IRC5 (RWS 1.0)'} · ${abb.user}${[abb.systemName, abb.robotWareName ? `RobotWare ${abb.robotWareName}` : '', abb.robotType].filter(Boolean).map(x => `\n${x}`).join('')}${el.r.notes ? `\n${el.r.notes}` : ''}${secret(abb.password, 'RWS password')}\nIn the ABB Controllers view while this cluster is open.`
+      ? `${el.r.name} at ${where} · ABB ${abb.family === 'omnicore' ? 'OmniCore (RWS 2.0)' : 'IRC5 (RWS 1.0)'} · ${abb.user}${[abb.systemName, abb.robotWareName ? `RobotWare ${abb.robotWareName}` : '', abb.robotType].filter(Boolean).map(x => `\n${x}`).join('')}${el.r.notes ? `\n${el.r.notes}` : ''}${secret(abb.password, 'RWS password')}\nIn the Cell view while this cluster is open.`
       : `${el.r.name} at ${el.r.host} · FTP ${el.r.ftpUser || 'anonymous'} · ${el.r.ftpDirectory}${el.r.notes ? `\n${el.r.notes}` : ''}${secret(el.r.ftpPassword, 'FTP password')}`;
     it.iconPath = new vscode.ThemeIcon(el.r.isVirtual ? 'vm' : 'server-environment');
     it.contextValue = 'rukus-robot';
@@ -548,13 +609,19 @@ export function registerRukusClusters(ctx: vscode.ExtensionContext, s: Services)
   r.state = ctx.globalState;
   const tree = new ClustersTree(r);
   ctx.subscriptions.push(r, s.containers.onDidChange(() => tree.refresh()));
-  if (viewDeclared(ctx, 'robotCode.rukusClusters')) ctx.subscriptions.push(watchViewVisibility(vscode.window.createTreeView('robotCode.rukusClusters', { treeDataProvider: tree, showCollapseAll: false })));
+  if (viewDeclared(ctx, 'robotCode.rukusClusters')) {
+    const view = watchViewVisibility(vscode.window.createTreeView('robotCode.rukusClusters', { treeDataProvider: tree, showCollapseAll: false }));
+    // the header names the source: "RUKUS Studio" when the clusters come from Studio's workspace
+    const title = () => { view.title = r.label === 'RUKUS Studio' ? 'RUKUS Studio' : 'RUKUS Clusters'; };
+    ctx.subscriptions.push(view, r.onDidChange(title));
+    title();
+  }
   const reg = commandRegistrar(ctx, s.output);
   reg('robotCode.rukus.openCluster', async (arg?: string | Node) => {
     const name = typeof arg === 'string' ? arg : arg && 't' in arg && arg.t === 'cluster' ? arg.c.name : undefined;
     if (name) return r.openCluster(name);
-    if (!r.available) { vscode.window.showInformationMessage('RUKUS was not found on this PC. Use Initialize Cell Container… to set a cell up by hand, or point robotCode.rukus.dataFolder at RUKUS\'s data folder.'); return; }
-    const pick = await vscode.window.showQuickPick(r.clusters.map(c => ({ label: c.name, description: `${c.robots.length} robots`, detail: r.folderOf(c.name) })), { placeHolder: 'Which RUKUS cluster becomes the workspace?' });
+    if (!r.available) { vscode.window.showInformationMessage(r.found ? `${r.label} has no workspace open yet. Open one in ${r.label}, or point robotCode.rukus.dataFolder at a workspace folder.` : 'Neither RUKUS Studio nor RUKUS was found on this PC. Use Initialize Cell Container… to set a cell up by hand, or point robotCode.rukus.dataFolder at a RUKUS Studio workspace or RUKUS\'s data folder.'); return; }
+    const pick = await vscode.window.showQuickPick(r.clusters.map(c => ({ label: c.name, description: `${c.robots.length} robots`, detail: r.folderOf(c.name) })), { placeHolder: `Which ${r.label} cluster becomes the workspace?` });
     if (pick) await r.openCluster(pick.label);
   });
   reg('robotCode.rukus.syncClusters', async () => { await r.refresh(); await r.syncCurrent(true); });
@@ -582,7 +649,7 @@ export function registerRukusClusters(ctx: vscode.ExtensionContext, s: Services)
       if (route === 'cluster') {
         const name = (q.get('name') ?? '').trim();
         if (!r.available) await r.refresh();
-        if (!name || !r.cluster(name)) { vscode.window.showWarningMessage(name ? `RUKUS has no cluster called ${name} on this PC.` : 'The link named no cluster.'); return; }
+        if (!name || !r.cluster(name)) { vscode.window.showWarningMessage(name ? `${r.label} has no cluster called ${name} on this PC.` : 'The link named no cluster.'); return; }
         await r.openCluster(name);
       } else if (route === 'sync') {
         await r.refresh(); await r.syncCurrent(true);

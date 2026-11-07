@@ -42,6 +42,7 @@ import { registerReportIssue } from '@core/reportIssue';
 import { registerFileIcons } from '@core/fileIcons';
 import { registerRukusClusters } from '@core/rukus/clusters';
 import { registerCellPage } from '@core/live/cellPage';
+import { registerBackupsView } from '@core/views/sideBar';
 import { registerOnboarding } from '@core/onboarding';
 import { registerExperimentalCommands } from '@core/experimental';
 import { windowFolders, setWindowFolders } from '@core/util';
@@ -97,7 +98,7 @@ export function activate(ctx: vscode.ExtensionContext) {
   }
   s.live.cellRootResolver = () => s.containers.cells[0]?.root;
   s.rukus = registerRukusClusters(ctx, s);
-  // RUKUS clusters mix brands: the open cluster's ABB robots join ABB Controllers.
+  // RUKUS clusters mix brands: the open cluster's ABB robots join the Cell view's ABB rows.
   if (abbControllers) ctx.subscriptions.push(followRukusCluster(abbControllers, s.rukus, s.output));
   if (fanuc) {
     registerViews(ctx, s);
@@ -108,6 +109,8 @@ export function activate(ctx: vscode.ExtensionContext) {
     registerTransferStatus(ctx, s);
     registerSnapshotDiffCommands(ctx, s);
   }
+  // Backups: Programs / PC programs / Macros / Data / RAPID as rows of one view, from what the brands added above
+  registerBackupsView(ctx);
   registerContainerCommands(ctx, s);
   registerSyncCommands(ctx, s);
   registerSyncOnOpen(ctx, s);

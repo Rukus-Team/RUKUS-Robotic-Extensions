@@ -39,7 +39,7 @@ RUKUS already handles backups, so the plan leans on FTP/HTTP first (zero footpri
 2. **Pull controller data live**: on connect, GET `NUMREG.VA`, `POSREG.VA`, `STRREG.VA`, `DIOCFGSV.VA`, `SYSMACRO.VA` over HTTP into an in-memory `DataStore` layer that overrides the backup-file data. Refresh on a timer (2–5 s for registers, on demand for I/O config). Hovers and inlay hints then show **live values**.
 3. **Live I/O state**: `IOSTATE.DG` (or `DIOCFGSV.VA` + `IOSTATE`) parsed into DI/DO/RI/RO/UI/UO/F values; the I/O view shows ON/OFF dots that update.
 4. **Live program state**: `PRGSTATE.DG` → running task, program, line. Decoration in the editor highlighting the line the robot is executing (like a debugger's current-line marker) when the open file matches the running program. Status bar: `▶ MAIN_PICK line 42 · RUNNING`.
-5. **Alarm log**: `ERRALL.LS` / `ERRCURR.LS` → an *Alarms* view with timestamps, severity, and a "jump to program line" action when the alarm names a TP line.
+5. **Alarm log**: `ERRALL.LS` (history) / `ERRACT.LS` (active) → an *Alarms* view with timestamps, severity, and a "jump to program line" action when the alarm names a TP line.
 6. **Open program from robot**: browse `MD:` over FTP, open a `.ls` read-only in the editor tagged `[S002R01]`, diff it against the local copy (`vscode.diff`).
 
 ## Phase 2 — Write paths (guarded)

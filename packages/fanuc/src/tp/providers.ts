@@ -15,6 +15,8 @@ import { frameHover } from './frameHover';
 import { alarmAt, alarmHover } from '../alarms/alarmHover';
 import { ORDER_FILE, parseOrderFile, catalogOptionInstalled, cachedOptionsForRobot, type ControllerOption } from '../live/controllerOptions';
 import { boundRobot } from '@core/robotBinding';
+import { FANUC_SCHEME, robotFileReadAt } from '@core/live/fs';
+import { robotDisplayName, robotOriginNote } from '@core/live/robotFileOrigin';
 
 const SEL = { language: 'fanuc-tp' };
 
@@ -161,7 +163,11 @@ export function dataHover(s: FanucServices, prog: TpProgram, ref: TpDataRef, uri
     lines.push('', `[$(insert) Auto-fill comment](${cmd})`);
   }
   if (ref.state !== undefined) lines.push('', `Listing state: \`${ref.state === '*' ? '* (not connected)' : ref.state}\` — what the point was when this .ls was exported, not what it is now.`);
-  if (!ds && s.data.datasets.length > 1) lines.push('', '_This file is not inside any robot backup folder, so no controller data is matched to it._');
+  if (uri.scheme === FANUC_SCHEME) {
+    // the robot's own copy: say where it came from, not that it is in no backup folder
+    const parts = uri.path.split('/').filter(Boolean);
+    lines.push('', robotOriginNote(robotDisplayName(uri.authority, s.live?.list().map(c => c.profile.name) ?? []), `${parts[0] ?? 'MD'}:`, parts[1] ?? '', robotFileReadAt(uri)));
+  } else if (!ds && s.data.datasets.length > 1) lines.push('', '_This file is not inside any robot backup folder, so no controller data is matched to it._');
   if (inline && ctrl && inline !== ctrl) lines.push('', `⚠ Inline comment \`${inline}\` differs from the controller comment.`);
   if (!ctrl && ws) lines.push('', `Comment used in ${ws.programs} program${ws.programs === 1 ? '' : 's'}: **${ws.comment}**`);
   if (ref.kind === 'R') {

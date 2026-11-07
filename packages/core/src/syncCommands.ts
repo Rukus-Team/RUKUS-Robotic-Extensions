@@ -22,7 +22,7 @@ import {
   writeWorkingCopy, workingFileFor, targetFromUri, snapshotCopy, fileNameForUri, noteRobotCompare,
   comparedChanged, syncStateOf, markerForDocument, type FetchOutcome,
 } from './snapshotSync';
-import { parseAlarms, activeAlarms, alarmPriorityLabel } from './live/parsers';
+import { readActiveAlarms, alarmPriorityLabel, activeAlarmsMessage } from './live/parsers';
 import type { AlarmEntry } from './live/types';
 import { config, showRecoverableError } from './util';
 import { gated, robotConnectionsEnabled } from './experimental';
@@ -713,20 +713,15 @@ async function historyCommand(s: Services, arg?: unknown): Promise<void> {
 // ── controller errors (also used by a failed push) ──────────────────────────
 
 /**
- * Read the controller's current errors over HTTP: ERRCURR.LS first, ERRALL.LS as a fallback.
- * Only meaningful while the extension can read the device; returns [] when it cannot.
+ * Read the controller's active errors: ERRACT.LS (the controller's active list), ERRALL.LS since
+ * the last RESET only where ERRACT.LS is missing. ERRCURR.LS is not an alarm list (V9.40: a
+ * version dump) and is never read. Only meaningful while the extension can read the device;
+ * returns [] when it cannot.
  */
 export async function fetchControllerErrors(s: Services, conn: RobotConnection): Promise<AlarmEntry[]> {
   const live = s.live;
   if (!live) return [];
-  for (const file of ['ERRCURR.LS', 'ERRALL.LS']) {
-    try {
-      const text = await live.readText(conn.profile, file);
-      const alarms = activeAlarms(parseAlarms(text));
-      if (alarms.length) return alarms;
-    } catch { /* try the next file */ }
-  }
-  return [];
+  return readActiveAlarms(file => live.readText(conn.profile, file));
 }
 
 async function errorsCommand(s: Services, arg?: unknown): Promise<void> {
@@ -736,9 +731,10 @@ async function errorsCommand(s: Services, arg?: unknown): Promise<void> {
   const alarms = await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Window, title: `Reading errors from ${conn.profile.name}` },
     () => fetchControllerErrors(s, conn));
-  if (!alarms.length) { vscode.window.showInformationMessage(`No controller errors read from ${conn.profile.name}.`); return; }
-  s.output.appendLine(`[RUKUS] ${conn.profile.name} errors:\n  ${alarms.map(a => `${a.time} ${alarmPriorityLabel(a.severity)} ${a.message}`).join('\n  ')}`);
-  const pick = await vscode.window.showWarningMessage(`${alarms.length} controller error(s) on ${conn.profile.name}: ${alarms[0].message}`, 'Open Output', 'Error Watcher in RUKUS');
+  if (!alarms.length) { vscode.window.showInformationMessage(activeAlarmsMessage(conn.profile.name, alarms)); return; }
+  s.output.appendLine(`[RUKUS] ${conn.profile.name} active alarms:\n  ${alarms.map(a => `${a.time} ${alarmPriorityLabel(a.severity)} ${a.message}`).join('\n  ')}`);
+  // RUKUS's Error Watcher only when RUKUS is there to open it
+  const pick = await vscode.window.showWarningMessage(activeAlarmsMessage(conn.profile.name, alarms), 'Open Output', ...(s.rukus?.available ? ['Error Watcher in RUKUS'] : []));
   if (pick === 'Open Output') s.output.show(true);
   if (pick === 'Error Watcher in RUKUS') await vscode.commands.executeCommand('robotCode.rukus.alarms', conn.profile.name);
 }

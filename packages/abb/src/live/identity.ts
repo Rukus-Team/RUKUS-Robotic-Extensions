@@ -27,8 +27,19 @@ export interface ExpectedController { name?: string; id?: string }
 
 const norm = (s: string | undefined) => s?.trim().replace(/^\{|\}$/g, '').toLowerCase() || undefined;
 
-/** The name the UI shows for a controller: its own name, else its system's. */
-export const controllerLabel = (i: ControllerIdentity | undefined) => i?.ctrlName ?? i?.systemName;
+/**
+ * The name the UI shows for a controller: its own name, else its system's. A RobotStudio virtual
+ * controller's ctrl-name is the PC it runs on ("IRC5VC DESKTOP-9A0FNHB"), which says nothing about
+ * which controller it is, so a virtual one is shown by its system name (irc6_testing).
+ */
+export const controllerLabel = (i: ControllerIdentity | undefined) =>
+  i && namedAfterPc(i) ? i.systemName ?? i.ctrlName : i?.ctrlName ?? i?.systemName;
+
+/** RobotStudio names a virtual controller after the PC: "IRC5VC DESKTOP-...", "OmniCoreVC ..." */
+const namedAfterPc = (i: ControllerIdentity) => i.virtual === true || /^(IRC5|OmniCore)\s*VC(?![A-Za-z0-9_])/i.test(i.ctrlName ?? '');
+
+/** "6.16.01.00" -> "RW 6.16"; undefined when there is no version */
+export const shortRobotWare = (v: string | undefined) => (v ? `RW ${v.split('.').slice(0, 2).join('.')}` : undefined);
 
 /** What to remember for a controller seen for the first time. */
 export function expectationOf(i: ControllerIdentity): ExpectedController {

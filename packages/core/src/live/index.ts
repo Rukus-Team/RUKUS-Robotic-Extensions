@@ -10,6 +10,7 @@ import * as path from 'node:path';
 import type { Services } from '../services';
 import { RobotManager, FETCH_UNITS, REGISTER_KINDS, WebServerUnreachableError } from './robotManager';
 import { RobotFileSystem, FANUC_SCHEME, robotUri } from './fs';
+import { robotDisplayName } from './robotFileOrigin';
 import { globToRegExp } from './ftp';
 import { RobotsTree, ageTicked } from './views';
 import { openRobotForm } from './robotForm';
@@ -23,7 +24,8 @@ import { placeBackup, backupManifest, RUKUS_MANIFEST } from '../rukus/store';
 import * as os from 'node:os';
 import { FETCH_KINDS } from './types';
 import { config, windowFolders, setWindowFolders, showRecoverableError } from '../util';
-import { gated } from '../experimental';
+import { gated, robotConnectionsEnabled, ROBOT_CONNECTIONS_SETTING } from '../experimental';
+import { createCellView, shownBrands } from '../views/sideBar';
 import { commandRegistrar } from '../commandBoundary';
 import { brandForFile } from '../brand';
 import type { FetchKind } from './types';
@@ -32,15 +34,22 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
   const robots = new RobotManager(ctx, s.output, s.transfers);
   const fs = new RobotFileSystem(robots);
   const tree = new RobotsTree(robots, s.containers);
-  const treeView = vscode.window.createTreeView('robotCode.cell', { treeDataProvider: tree, showCollapseAll: true });
-  ctx.subscriptions.push(robots, treeView,
-    vscode.workspace.registerFileSystemProvider(FANUC_SCHEME, fs, { isCaseSensitive: false, isReadonly: true }));
-  // "1 of 2 live" on the section header
-  const summarise = () => {
-    const all = robots.list(), live = robots.connected().length, failed = all.filter(c => c.state === 'error').length;
-    treeView.description = all.length ? `${live} of ${all.length} live${failed ? ` · ⚠ ${failed} failed` : ''}` : '';
-  };
-  ctx.subscriptions.push(robots.onDidChange(summarise));
+  // One Cell of every robot: these FANUC rows and the rows a brand added (ABB's controllers), each
+  // with its brand when the cell mixes them (views/sideBar.ts). The FANUC rows need the robot
+  // connections switch and the FANUC side bar.
+  const fanucRows = () => robotConnectionsEnabled() && shownBrands().fanuc;
+  const cell = createCellView(ctx, {
+    id: 'fanuc', provider: tree, visible: fanucRows,
+    badge: (el: any) => (el?.t === 'robot' ? 'FANUC' : undefined),
+    counts: () => { const all = robots.list(); return { live: robots.connected().length, total: all.length, failed: all.filter(c => c.state === 'error').length }; },
+  });
+  const treeView = cell.view;
+  ctx.subscriptions.push(robots,
+    vscode.workspace.registerFileSystemProvider(FANUC_SCHEME, fs, { isCaseSensitive: false, isReadonly: true }),
+    vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration(`robotCode.${ROBOT_CONNECTIONS_SETTING}`)) cell.tree.refresh(); }));
+  // "1 of 2 live" on the section header, FANUC and ABB together
+  const summarise = () => { treeView.description = cell.summary(); };
+  ctx.subscriptions.push(robots.onDidChange(summarise), cell.tree.onDidChangeTreeData(() => summarise()));
   summarise();
   // hidden: the section header and rows, for the smoke test
   ctx.subscriptions.push(vscode.commands.registerCommand('robotCode.live._viewState', async () => {
@@ -400,7 +409,7 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
       : vscode.window.activeTextEditor?.document.uri;
     if (!source || source.scheme !== FANUC_SCHEME) { vscode.window.showInformationMessage('Download works on a file that is on a controller: right-click one under Files in the Controllers view, or open one first.'); return; }
     const fileName = source.path.split('/').pop() ?? 'file';
-    const robot = decodeURIComponent(source.authority);
+    const robot = robotDisplayName(source.authority, robots.list().map(c => c.profile.name));
     const lastDir = ctx.workspaceState.get<string>('robotCode.live.downloadDir');
     const dir = lastDir ?? vscode.workspace.workspaceFolders?.find(f => f.uri.scheme === 'file')?.uri.fsPath;
     const target = await vscode.window.showSaveDialog({ defaultUri: vscode.Uri.file(dir ? path.join(dir, fileName) : fileName), title: `Download ${fileName} from ${robot}`, saveLabel: 'Download' });
@@ -415,8 +424,16 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
       void showRecoverableError(`Could not download ${fileName} from ${robot}: ${e?.message ?? e}`, s.output, () => vscode.commands.executeCommand('robotCode.live.downloadFile', arg));
       return;
     }
-    const pick = await vscode.window.showInformationMessage(`${fileName} saved to ${target.fsPath} - an editable copy.`, 'Open the copy');
-    if (pick) await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(target));
+    // the copy is what was asked for: open it in front, as a kept tab, without another click
+    try {
+      await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(target), { preview: false, preserveFocus: false, viewColumn: vscode.ViewColumn.Active });
+    } catch (e: any) {
+      void vscode.window.showErrorMessage(`${fileName} was saved to ${target.fsPath}, but could not be opened: ${e?.message ?? e}`);
+      return;
+    }
+    const reveal = 'Show in Folder';
+    void vscode.window.showInformationMessage(`${fileName} saved to ${target.fsPath} and opened - this copy is editable; the copy on ${robot} is unchanged.`, reveal)
+      .then(pick => { if (pick === reveal) void vscode.commands.executeCommand('revealFileInOS', target); });
   });
 
   reg('robotCode.live.openTaskLine', async (robot: string, program: string, line: number, type: string) => {
@@ -453,7 +470,8 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     // <backups root>\<cluster>\<robot>\<batch>\ - the robot's own archive, named by RUKUS's
     // templates, with RUKUS's manifest inside so RUKUS reads it as one of its own. Never into
     // Latest, which is RUKUS's to rotate. Without RUKUS: a folder of the user's choosing.
-    const rukus = s.rukus?.available ? s.rukus : undefined;
+    // RUKUS Studio's clusters are read only: its backups carry its own manifest, so the user picks the folder there
+    const rukus = s.rukus?.available && !s.rukus.isStudio ? s.rukus : undefined;
     const rukusCluster = rukus ? (rukus.current()?.cluster ?? rukus.clusterOfRobot(name)) : undefined;
     let picked: vscode.Uri[] | undefined;
     if (!rukusCluster) {
