@@ -130,9 +130,13 @@ export function splitAddress(address: string | undefined): { host: string; port?
   return m ? { host: m[1], port: Number(m[2]) } : { host: a };
 }
 
+/** path functions for a workspace root: Windows ones for a Windows path (a drive letter or backslashes), so
+ * the result is the same on a Linux build machine as on the Windows PC the path came from */
+function pathsFor(root: string): typeof path.win32 { return /^[A-Za-z]:|\\/.test(root) ? path.win32 : path; }
+
 /** the top-level robots' pseudo-cluster: named after the workspace folder */
 export function topLevelName(ws: StudioWorkspace): string {
-  return path.basename(ws.root.replace(/[\\/]+$/, '')) || 'Workspace';
+  return pathsFor(ws.root).basename(ws.root.replace(/[\\/]+$/, '')) || 'Workspace';
 }
 
 /**
@@ -143,13 +147,14 @@ export function topLevelName(ws: StudioWorkspace): string {
  */
 export function studioClusters(ws: StudioWorkspace): { clusters: RukusCluster[]; folders: Map<string, string> } {
   const folders = new Map<string, string>();
-  const file = path.join(ws.root, STUDIO_WORKSPACE_FILE);
+  const p = pathsFor(ws.root);
+  const file = p.join(ws.root, STUDIO_WORKSPACE_FILE);
   const byContainer = new Map<string, StudioRobot[]>();
   for (const r of ws.robots) byContainer.set(r.container, [...(byContainer.get(r.container) ?? []), r]);
   const out: RukusCluster[] = [];
   const add = (name: string, container: string, robots: StudioRobot[]) => {
     out.push({ name, file, robots: robots.map(toRukusRobot), raw: { studio: true, container } });
-    folders.set(name.toLowerCase(), container ? path.join(ws.root, ...container.split('/')) : ws.root);
+    folders.set(name.toLowerCase(), container ? p.join(ws.root, ...container.split('/')) : ws.root);
   };
   // a cluster with robots, or a leaf (an empty cell is still a cell); a parent with only sub-clusters is not listed
   for (const c of ws.containers) {

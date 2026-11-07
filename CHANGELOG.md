@@ -1,5 +1,9 @@
 # Changelog
 
+## 26.119.2 - 2026-11-07
+
+- First Marketplace release of 26.119.1's changes; the RUKUS Studio workspace paths now read the same on a Linux build machine (the 26.119.1 publish stopped at its unit tests).
+
 ## 26.119.1 - 2026-11-07 - Active alarms from ERRACT.LS
 
 ### Fixed
