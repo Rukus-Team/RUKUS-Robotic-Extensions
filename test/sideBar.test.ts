@@ -37,27 +37,27 @@ const WORKSPACE = JSON.stringify({
 export function runDetection(check: Check): void {
   const local = 'C:\\Users\\sam\\AppData\\Local';
   const docs = 'C:\\Users\\sam\\Documents';
-  const exe = path.join(local, 'Programs', 'RUKUS Studio', 'Rukus.Studio.exe');
-  const defWs = path.join(docs, 'RUKUS Studio', 'Workspace');
-  const shell = path.join(local, 'RUKUS Studio', 'shell.json');
+  const exe = path.win32.join(local, 'Programs', 'RUKUS Studio', 'Rukus.Studio.exe');
+  const defWs = path.win32.join(docs, 'RUKUS Studio', 'Workspace');
+  const shell = path.win32.join(local, 'RUKUS Studio', 'shell.json');
 
   // ---- where Studio is ----
   check(!locateStudio({ localAppData: local, documents: docs }, mem({})).installed, 'nothing on the PC: Studio not installed');
   const onlyExe = locateStudio({ localAppData: local, documents: docs }, mem({ [exe]: '' }));
   check(onlyExe.installed && onlyExe.exe === exe && !onlyExe.workspace, 'the exe alone: installed, no workspace');
-  const dflt = locateStudio({ localAppData: local, documents: docs }, mem({ [exe]: '', [path.join(defWs, STUDIO_WORKSPACE_FILE)]: '{}' }));
+  const dflt = locateStudio({ localAppData: local, documents: docs }, mem({ [exe]: '', [path.win32.join(defWs, STUDIO_WORKSPACE_FILE)]: '{}' }));
   check(dflt.workspace === defWs, `the default workspace Documents\\RUKUS Studio\\Workspace (${dflt.workspace})`);
   const other = 'D:\\Cells\\Plant';
   const fromShell = locateStudio({ localAppData: local, documents: docs }, mem({
-    [shell]: JSON.stringify({ workspace: other }), [path.join(other, STUDIO_WORKSPACE_FILE)]: '{}', [path.join(defWs, STUDIO_WORKSPACE_FILE)]: '{}',
+    [shell]: JSON.stringify({ workspace: other }), [path.win32.join(other, STUDIO_WORKSPACE_FILE)]: '{}', [path.win32.join(defWs, STUDIO_WORKSPACE_FILE)]: '{}',
   }));
   check(fromShell.workspace === other, `the workspace Studio had open last (shell.json) comes first (${fromShell.workspace})`);
-  const gone = locateStudio({ localAppData: local, documents: docs }, mem({ [shell]: JSON.stringify({ workspace: other }), [path.join(defWs, STUDIO_WORKSPACE_FILE)]: '{}' }));
+  const gone = locateStudio({ localAppData: local, documents: docs }, mem({ [shell]: JSON.stringify({ workspace: other }), [path.win32.join(defWs, STUDIO_WORKSPACE_FILE)]: '{}' }));
   check(gone.workspace === defWs, 'a last workspace that is gone falls back to the default one');
-  const broken = locateStudio({ localAppData: local, documents: docs }, mem({ [shell]: '{ half', [path.join(defWs, STUDIO_WORKSPACE_FILE)]: '{}' }));
+  const broken = locateStudio({ localAppData: local, documents: docs }, mem({ [shell]: '{ half', [path.win32.join(defWs, STUDIO_WORKSPACE_FILE)]: '{}' }));
   check(broken.workspace === defWs, 'a half-written shell.json is not fatal');
   const home = 'E:\\Studio';
-  const portable = locateStudio({ localAppData: local, documents: docs, studioHome: home }, mem({ [path.join(home, 'shell.json')]: JSON.stringify({ workspace: other }), [path.join(other, STUDIO_WORKSPACE_FILE)]: '{}' }));
+  const portable = locateStudio({ localAppData: local, documents: docs, studioHome: home }, mem({ [path.win32.join(home, 'shell.json')]: JSON.stringify({ workspace: other }), [path.win32.join(other, STUDIO_WORKSPACE_FILE)]: '{}' }));
   check(portable.workspace === other, 'RUKUS_STUDIO_HOME is where shell.json is read');
 
   // ---- which of the two is read ----
@@ -88,7 +88,7 @@ export function runDetection(check: Check): void {
   const { clusters, folders } = studioClusters(ws);
   check(JSON.stringify(clusters.map(c => c.name)) === JSON.stringify(['Cell 1', 'Plant A/Line 2', 'Workspace']),
     `one cluster per cluster path, plus the top-level robots under the workspace's name (${clusters.map(c => c.name).join(', ')})`);
-  check(folders.get('cell 1') === path.join(root, 'Cell 1') && folders.get('plant a/line 2') === path.join(root, 'Plant A', 'Line 2') && folders.get('workspace') === root,
+  check(folders.get('cell 1') === path.win32.join(root, 'Cell 1') && folders.get('plant a/line 2') === path.win32.join(root, 'Plant A', 'Line 2') && folders.get('workspace') === root,
     'a cluster\'s folder is <workspace>\\<cluster path>; the top-level robots\' is the workspace itself');
   const cell1 = clusters.find(c => c.name === 'Cell 1')!;
   const ctl = clusterControllers(cell1);
@@ -105,27 +105,27 @@ export function runDetection(check: Check): void {
 
 export function runFolderFilter(check: Check): void {
   const root = 'C:\\Users\\sam\\Documents\\RUKUS Studio\\Workspace';
-  const f = mem({ [path.join(root, STUDIO_WORKSPACE_FILE)]: '{}' });
-  const robot = path.join(root, 'Cell 1', 'R1');
-  check(isNonBackupFolder(path.join(robot, 'replaced', '2026-11-07_07-45-00'), f), 'Studio\'s replaced\\<time> is no backup');
-  check(isNonBackupFolder(path.join(robot, 'snapshots', 'before teach'), f), 'Studio\'s snapshots\\ is no backup');
-  for (const n of ['alarms', 'checks', 'dcs-out', 'reports']) check(isNonBackupFolder(path.join(robot, n), f), `Studio's ${n}\\ is no backup`);
-  check(!isNonBackupFolder(path.join(robot, '2026-10-18_20-13'), f), 'a dated backup is a backup');
+  const f = mem({ [path.win32.join(root, STUDIO_WORKSPACE_FILE)]: '{}' });
+  const robot = path.win32.join(root, 'Cell 1', 'R1');
+  check(isNonBackupFolder(path.win32.join(robot, 'replaced', '2026-11-07_07-45-00'), f), 'Studio\'s replaced\\<time> is no backup');
+  check(isNonBackupFolder(path.win32.join(robot, 'snapshots', 'before teach'), f), 'Studio\'s snapshots\\ is no backup');
+  for (const n of ['alarms', 'checks', 'dcs-out', 'reports']) check(isNonBackupFolder(path.win32.join(robot, n), f), `Studio's ${n}\\ is no backup`);
+  check(!isNonBackupFolder(path.win32.join(robot, '2026-10-18_20-13'), f), 'a dated backup is a backup');
   check(!isNonBackupFolder(robot, f), 'the robot folder itself is listed');
-  check(!isNonBackupFolder(path.join(root, 'Cell 1', 'replaced'), mem({})), 'outside a Studio workspace a folder called replaced is the user\'s own');
+  check(!isNonBackupFolder(path.win32.join(root, 'Cell 1', 'replaced'), mem({})), 'outside a Studio workspace a folder called replaced is the user\'s own');
   check(!isNonBackupFolder('D:\\Plant\\reports\\R1_backup', mem({})), 'a user\'s "reports" folder elsewhere is left alone');
-  check(isNonBackupFolder('D:\\Plant\\Backups\\Cell\\.incoming\\R1', mem({})) && isNonBackupFolder(path.join(robot, '.incoming-2026-11-07_10-00'), f), 'a download in progress (.incoming, .incoming-<name>) is never a backup');
+  check(isNonBackupFolder('D:\\Plant\\Backups\\Cell\\.incoming\\R1', mem({})) && isNonBackupFolder(path.win32.join(robot, '.incoming-2026-11-07_10-00'), f), 'a download in progress (.incoming, .incoming-<name>) is never a backup');
   check(isNonBackupFolder('C:\\Users\\sam\\AppData\\Local\\RUKUS Studio\\edit-on-robot\\bc0de4f1f39d', mem({})), 'Studio\'s edit-on-robot copies are never a backup');
   check(isNeverBackupName('.INCOMING') && !isNeverBackupName('incoming'), 'only the dot names count');
   // the workspace file must be ABOVE the folder: a robot called "replaced" at the top level is a robot
-  check(!isNonBackupFolder(path.join(root, 'replaced'), mem({ [path.join(root, 'replaced', STUDIO_WORKSPACE_FILE)]: '{}' })), 'a workspace folder named like one is not hidden');
+  check(!isNonBackupFolder(path.win32.join(root, 'replaced'), mem({ [path.win32.join(root, 'replaced', STUDIO_WORKSPACE_FILE)]: '{}' })), 'a workspace folder named like one is not hidden');
   // the cache asks the disk once per folder
   let asks = 0;
-  const counting: FsLike = { exists: p => { asks++; return p === path.join(root, STUDIO_WORKSPACE_FILE); }, readText: () => undefined };
+  const counting: FsLike = { exists: p => { asks++; return p === path.win32.join(root, STUDIO_WORKSPACE_FILE); }, readText: () => undefined };
   const cache = new Map<string, boolean>();
-  for (let i = 0; i < 20; i++) isNonBackupFolder(path.join(robot, 'replaced', `t${i}`), counting, cache);
+  for (let i = 0; i < 20; i++) isNonBackupFolder(path.win32.join(robot, 'replaced', `t${i}`), counting, cache);
   const first = asks;
-  for (let i = 0; i < 20; i++) isNonBackupFolder(path.join(robot, 'replaced', `t${i}`), counting, cache);
+  for (let i = 0; i < 20; i++) isNonBackupFolder(path.win32.join(robot, 'replaced', `t${i}`), counting, cache);
   check(asks === first, `the second pass asks the disk nothing (${first} then ${asks})`);
 
   // on disk: a real temp folder shaped like the workspace

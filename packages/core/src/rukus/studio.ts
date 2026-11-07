@@ -47,12 +47,12 @@ export interface StudioLocation {
  * (shell.json), else the default Documents\RUKUS Studio\Workspace when that holds a workspace file.
  */
 export function locateStudio(env: StudioEnv, f: FsLike = realFs): StudioLocation {
-  const exe = env.localAppData ? path.join(env.localAppData, 'Programs', STUDIO_PRODUCT_FOLDER, STUDIO_EXE) : undefined;
+  const exe = env.localAppData ? pathsFor(env.localAppData).join(env.localAppData, 'Programs', STUDIO_PRODUCT_FOLDER, STUDIO_EXE) : undefined;
   const installed = !!exe && f.exists(exe);
-  const dataRoot = env.studioHome || (env.localAppData ? path.join(env.localAppData, STUDIO_PRODUCT_FOLDER) : undefined);
+  const dataRoot = env.studioHome || (env.localAppData ? pathsFor(env.localAppData).join(env.localAppData, STUDIO_PRODUCT_FOLDER) : undefined);
   const candidates: string[] = [];
   if (dataRoot) {
-    const shell = f.readText(path.join(dataRoot, 'shell.json'));
+    const shell = f.readText(pathsFor(dataRoot).join(dataRoot, 'shell.json'));
     if (shell) {
       try {
         const ws = JSON.parse(shell)?.workspace;
@@ -60,14 +60,14 @@ export function locateStudio(env: StudioEnv, f: FsLike = realFs): StudioLocation
       } catch { /* a half-written shell.json: the default below */ }
     }
   }
-  candidates.push(path.join(env.documents, STUDIO_PRODUCT_FOLDER, STUDIO_DEFAULT_WORKSPACE));
+  candidates.push(pathsFor(env.documents).join(env.documents, STUDIO_PRODUCT_FOLDER, STUDIO_DEFAULT_WORKSPACE));
   const workspace = candidates.find(c => isStudioWorkspace(c, f));
   return { installed, ...(installed ? { exe } : {}), ...(workspace ? { workspace } : {}) };
 }
 
 /** a folder holding Studio's workspace file */
 export function isStudioWorkspace(folder: string, f: FsLike = realFs): boolean {
-  return f.exists(path.join(folder, STUDIO_WORKSPACE_FILE));
+  return f.exists(pathsFor(folder).join(folder, STUDIO_WORKSPACE_FILE));
 }
 
 export interface StudioRobot {
@@ -254,14 +254,15 @@ export function isNeverBackupName(name: string): boolean {
  * per folder.
  */
 export function isNonBackupFolder(dir: string, f: FsLike = realFs, cache: Map<string, boolean> = new Map()): boolean {
-  const parts = path.resolve(dir).split(/[\\/]+/).filter(Boolean);
+  const P = pathsFor(dir);
+  const parts = P.resolve(dir).split(/[\\/]+/).filter(Boolean);
   const isRoot = (i: number) => {
     // the folder made of parts[0..i]
-    const p = parts.slice(0, i + 1).join(path.sep);
-    const folder = /^[A-Za-z]:$/.test(parts[0]) ? p : path.sep + p;
+    const p = parts.slice(0, i + 1).join(P.sep);
+    const folder = /^[A-Za-z]:$/.test(parts[0]) ? p : P.sep + p;
     const key = folder.toLowerCase();
     let hit = cache.get(key);
-    if (hit === undefined) { hit = isStudioWorkspace(folder.length === 2 ? folder + path.sep : folder, f); cache.set(key, hit); }
+    if (hit === undefined) { hit = isStudioWorkspace(folder.length === 2 ? folder + P.sep : folder, f); cache.set(key, hit); }
     return hit;
   };
   for (let i = 0; i < parts.length; i++) {
