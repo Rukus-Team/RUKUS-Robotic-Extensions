@@ -2,7 +2,7 @@
   "name": "robot-code",
   "displayName": "RUKUS Robotic Extensions — FANUC & ABB (Beta)",
   "description": "BETA - in active development, not yet proven on a live cell. One extension for FANUC and ABB robots: FANUC TP (.ls) and KAREL (.kl), ABB RAPID (.mod/.sys/.prg) with hover docs, go-to-definition, diagnostics, linting, flowcharts and call graphs; controller backups and live controllers (FANUC over HTTP/FTP, ABB IRC5 and OmniCore over Robot Web Services) with registers, RAPID data, I/O, alarms and positions; ktrans integration and the RUKUS desktop app.",
-  "version": "26.111.2076",
+  "version": "26.119.1",
   "publisher": "rukus-team",
   "license": "MIT",
   "repository": {
@@ -1388,6 +1388,12 @@
         "icon": "$(repo-pull)"
       },
       {
+        "command": "robotCode.live.sendFile",
+        "title": "Send File to Robot…",
+        "category": "Robot Code",
+        "icon": "$(cloud-upload)"
+      },
+      {
         "command": "robotCode.sync.pushFile",
         "title": "Push Current File to Robot…",
         "category": "RUKUS",
@@ -1938,6 +1944,11 @@
           "group": "navigation@0.4"
         },
         {
+          "command": "robotCode.live.sendFile",
+          "when": "editorLangId == fanuc-tp && resourceScheme == file && config.robotCode.experimental.robotConnections && !(robotCode.fileInContainer && robotCode.fileHasRobot)",
+          "group": "navigation@0.4"
+        },
+        {
           "command": "robotCode.sync.compareFile",
           "when": "robotCode.fileInContainer",
           "group": "navigation@0.5"
@@ -2224,48 +2235,48 @@
       "view/title": [
         {
           "command": "robotCode.tp.newProgram",
-          "when": "view == robotCode.programs",
-          "group": "navigation@0"
+          "when": "view == robotCode.backups && !robotCode.hideFanuc && !robotCode.fanucOff",
+          "group": "2_programs@1"
         },
         {
           "command": "robotCode.karel.newProgram",
-          "when": "view == robotCode.pcPrograms",
-          "group": "navigation@0"
+          "when": "view == robotCode.backups && !robotCode.hideFanuc && !robotCode.fanucOff",
+          "group": "2_programs@2"
         },
         {
           "command": "robotCode.showFeatures",
-          "when": "view == robotCode.programs || view == robotCode.cell",
+          "when": "view == robotCode.backups || view == robotCode.cell",
           "group": "navigation@9"
         },
         {
           "command": "robotCode.showFeatures",
-          "when": "view =~ /^robotCode\\./ && view != robotCode.programs && view != robotCode.cell",
+          "when": "view =~ /^robotCode\\./ && view != robotCode.backups && view != robotCode.cell",
           "group": "9_help@1"
         },
         {
           "command": "robotCode.data.refresh",
-          "when": "view == robotCode.registers || view == robotCode.programs || view == robotCode.pcPrograms || view == robotCode.macros || view == robotCode.snapshot",
+          "when": "view == robotCode.backups && !robotCode.fanucOff || view == robotCode.snapshot",
           "group": "navigation@1"
         },
         {
           "command": "robotCode.data.openRegisterTable",
-          "when": "view == robotCode.registers",
-          "group": "navigation@2"
+          "when": "view == robotCode.backups && !robotCode.hideFanuc && !robotCode.fanucOff",
+          "group": "3_data@1"
         },
         {
           "command": "robotCode.data.addBackupFolder",
-          "when": "view == robotCode.snapshot || view == robotCode.registers",
+          "when": "view == robotCode.snapshot || view == robotCode.backups && !robotCode.fanucOff",
           "group": "navigation@3"
         },
         {
           "command": "robotCode.data.restoreBackupFolders",
-          "when": "view == robotCode.registers",
+          "when": "view == robotCode.backups && !robotCode.fanucOff",
           "group": "1_backups@1"
         },
         {
           "command": "robotCode.tp.showCallGraph",
-          "when": "view == robotCode.programs || view == robotCode.pcPrograms",
-          "group": "navigation@2"
+          "when": "view == robotCode.backups && !robotCode.hideFanuc && !robotCode.fanucOff",
+          "group": "2_programs@5"
         },
         {
           "command": "robotCode.live.addRobot",
@@ -2284,13 +2295,13 @@
         },
         {
           "command": "robotCode.tools.xrefReport",
-          "when": "view == robotCode.registers",
-          "group": "navigation@4"
+          "when": "view == robotCode.backups && !robotCode.hideFanuc && !robotCode.fanucOff",
+          "group": "3_data@2"
         },
         {
           "command": "robotCode.tools.unusedPrograms",
-          "when": "view == robotCode.programs",
-          "group": "navigation@4"
+          "when": "view == robotCode.backups && !robotCode.hideFanuc && !robotCode.fanucOff",
+          "group": "2_programs@4"
         },
         {
           "command": "robotCode.rukus.syncClusters",
@@ -2314,28 +2325,28 @@
         },
         {
           "command": "robotCode.rapid.refresh",
-          "when": "view == robotCode.rapid",
-          "group": "navigation@1"
+          "when": "view == robotCode.backups && robotCode.abbActive && !robotCode.hideAbb",
+          "group": "4_rapid@1"
         },
         {
           "command": "robotCode.abb.addController",
-          "when": "view == robotCode.abbControllers",
-          "group": "navigation@1"
+          "when": "view == robotCode.cell && robotCode.abbActive && !robotCode.hideAbb",
+          "group": "0_add@2"
         },
         {
           "command": "robotCode.abb.searchControllers",
-          "when": "view == robotCode.abbControllers",
-          "group": "navigation@1"
+          "when": "view == robotCode.cell && robotCode.abbActive && !robotCode.hideAbb",
+          "group": "0_add@3"
         },
         {
           "command": "robotCode.views.toggleLatestOnly",
-          "when": "view == robotCode.programs || view == robotCode.pcPrograms",
+          "when": "view == robotCode.backups && !robotCode.hideFanuc && !robotCode.fanucOff",
           "group": "navigation@5"
         },
         {
           "command": "robotCode.tp.combinePrograms",
-          "when": "view == robotCode.programs",
-          "group": "navigation@6"
+          "when": "view == robotCode.backups && !robotCode.hideFanuc && !robotCode.fanucOff",
+          "group": "2_programs@3"
         },
         {
           "command": "robotCode.tools.diffBackups",
@@ -2354,8 +2365,8 @@
         },
         {
           "command": "robotCode.sync.fetchCompareAll",
-          "when": "view == robotCode.programs && config.robotCode.experimental.robotConnections",
-          "group": "navigation@0b"
+          "when": "view == robotCode.backups && config.robotCode.experimental.robotConnections && !robotCode.fanucOff",
+          "group": "2_programs@0"
         },
         {
           "command": "robotCode.live.manageRobots",
@@ -2379,6 +2390,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "robotCode.live.sendFile",
+          "when": "editorLangId == fanuc-tp && resourceScheme == file"
+        },
         {
           "command": "robotCode.cell.open"
         },
@@ -2769,127 +2784,87 @@
         },
         {
           "command": "robotCode.abb.connect",
-          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-(disconnected|error)$/",
+          "when": "view == robotCode.cell && viewItem =~ /^abb-ctrl-(disconnected|error)$/",
           "group": "inline@1"
         },
         {
           "command": "robotCode.abb.findVirtualControllers",
-          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-(disconnected|error)$/",
+          "when": "view == robotCode.cell && viewItem =~ /^abb-ctrl-(disconnected|error)$/",
           "group": "1_connection@9"
         },
         {
           "command": "robotCode.abb.openPage",
-          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-/",
+          "when": "view == robotCode.cell && viewItem =~ /^abb-ctrl-/",
           "group": "inline@0"
         },
         {
           "command": "robotCode.abb.openPage",
-          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-/",
-          "group": "1_controller@0"
+          "when": "view == robotCode.cell && viewItem =~ /^abb-ctrl-/",
+          "group": "1_read@0"
         },
         {
           "command": "robotCode.abb.refresh",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
           "group": "inline@1"
         },
         {
           "command": "robotCode.abb.disconnect",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
           "group": "inline@2"
         },
         {
           "command": "robotCode.abb.backup",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "1_controller@1"
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "2_backup@0"
+        },
+        {
+          "command": "robotCode.abb.refresh",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "1_read@1"
+        },
+        {
+          "submenu": "robotCode.abb.controlMenu",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "3_control@1"
+        },
+        {
+          "submenu": "robotCode.abb.writeMenu",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "3_control@2"
         },
         {
           "command": "robotCode.abb.showEventLog",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "1_controller@2"
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "1_read@2"
         },
         {
           "command": "robotCode.abb.showSignals",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "1_controller@3"
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "1_read@3"
         },
         {
           "command": "robotCode.abb.showRapidData",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "1_controller@3"
-        },
-        {
-          "command": "robotCode.abb.setSpeed",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "2_motion@0"
-        },
-        {
-          "command": "robotCode.abb.motorsOn",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "2_motion@1"
-        },
-        {
-          "command": "robotCode.abb.motorsOff",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "2_motion@2"
-        },
-        {
-          "command": "robotCode.abb.startRapid",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "3_rapid@0"
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "1_read@4"
         },
         {
           "command": "robotCode.abb.stopRapid",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "3_rapid@1"
-        },
-        {
-          "command": "robotCode.abb.resetProgramPointer",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "3_rapid@2"
-        },
-        {
-          "command": "robotCode.abb.loadModule",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "4_program@0"
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "3_control@0"
         },
         {
           "command": "robotCode.abb.unloadModule",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "4_program@1"
-        },
-        {
-          "command": "robotCode.abb.setSignal",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "4_program@2"
-        },
-        {
-          "command": "robotCode.abb.setRapidData",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "4_program@3"
-        },
-        {
-          "command": "robotCode.abb.requestWriteAccess",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "5_access@0"
-        },
-        {
-          "command": "robotCode.abb.releaseWriteAccess",
-          "when": "view == robotCode.abbControllers && viewItem == abb-ctrl-connected",
-          "group": "5_access@1"
-        },
-        {
-          "command": "robotCode.abb.unloadModule",
-          "when": "view == robotCode.abbControllers && viewItem == abb-module",
+          "when": "view == robotCode.cell && viewItem == abb-module",
           "group": "1_module@0"
         },
         {
           "command": "robotCode.abb.editController",
-          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-/",
+          "when": "view == robotCode.cell && viewItem =~ /^abb-ctrl-/",
           "group": "9_remove@0"
         },
         {
           "command": "robotCode.abb.removeController",
-          "when": "view == robotCode.abbControllers && viewItem =~ /^abb-ctrl-/",
+          "when": "view == robotCode.cell && viewItem =~ /^abb-ctrl-/",
           "group": "9_remove"
         },
         {
@@ -2909,12 +2884,12 @@
         },
         {
           "command": "robotCode.data.removeBackupFolder",
-          "when": "view == robotCode.registers && viewItem == backup",
+          "when": "view == robotCode.backups && viewItem == backup",
           "group": "inline@9"
         },
         {
           "command": "robotCode.data.removeBackupFolder",
-          "when": "view == robotCode.registers && viewItem == backup",
+          "when": "view == robotCode.backups && viewItem == backup",
           "group": "9_remove@1"
         },
         {
@@ -2974,57 +2949,57 @@
         },
         {
           "command": "robotCode.sync.compareFile",
-          "when": "(view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/",
+          "when": "view == robotCode.backups && viewItem =~ /^program(-pc)?(-modified)?$/",
           "group": "syncProgram@0"
         },
         {
           "command": "robotCode.sync.fetchFile",
-          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/) && config.robotCode.experimental.robotConnections",
+          "when": "view == robotCode.backups && viewItem =~ /^program(-pc)?(-modified)?$/ && config.robotCode.experimental.robotConnections",
           "group": "syncProgram@1"
         },
         {
           "command": "robotCode.sync.pullFile",
-          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/) && config.robotCode.experimental.robotConnections",
+          "when": "view == robotCode.backups && viewItem =~ /^program(-pc)?(-modified)?$/ && config.robotCode.experimental.robotConnections",
           "group": "syncProgram@2"
         },
         {
           "command": "robotCode.sync.revertFile",
-          "when": "(view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/",
+          "when": "view == robotCode.backups && viewItem =~ /^program(-pc)?(-modified)?$/",
           "group": "syncProgram@3"
         },
         {
           "command": "robotCode.sync.comparePositions",
-          "when": "view == robotCode.programs && viewItem =~ /^program(-modified)?$/",
+          "when": "view == robotCode.backups && viewItem =~ /^program(-modified)?$/",
           "group": "syncProgram@4"
         },
         {
           "command": "robotCode.sync.history",
-          "when": "(view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/",
+          "when": "view == robotCode.backups && viewItem =~ /^program(-pc)?(-modified)?$/",
           "group": "syncProgram@5"
         },
         {
           "command": "robotCode.sync.fetchCompareAll",
-          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem == robot-folder) && config.robotCode.experimental.robotConnections",
+          "when": "view == robotCode.backups && viewItem == robot-folder && config.robotCode.experimental.robotConnections",
           "group": "syncRobot@0"
         },
         {
           "command": "robotCode.sync.fetch",
-          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem == robot-folder) && config.robotCode.experimental.robotConnections",
+          "when": "view == robotCode.backups && viewItem == robot-folder && config.robotCode.experimental.robotConnections",
           "group": "syncRobot@1"
         },
         {
           "command": "robotCode.sync.fetchFolder",
-          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem == robot-folder) && config.robotCode.experimental.robotConnections",
+          "when": "view == robotCode.backups && viewItem == robot-folder && config.robotCode.experimental.robotConnections",
           "group": "syncRobot@2"
         },
         {
           "command": "robotCode.sync.pullFolder",
-          "when": "((view == robotCode.programs || view == robotCode.pcPrograms) && viewItem == robot-folder) && config.robotCode.experimental.robotConnections",
+          "when": "view == robotCode.backups && viewItem == robot-folder && config.robotCode.experimental.robotConnections",
           "group": "syncRobot@3"
         },
         {
           "command": "robotCode.sync.compareFile",
-          "when": "(view == robotCode.programs || view == robotCode.pcPrograms) && viewItem =~ /^program(-modified)?$/",
+          "when": "view == robotCode.backups && viewItem =~ /^program(-pc)?(-modified)?$/",
           "group": "inline@9"
         },
         {
@@ -3104,17 +3079,17 @@
         },
         {
           "command": "robotCode.rukus.monitor",
-          "when": "view == robotCode.cell && viewItem =~ /^robot-/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-/ && robotCode.rukusAvailable",
           "group": "c@1"
         },
         {
           "command": "robotCode.rukus.alarms",
-          "when": "view == robotCode.cell && viewItem =~ /^robot-/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-/ && robotCode.rukusAvailable",
           "group": "c@2"
         },
         {
           "command": "robotCode.rukus.backup",
-          "when": "view == robotCode.cell && viewItem =~ /^robot-/",
+          "when": "view == robotCode.cell && viewItem =~ /^robot-/ && robotCode.rukusAvailable",
           "group": "c@3"
         },
         {
@@ -3131,9 +3106,103 @@
           "command": "robotCode.live.removeRobot",
           "when": "view == robotCode.cell && viewItem =~ /^robot-/",
           "group": "b@2"
+        },
+        {
+          "command": "robotCode.tp.newProgram",
+          "when": "view == robotCode.backups && viewItem == backups-group-programs",
+          "group": "inline@1"
+        },
+        {
+          "command": "robotCode.tools.unusedPrograms",
+          "when": "view == robotCode.backups && viewItem == backups-group-programs",
+          "group": "1_programs@1"
+        },
+        {
+          "command": "robotCode.karel.newProgram",
+          "when": "view == robotCode.backups && viewItem == backups-group-pcPrograms",
+          "group": "inline@1"
+        },
+        {
+          "command": "robotCode.data.openRegisterTable",
+          "when": "view == robotCode.backups && viewItem == backups-group-data",
+          "group": "inline@1"
+        },
+        {
+          "command": "robotCode.tools.xrefReport",
+          "when": "view == robotCode.backups && viewItem == backups-group-data",
+          "group": "1_data@1"
+        },
+        {
+          "command": "robotCode.rapid.refresh",
+          "when": "view == robotCode.backups && viewItem == backups-group-rapid",
+          "group": "inline@1"
+        }
+      ],
+      "robotCode.abb.controlMenu": [
+        {
+          "command": "robotCode.abb.setSpeed",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "2_motion@0"
+        },
+        {
+          "command": "robotCode.abb.motorsOn",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "2_motion@1"
+        },
+        {
+          "command": "robotCode.abb.motorsOff",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "2_motion@2"
+        },
+        {
+          "command": "robotCode.abb.startRapid",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "3_rapid@0"
+        },
+        {
+          "command": "robotCode.abb.resetProgramPointer",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "3_rapid@2"
+        }
+      ],
+      "robotCode.abb.writeMenu": [
+        {
+          "command": "robotCode.abb.loadModule",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "4_program@0"
+        },
+        {
+          "command": "robotCode.abb.unloadModule",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "4_program@1"
+        },
+        {
+          "command": "robotCode.abb.setSignal",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "4_program@2"
+        },
+        {
+          "command": "robotCode.abb.setRapidData",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "4_program@3"
+        },
+        {
+          "command": "robotCode.abb.requestWriteAccess",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "5_access@0"
+        },
+        {
+          "command": "robotCode.abb.releaseWriteAccess",
+          "when": "view == robotCode.cell && viewItem == abb-ctrl-connected",
+          "group": "5_access@1"
         }
       ],
       "explorer/context": [
+        {
+          "command": "robotCode.live.sendFile",
+          "when": "resourceScheme == file && resourceExtname =~ /^\\.ls$/i && config.robotCode.experimental.robotConnections",
+          "group": "5_cutcopypaste@9"
+        },
         {
           "submenu": "robotCode.menu",
           "when": "resourceScheme == fanuc || robotCode.hasContainers || explorerResourceIsFolder",
@@ -3164,6 +3233,14 @@
       {
         "id": "robotCode.sync.submenu",
         "label": "Snapshot & Robot"
+      },
+      {
+        "id": "robotCode.abb.controlMenu",
+        "label": "Motors and RAPID"
+      },
+      {
+        "id": "robotCode.abb.writeMenu",
+        "label": "Write to Controller"
       }
     ],
     "viewsContainers": {
@@ -3178,102 +3255,63 @@
     "views": {
       "robotCode": [
         {
+          "id": "robotCode.cell",
+          "name": "Cell",
+          "icon": "media/activity.svg",
+          "contextualTitle": "Cell: every robot",
+          "when": "config.robotCode.experimental.robotConnections && !robotCode.hideFanuc && !robotCode.fanucOff || robotCode.abbActive && !robotCode.hideAbb",
+          "initialSize": 3
+        },
+        {
+          "id": "robotCode.backups",
+          "name": "Backups",
+          "icon": "media/activity.svg",
+          "contextualTitle": "Backups: programs, data and RAPID",
+          "when": "!robotCode.hideFanuc && !robotCode.fanucOff || robotCode.abbActive && !robotCode.hideAbb",
+          "initialSize": 4
+        },
+        {
           "id": "robotCode.rukusClusters",
           "name": "RUKUS Clusters",
           "icon": "media/activity.svg",
-          "contextualTitle": "RUKUS clusters"
-        },
-        {
-        "id": "robotCode.cell",
-        "name": "Cell",
-        "icon": "media/activity.svg",
-        "contextualTitle": "Cell",
-        "when": "config.robotCode.experimental.robotConnections && !robotCode.hideFanuc && !robotCode.fanucOff"
+          "contextualTitle": "RUKUS clusters",
+          "visibility": "collapsed",
+          "initialSize": 1
         },
         {
           "id": "robotCode.snapshot",
           "name": "Snapshot",
           "icon": "media/activity.svg",
           "contextualTitle": "Snapshots",
-          "when": "!robotCode.hideFanuc && !robotCode.fanucOff"
-        },
-        {
-          "id": "robotCode.programs",
-          "name": "Programs",
-          "icon": "media/activity.svg",
-          "contextualTitle": "Programs",
-          "when": "!robotCode.hideFanuc && !robotCode.fanucOff"
-        },
-        {
-          "id": "robotCode.pcPrograms",
-          "name": "PC programs",
-          "icon": "media/activity.svg",
-          "contextualTitle": "PC programs",
-          "when": "!robotCode.hideFanuc && !robotCode.fanucOff"
-        },
-        {
-          "id": "robotCode.macros",
-          "name": "Macros",
-          "icon": "media/activity.svg",
-          "contextualTitle": "Macros",
-          "when": "!robotCode.hideFanuc && !robotCode.fanucOff"
-        },
-        {
-          "id": "robotCode.registers",
-          "name": "Data",
-          "icon": "media/activity.svg",
-          "contextualTitle": "Registers, payloads and I/O",
-          "when": "!robotCode.hideFanuc && !robotCode.fanucOff"
-        },
-        {
-          "id": "robotCode.rapid",
-          "name": "RAPID",
-          "icon": "media/activity.svg",
-          "contextualTitle": "ABB RAPID modules",
-          "when": "robotCode.abbActive && !robotCode.hideAbb"
-        },
-        {
-          "id": "robotCode.abbControllers",
-          "name": "ABB Controllers",
-          "icon": "media/activity.svg",
-          "contextualTitle": "ABB controllers (Robot Web Services)",
-          "when": "robotCode.abbActive && !robotCode.hideAbb"
+          "when": "!robotCode.hideFanuc && !robotCode.fanucOff",
+          "visibility": "collapsed",
+          "initialSize": 1
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "robotCode.registers",
-        "contents": "No controller data loaded.\n[Add Backup Folder](command:robotCode.data.addBackupFolder) [Try the Tutorial Cell](command:robotCode.tutorial.open)"
+        "view": "robotCode.cell",
+        "when": "config.robotCode.experimental.robotConnections && !robotCode.hideFanuc && !robotCode.fanucOff",
+        "contents": "No robots yet.\n[Add Robot](command:robotCode.live.addRobot)\n[Set Up a Robot](command:robotCode.openRobotWalkthrough)\nReads only when you press Get; writes always ask."
       },
       {
         "view": "robotCode.cell",
-        "contents": "The cell's robots, read only when you press Get.\n[Add Robot](command:robotCode.live.addRobot) [Open Cell Page](command:robotCode.cell.open) [Set Up a Robot Walkthrough](command:robotCode.openRobotWalkthrough)\nThe one write, Upload Program, always asks first."
+        "when": "robotCode.abbActive && !robotCode.hideAbb",
+        "contents": "[Add ABB Controller](command:robotCode.abb.addController)\nWrites only what you confirm."
+      },
+      {
+        "view": "robotCode.backups",
+        "contents": "No backups loaded yet.\n[Add Backup Folder](command:robotCode.data.addBackupFolder)\n[Try the Tutorial Cell](command:robotCode.tutorial.open)"
       },
       {
         "view": "robotCode.rukusClusters",
         "when": "!robotCode.rukusAvailable",
-        "contents": "RUKUS was not found. With it, its clusters appear here.\n[Get RUKUS](command:robotCode.rukus.revealData) [Initialize Cell Container…](command:robotCode.containers.initCell)\nInstalled elsewhere? Set `robotCode.rukus.dataFolder`. New to RUKUS? [Robot Code + RUKUS walkthrough](command:robotCode.openRukusWalkthrough)."
+        "contents": "RUKUS Studio was not found.\n[Get RUKUS](command:robotCode.rukus.revealData)\n[Set Up a Cell by Hand](command:robotCode.containers.initCell)\nElsewhere? Set `robotCode.rukus.dataFolder`."
       },
       {
         "view": "robotCode.snapshot",
-        "contents": "The snapshot is the robot's last known state; working copies are compared with it.\n[Initialize Robot Container…](command:robotCode.containers.initRobot) [Try the Tutorial Cell](command:robotCode.tutorial.open)\nThen connect and **Fetch…**, or snapshot a backup folder."
-      },
-      {
-        "view": "robotCode.macros",
-        "contents": "The macro table comes from sysmacro.va in a backup folder.\n[Add Backup Folder](command:robotCode.data.addBackupFolder)"
-      },
-      {
-        "view": "robotCode.abbControllers",
-        "contents": "Connect to an ABB IRC5 over Robot Web Services to see its state, where each RAPID task's program and motion pointers are, and the robot's position.\n[Add ABB Controller](command:robotCode.abb.addController)\nReads happen only when you press Connect or Get or open a module. Nothing is written to the controller except what you confirm: a Back Up, or an action (speed, motors, RAPID start/stop, load a module, an output, a variable, write access) from the controller page or a right-click. With a controller connected, Convert Target on Controller (RAPID editor) turns a jointtarget into a robtarget and back with the controller's own kinematics."
-      },
-      {
-        "view": "robotCode.rapid",
-        "contents": "ABB RAPID modules (.mod, .sys) found in the workspace and backup folders appear here, by backup, task and module. Open an IRC5 backup folder (it holds BACKINFO, RAPID and SYSPAR) to see its tasks.\n[Add Backup Folder](command:robotCode.data.addBackupFolder)"
-      },
-      {
-        "view": "robotCode.pcPrograms",
-        "contents": "KAREL sources (.kl) and compiled PC programs (.pc) appear here.\n[Open the Tutorial Cell](command:robotCode.tutorial.open)"
+        "contents": "A robot's last known state, to compare with.\n[Initialize Robot Container…](command:robotCode.containers.initRobot)"
       }
     ],
     "walkthroughs": [
@@ -3312,7 +3350,7 @@
           {
             "id": "robotCode.walkthrough.edit.sidebar",
             "title": "Explore the Sidebar",
-            "description": "The **Robot Code** panel holds **Programs** (TP), **PC programs** (KAREL), **Macros** and **Data** (registers, payloads and I/O) - plus **Snapshot** and **Controllers** once you work with a robot.",
+            "description": "The **Robot Code** panel holds **Programs** (TP), **PC programs** (KAREL), **Macros** and **Data** (registers, payloads and I/O) - plus **Snapshot** and **Cell** once you work with a robot.",
             "media": { "markdown": "media/walkthrough/edit-4-sidebar.md" },
             "completionEvents": ["onCommand:workbench.view.extension.robotCode"]
           },
@@ -3335,15 +3373,15 @@
       {
         "id": "robotCode.robot",
         "title": "Set Up a Robot",
-        "description": "Robot-first: one robot container, a snapshot of the controller, and the fetch / compare / push loop. Connecting to a robot is an experimental feature - the first step turns it on.",
+        "description": "Connect a robot, take a snapshot, then fetch, compare and push.",
         "icon": "media/icon.png",
         "steps": [
           {
             "id": "robotCode.walkthrough.robot.enable",
             "title": "Turn On Robot Connections",
-            "description": "Talking to a robot (FTP/HTTP reads, teach, upload) is still being proven on real cells, so it sits behind an experimental switch, off by default. This turns it on and reveals the **Controllers** view.",
+            "description": "Talking to a robot (FTP/HTTP reads, teach, upload) is still being proven on real cells, so it sits behind an experimental switch, off by default. This turns it on and opens the **Cell** view.",
             "media": { "markdown": "media/walkthrough/robot-1-enable.md" },
-            "completionEvents": ["onSettingChanged:robotCode.experimental.robotConnections"]
+            "completionEvents": ["onCommand:robotCode.experimental.enableRobotConnections", "onSettingChanged:robotCode.experimental.robotConnections", "onContext:config.robotCode.experimental.robotConnections"]
           },
           {
             "id": "robotCode.walkthrough.robot.container",

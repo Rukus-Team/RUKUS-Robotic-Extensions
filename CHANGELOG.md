@@ -1,5 +1,74 @@
 # Changelog
 
+## 26.119.1 - 2026-11-07 - Active alarms from ERRACT.LS
+
+### Fixed
+- **Controller errors are the controller's active alarm list.** *Get Controller Errors* and a refused push now read
+  `ERRACT.LS`, the controller's own list of active alarms. `ERRCURR.LS` is no longer read: on an R-30iB Plus (V9.40) it
+  is a version/feature dump, not alarms. When `ERRACT.LS` answers with only its header, nothing is active and the
+  alarm history is not shown as if it were; `ERRALL.LS` since the last RESET is used only where `ERRACT.LS` is missing.
+- `test/activeAlarms.test.ts` covers the `ERRACT.LS` rows (the same ones RUKUS Studio's tests use), the header-only
+  file, a web-server home page in its place, and the fallback.
+- **RUKUS Studio is found.** The clusters view no longer says "RUKUS was not found" when RUKUS Studio is installed: it
+  reads Studio's workspace (`rukus-workspace.json`, the one Studio had open last, else
+  `DocumentsRUKUS StudioWorkspace`), lists its clusters and robots, and is headed *RUKUS Studio*. Studio wins when
+  both are on the PC; `robotCode.rukus.dataFolder` may point at a Studio workspace folder too. Studio's workspace file is
+  only read, never written (Studio imports cell folders itself). `robotCode.rukusAvailable` is now true for either.
+- **Studio's safety copies are not backups.** Programs, PC programs, Macros, Data and RAPID no longer list RUKUS
+  Studio's `replaced<time>` folders (nor its `snapshots`, `alarms`, `checks`, `dcs-out`, `reports`, `watch`
+  folders inside a Studio workspace, a download still in `.incoming`, or `edit-on-robot` copies).
+
+### Changed
+- **A robot-first side bar of four views instead of nine.** *Cell* holds every robot: the ABB controllers now sit
+  beside the FANUC robots, with a FANUC / ABB badge when the cell mixes brands (the separate ABB Controllers view, which
+  sat off the bottom of the side bar, is gone; its menus and commands work on the Cell rows). *Backups* has Programs,
+  PC programs, Macros, Data and RAPID as rows, each hidden while it has nothing to show and remembering whether it
+  is open. *RUKUS Clusters* and *Snapshot* start collapsed. Welcome texts are short enough not to be cut. The old view
+  ids' *Focus* commands still work and land on the view their rows moved to.
+- `test/sideBar.test.ts` covers the Studio detection and workspace reading, the folder filter, the merged trees and
+  the manifest (four views, no menu on a retired view, short welcome lines).
+
+### Button test 2026-11-07: forms, menus and wording
+- **Send File to Robot.** A clear command (Command Palette, a title-bar button on TP editors outside a robot
+  container, and the Explorer right-click of a `.ls`) sends the open program once to a robot you pick. It is Push
+  underneath: the same `robotCode.live.upload` switch and its explanation, confirmation, gates and read-back. A
+  `.tp`, `.kl`, `.pc` or RAPID module says why it cannot be sent from here.
+- **Robot connections form:** from *Ports* down every label sits beside its own field again (the connection choice
+  and its help line had taken two grid cells). The ABB form has a **Find virtual controllers** button that fills in
+  a RobotStudio controller's address and port, and *Test connection* with an empty password tries the factory one
+  (`robotics`) instead of refusing without trying.
+- **Download (editable local copy)** names the robot as its profile does (R1, not r1) and opens the copy right away.
+- **Get Controller Errors** with nothing active says *No active alarms on R1*; the RUKUS Error Watcher button and the
+  robot menu's *Live Monitor / Alarm History / Backups and Schedules in RUKUS* show only when RUKUS is found.
+- **Hover on a file opened from a robot** says which robot it came from and when it was read, instead of "not
+  inside any robot backup folder".
+- **ABB:** a virtual controller's row shows its system name and RobotWare version, not the PC's name; *Event log*,
+  *I/O signals* and *RAPID data* say when they were last read; a RAPID value the controller will not give over RWS
+  (a clock) shows *(not readable over RWS)* with the controller's answer on hover and under the table; the
+  controller's right-click menu puts the reads first and the writes in *Motors and RAPID* and *Write to Controller*
+  submenus, so it fits on screen.
+- **Walkthrough "Set Up a Robot":** a shorter intro that is not cut off, the first step ticks once robot
+  connections are on (also when they already were), and the steps name the **Cell** view.
+- `test/uiFixes.test.ts` covers each of these.
+- **A refused program no longer leaves the robot without it.** A FANUC controller takes the old program away when it
+  starts loading a `.LS`, and kept nothing when it then refused the file (ROBOGUIDE V9.40: a live-edit save deleted
+  RKEDIT and left `-TMPASC-.LS`/`.TP`). Upload Program, Live Edit and Restore Pre-Push Copy now keep the robot's
+  current copy first (its `.TP` when the controller hands it out, and its `.LS`, saved on this PC); a program whose copy
+  cannot be read is not replaced. After a refusal, if the robot no longer lists the program, the kept copy is sent back
+  (`.TP` first, else `.LS`) and confirmed by a listing, and the `-TMPASC-` leftovers this send created are deleted
+  (FTP `DELE`). If the put-back fails, a modal error says the robot NO LONGER HAS the program and where the saved copy
+  is. Same fix as RUKUS Studio #285.
+- **A refusal says the controller's own reason.** The reason is read from `ERRALL.LS` right after the refusal
+  (e.g. "ASBN-092 Undefined instruction - line 23, column 28"), the editor jumps to that line and column, and the
+  message says whether the old program was put back or is unchanged. The generic hints (program selected,
+  write-protected, R507/R796) appear only when the controller gave no reason. Alarm rows now keep their second column
+  (the loader's cause).
+- **TP checker: an operator with nothing after it** (`R[1:Edit test]=    ;`, `R[1]=R[2]+ ;`, `IF R[1]> ,JMP ...`) is
+  an error (`tp.missingOperand`): the controller refuses the program (ASBN-092). No finding in 546 real programs.
+- `test/pushSafety.test.ts`: a fake FANUC MD: device (refuses the bad `.LS` the way ROBOGUIDE did) for the put-back,
+  the leftovers and the words; the ERRALL.LS reason; the TP check (set `TP_CORPUS` to run it over real backups); FTP
+  `DELE` against the mock controller.
+
 ## 26.111.2076 - 2026-11-06 - Cell view, tutorials, faster transfers, and minor changes
 
 At a glance: the Cell view and page become the home for controllers, robots and setup;

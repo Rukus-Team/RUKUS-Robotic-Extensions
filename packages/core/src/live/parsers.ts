@@ -129,16 +129,20 @@ export function parseIoState(text: string): IoPoint[] {
 }
 
 /**
- * ERRALL.LS / ERRCURR.LS rows:
+ * ERRALL.LS / ERRACT.LS rows (ERRACT.LS is the active list in ERRALL's row format):
  *   798" 23-AUG-26 13:20:34 " INTP-213 TeachMem still ON (-PMC-, 1) UALM[23]    " " WARN     00000000"    "
+ *   94" 10-OCT-26 23:45:08 " SYST-212 Need to apply to DCS param   " " STOP.G      00100110"
  */
 export function parseAlarms(text: string): AlarmEntry[] {
   const out: AlarmEntry[] = [];
-  for (const m of text.matchAll(/^\s*(\d+)"\s*(\d{2}-[A-Z]{3}-\d{2}\s+\d{2}:\d{2}:\d{2})\s*"\s*(.*?)\s*"\s*"\s*([A-Z]*)[^"]*"/gm)) {
+  // message, then the second column (empty, or the loader's cause), then the severity (RUKUS Studio FanucText.AlarmRow):
+  //   1" 07-NOV-26 14:02:11 " ASBN-009 on line 23, column 28 " ASBN-092 Undefined instruction " WARN 00000000"
+  for (const m of text.matchAll(/^[ \t]*(\d+)"[ \t]*(\d{2}-[A-Z]{3}-\d{2}[ \t]+\d{2}:\d{2}:\d{2})[ \t]*"[ \t]*([^"\r\n]*?)[ \t]*"[ \t]*([^"\r\n]*?)[ \t]*"[ \t]*([A-Z]*)[^"\r\n]*"/gm)) {
     const message = m[3].replace(/\s+/g, ' ').trim();
     const isReset = /^R E S E T$/.test(message);
     const code = /^([A-Z]{2,5}-\d{3})/.exec(message)?.[1];
-    out.push({ seq: parseInt(m[1], 10), time: m[2], code, message, severity: m[4] || (isReset ? 'RESET' : ''), isReset });
+    const cause = m[4].replace(/\s+/g, ' ').trim() || undefined;
+    out.push({ seq: parseInt(m[1], 10), time: m[2], code, message, severity: m[5] || (isReset ? 'RESET' : ''), isReset, ...(cause ? { cause } : {}) });
   }
   return out;
 }
@@ -176,7 +180,40 @@ export function activeAlarms(rows: AlarmEntry[], max = 8): AlarmEntry[] {
   return out;
 }
 
-export type AlarmPriority = 'High' | 'Medium' | 'Low' | 'Info';
+/**
+ * True when the text is the controller's ERRACT.LS listing (its header names it), not a page
+ * the web server sent in its place (its home page answers any file name when not ready).
+ */
+export function isErrActListing(text: string): boolean {
+  return /\bERRACT\.LS\b/i.test(text);
+}
+
+/**
+ * The controller's active alarms. ERRACT.LS is the controller's own active list (ERRALL's row
+ * format; only the header when nothing is active - R-30iB Plus V9.40, ROBOGUIDE 2026-10-13), so
+ * when it answers it is the answer, empty included. Only where it is missing or unreadable are
+ * ERRALL.LS's rows since the last RESET used instead. ERRCURR.LS is never read: on V9.40 it is
+ * a version/feature dump, not an alarm list.
+ */
+export async function readActiveAlarms(read: (file: string) => Promise<string>, max = 8): Promise<AlarmEntry[]> {
+  try {
+    const act = await read('ERRACT.LS');
+    if (isErrActListing(act)) return activeAlarms(parseAlarms(act), max);
+  } catch { /* no ERRACT.LS: fall back to the log */ }
+  try {
+    return activeAlarms(parseAlarms(await read('ERRALL.LS')), max);
+  } catch {
+    return [];
+  }
+}
+
+/** The one line Get Controller Errors shows: what is active now (ERRACT.LS), not a history. */
+export function activeAlarmsMessage(robot: string, alarms: readonly AlarmEntry[]): string {
+  if (!alarms.length) return `No active alarms on ${robot}.`;
+  return `${alarms.length} active alarm${alarms.length === 1 ? '' : 's'} on ${robot}: ${alarms[0].message}`;
+}
+
+export type AlarmPriority ='High' | 'Medium' | 'Low' | 'Info';
 
 /** Severity column as a priority: STOP/SERVO/ABORT/SYSTEM high, PAUSE medium, WARN low, else info. */
 export function alarmPriority(severity: string): AlarmPriority {

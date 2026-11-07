@@ -61,7 +61,16 @@ export interface ConnectionKind {
   test(profile: Record<string, unknown>, password: string | undefined, originalName: string | undefined): Promise<ConnectionTest>;
   connect(name: string): Promise<void>;
   disconnect(name: string): Promise<void>;
+  /** extra buttons on the form (ABB: Find virtual controllers) */
+  actions?(): ConnectionAction[];
+  /**
+   * One of `actions` pressed, with the form as it is: the field values to put into the form
+   * (never the password) and a line to show; undefined when the user cancelled.
+   */
+  runAction?(id: string, profile: Record<string, unknown>, password: string | undefined): Promise<{ values?: Record<string, unknown>; text?: string } | undefined>;
 }
+
+export interface ConnectionAction { id: string; label: string; title?: string }
 
 const kinds: ConnectionKind[] = [];
 const changed = new vscode.EventEmitter<void>();

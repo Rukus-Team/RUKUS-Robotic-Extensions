@@ -13,6 +13,10 @@ export function robotUri(robot: string, device: string, file?: string): vscode.U
   return vscode.Uri.from({ scheme: FANUC_SCHEME, authority: encodeURIComponent(robot), path: `/${dev}${file ? '/' + file : ''}` });
 }
 
+/** when each robot file was last read from its controller, for the hover that says where it came from */
+const readTimes = new Map<string, number>();
+export function robotFileReadAt(uri: vscode.Uri): number | undefined { return readTimes.get(uri.toString()); }
+
 function split(uri: vscode.Uri): { robot: string; device: string; file?: string } {
   const robot = decodeURIComponent(uri.authority);
   const parts = uri.path.split('/').filter(Boolean);
@@ -60,6 +64,7 @@ export class RobotFileSystem implements vscode.FileSystemProvider {
     try {
       const data = await this.robots.readBinary(c.profile, file, device);
       this.cache.set(key, { at: Date.now(), data });
+      readTimes.set(key, Date.now());
       return data;
     } catch (e: any) {
       throw vscode.FileSystemError.Unavailable(`${robot} ${device}${file}: ${e?.message ?? e}`);

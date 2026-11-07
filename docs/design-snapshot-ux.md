@@ -89,7 +89,7 @@ folder carries no text and must not make every edit read as identical.
    failed push. An explicit push **pulls R″ into the working copy** (the last step) according to
    `containers.pullAfterPush`: `always` (default) overwrites even when the compile rewrote it,
    `when-identical` keeps your file on a difference, `never` leaves it alone. Only a controller
-   error (the STOR is refused) fails the push and is captured from `ERRCURR`/`ERRALL`.
+   error (the STOR is refused) fails the push and is captured from `ERRACT` (`ERRALL` where it is missing).
    `containers.pullPartnerAfterPush` controls the partner representation read;
    `containers.pullCompiledAfterSourcePush` controls the compiled `.TP`/`.PC` read after a
    source `.LS`/`.KL` push, fetch or pull.

@@ -17,6 +17,7 @@ import * as http from 'node:http';
 import * as https from 'node:https';
 import { execFile } from 'node:child_process';
 import { RwsClient } from '../rws/client';
+import { controllerLabel } from './identity';
 
 export const VC_PROCESSES = [
   { image: 'vrchost64.exe', family: 'omnicore' as const },
@@ -25,6 +26,14 @@ export const VC_PROCESSES = [
 
 export interface VcProcess { image: string; pid: number; family: 'irc5' | 'omnicore' }
 export interface VcEndpoint { pid: number; image: string; port: number; family: 'irc5' | 'omnicore'; https: boolean; ctrlName?: string; systemName?: string; systemId?: string; virtual?: boolean; error?: string }
+
+/** The factory login's password; the connection form's Test uses it when the password box is empty. */
+export const FACTORY_PASSWORD = 'robotics';
+
+/** A virtual controller found on this PC, as the connection form's fields (its name only when the form has none yet). */
+export function formValuesForVc(ep: VcEndpoint, formName: string): Record<string, unknown> {
+  return { host: '127.0.0.1', port: ep.port, family: ep.family, https: ep.https, ...(formName.trim() ? {} : { name: controllerLabel(ep) ?? '' }) };
+}
 
 /** `tasklist /FO CSV /NH` -> the VC processes in it. */
 export function parseTasklist(csv: string): VcProcess[] {

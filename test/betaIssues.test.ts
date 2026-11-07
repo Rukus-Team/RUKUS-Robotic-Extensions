@@ -128,8 +128,9 @@ export function run(check: (cond: unknown, msg: string) => void): void {
       check(reachesCommand(menu, 'robotCode.live.downloadFile'), `Download is on ${menu}`);
     }
     // #12
-    const view = manifest.contributes.views.robotCode.find((v: { id: string }) => v.id === 'robotCode.programs');
-    check(view.name === 'Programs', `the section is called Programs: ${view.name}`);
+    // (VSC test 2026-11-07: Programs is now a row of the one Backups view, see test/sideBar.test.ts)
+    const view = manifest.contributes.views.robotCode.find((v: { id: string }) => v.id === 'robotCode.backups');
+    check(view?.name === 'Backups', `the programs live in a view called Backups: ${view?.name}`);
 
     // ---- git-shaped sync buttons on the editor tab, one Compare command ----
     const tabEntries: Array<{ command: string; group?: string }> = manifest.contributes.menus['editor/title'];

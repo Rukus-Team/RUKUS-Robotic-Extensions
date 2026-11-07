@@ -71,6 +71,8 @@ export interface TransferSession {
   readBinary(file: string): Promise<Buffer>;
   write(file: string, data: Uint8Array): Promise<void>;
   list(): Promise<RemoteFile[]>;
+  /** deletes one file on the device (FTP DELE); only the put-back after a refused program uses it */
+  remove(file: string): Promise<void>;
   readMany(files: string[], onFile: (name: string, result: { data: Uint8Array } | { error: string }, index: number) => void, isCancelled?: () => boolean, signal?: AbortSignal): Promise<void>;
   close(): Promise<void>;
 }
@@ -769,6 +771,7 @@ export class RobotManager implements vscode.Disposable {
       readBinary: f => c.retrieveSized(f),
       write: (f, d) => c.store(f, d),
       list: () => c.list(),
+      remove: f => c.delete(f),
       readMany: (files, onFile, isCancelled, signal) => c.retrieveMany(files, onFile, () => !!isCancelled?.() || !!signal?.aborted),
       close: async () => { try { await c.quit(); } finally { this.releaseSession(id); } },
     };
@@ -785,6 +788,7 @@ export class RobotManager implements vscode.Disposable {
       readBinary: f => httpGetBinary(http, device, f),
       write: async () => { throw new Error('The controller web server does not accept uploads; FTP is required.'); },
       list: () => httpList(http, device),
+      remove: async () => { throw new Error('The controller web server does not delete files; FTP is required.'); },
       readMany: async (files, onFile, isCancelled, signal) => {
         for (let i = 0; i < files.length; i++) {
           if (isCancelled?.() || signal?.aborted) return;

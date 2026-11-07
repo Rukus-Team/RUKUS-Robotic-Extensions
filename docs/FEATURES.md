@@ -157,7 +157,7 @@ Kept in full because what each one **refuses** to do is the part worth not re-de
 - [x] **Snapshot view** replaces the Backup inventory (`robotCode.snapshot`); scope groups + raw
       mirror, ages, `=`/`≠`, per-file actions.
 - [x] **Sync status bar item** + merged connection/snapshot item; TP stats item removed.
-- [x] **Push failure errors** read from `ERRCURR.LS` / `ERRALL.LS` over HTTP, or RUKUS's Error
+- [x] **Push failure errors** read from `ERRACT.LS` (`ERRALL.LS` where it is missing), or RUKUS's Error
       Watcher when linked.
 - [x] **`containers.gitAware`** - note uncommitted git changes before a push.
 - [x] **Snapshot sync in the Programs view** (git-shaped marker per program, `n/n synced` robot

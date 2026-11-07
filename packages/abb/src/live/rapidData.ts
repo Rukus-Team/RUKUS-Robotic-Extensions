@@ -25,7 +25,33 @@ export function formatRapidData(ctrl: string, data: readonly RapidDatum[], when 
   const w = head.map((h, i) => Math.max(h.length, ...list.map(d => cell(d)[i].length)));
   const row = (cells: string[], value: string) => cells.map((c, i) => c.padEnd(w[i])).join('  ') + '  ' + value;
   const out = [`${ctrl} - ${list.length} RAPID data (read ${when.toLocaleString()})`, '', row(head, 'Value')];
-  for (const d of list) out.push(row(cell(d), d.error ? `(not read: ${d.error})` : oneLine(d.value ?? '')));
+  for (const d of list) out.push(row(cell(d), d.error ? UNREADABLE : oneLine(d.value ?? '')));
   if (!list.length) out.push('(no data declared)');
+  // the controller's own words, once, under the table (hover a row for the same)
+  const failed = list.filter(d => d.error);
+  if (failed.length) {
+    out.push('', `${failed.length} value${failed.length === 1 ? '' : 's'} ${UNREADABLE.slice(1, -1)} - what the controller said:`);
+    for (const d of failed) out.push(`  ${d.task}/${d.module ? `${d.module}/` : ''}${d.name}: ${oneLine(d.error!)}`);
+  }
   return out.join('\n') + '\n';
+}
+
+/** What a value the controller would not give over RWS shows instead (a clock, some data types). */
+export const UNREADABLE = '(not readable over RWS)';
+
+/** The hover for line `line` of a page formatRapidData wrote: the detail of an unreadable row, else undefined. */
+export function unreadableHoverAt(page: string, line: number): string | undefined {
+  const lines = page.split(/\r?\n/);
+  const text = lines[line];
+  if (!text?.endsWith(UNREADABLE)) return undefined;
+  const [task, module, , , name] = text.trim().split(/\s{2,}/);
+  if (!name) return undefined;
+  const key = `  ${task}/${module === '(task)' ? '' : `${module}/`}${name}: `;
+  const hit = lines.find(l => l.startsWith(key));
+  return hit ? unreadableDetail(hit.slice(key.length)) : undefined;
+}
+
+/** A sentence for a hover: why there is no value, then the controller's answer as it came. */
+export function unreadableDetail(error: string): string {
+  return `Not readable over Robot Web Services: the controller would not give this value (RWS cannot read some data types, such as clock). Controller's answer: ${oneLine(error)}`;
 }

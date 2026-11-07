@@ -20,7 +20,7 @@ import * as path from 'node:path';
 import type { Services } from '@core/services';
 import type { ProgramInfo } from '@core/workspaceIndex';
 import { icon } from '@core/views/typeStyle';
-import { viewDeclared } from '@core/util';
+import { addBackupSection, shownBrands } from '@core/views/sideBar';
 import { robotNameFromFolder, folderDate } from '@core/backupFolders';
 import { compareBackupDirs } from '@core/robotContainers';
 import { parseRapid, type RapidRoutine } from '../rapid/parser';
@@ -186,21 +186,24 @@ const taskNo = (folder: string) => parseInt(/\d+/.exec(folder)?.[0] ?? '999', 10
 
 export function registerRapidView(ctx: vscode.ExtensionContext, s: Services) {
   const tree = new RapidTree(s);
-  const view = viewDeclared(ctx, 'robotCode.rapid') ? vscode.window.createTreeView('robotCode.rapid', { treeDataProvider: tree, showCollapseAll: true }) : undefined;
-  const summarise = () => {
-    if (!view) return;
+  const summary = () => {
     const mods = tree.modules();
     const roots = new Set(mods.map(p => backupRootOf(p.uri.fsPath) ?? path.dirname(p.uri.fsPath)));
-    view.description = mods.length ? `${roots.size} backup${roots.size === 1 ? '' : 's'} · ${mods.length} modules` : '';
+    return mods.length ? `${roots.size} backup${roots.size === 1 ? '' : 's'} · ${mods.length} modules` : '';
   };
+  // a top-level row of the Backups view (views/sideBar.ts), hidden while there is no RAPID module
+  addBackupSection({
+    id: 'rapid', label: 'RAPID', order: 50, provider: tree, icon: 'symbol-module',
+    tooltip: 'ABB RAPID modules (.mod, .sys) of the workspace and backup folders, by backup, task and module.',
+    visible: () => shownBrands().abb, isEmpty: () => tree.modules().length === 0, description: summary,
+  });
   ctx.subscriptions.push(
-    ...(view ? [view] : []),
-    s.index.onDidChange(() => { tree.refresh(); summarise(); }),
+    s.index.onDidChange(() => tree.refresh()),
     vscode.commands.registerCommand('robotCode.rapid.open', async (uri: vscode.Uri, line?: number) => {
       const ed = await vscode.window.showTextDocument(uri, { preview: true });
       if (line !== undefined) { const pos = new vscode.Position(line, 0); ed.selection = new vscode.Selection(pos, pos); ed.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenterIfOutsideViewport); }
     }),
-    vscode.commands.registerCommand('robotCode.rapid.refresh', () => { tree.refresh(); summarise(); }),
+    vscode.commands.registerCommand('robotCode.rapid.refresh', () => tree.refresh()),
     // hidden: what the section shows, for the smoke test - header summary plus the first rows two levels down
     vscode.commands.registerCommand('robotCode.rapid._state', async () => {
       const label = (n: Node) => { const it = tree.getTreeItem(n); return `${typeof it.label === 'string' ? it.label : it.label?.label ?? ''}${it.description ? ` — ${it.description}` : ''}`; };
@@ -208,8 +211,7 @@ export function registerRapidView(ctx: vscode.ExtensionContext, s: Services) {
       const first = top[0] ? tree.getChildren(top[0]) : [];
       const second = first[0] ? tree.getChildren(first[0]) : [];
       const third = second.find(n => n.type === 'module' && !isEncrypted(n.info));
-      return { description: view?.description, backups: top.map(label), first: first.map(label), modules: second.map(label), routines: third ? tree.getChildren(third).map(label) : [] };
+      return { description: summary(), backups: top.map(label), first: first.map(label), modules: second.map(label), routines: third ? tree.getChildren(third).map(label) : [] };
     }),
   );
-  summarise();
 }

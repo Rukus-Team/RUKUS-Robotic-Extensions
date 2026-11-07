@@ -11,6 +11,8 @@ import * as vscode from 'vscode';
 import type { ConnectionKind, ConnectionTest } from '@core/live/connectionKinds';
 import { RwsClient } from '../rws/client';
 import { AbbControllers, type AbbProfile } from './controllers';
+import { discoverVirtualControllers, formValuesForVc, FACTORY_PASSWORD, type VcEndpoint } from './vcDiscovery';
+import { controllerLabel } from './identity';
 
 export const ABB_SERVICE_PORT_IP = '192.168.125.1';
 
@@ -67,7 +69,7 @@ export function abbConnectionKind(ctrls: AbbControllers): ConnectionKind {
       { key: 'port', label: 'Port', type: 'number', placeholder: 'default (80, or 443 with HTTPS)', help: 'Blank for the default. A RobotStudio virtual controller listens on a port of its own that changes each time it starts.' },
       { key: 'https', label: 'HTTPS', type: 'checkbox', placeholder: 'use HTTPS (OmniCore; the controller\'s self-signed certificate is accepted)' },
       { key: 'user', label: 'RWS user', type: 'text', placeholder: 'Default User' },
-      { key: 'password', label: 'Password', type: 'password', placeholder: 'robotics is the factory default' },
+      { key: 'password', label: 'Password', type: 'password', placeholder: 'empty = robotics, the factory default' },
       { key: 'mechUnit', label: 'Mechanical unit', type: 'text', placeholder: 'ROB_1', help: 'Whose position Get reads.' },
     ],
     defaults: () => ({ family: 'irc5', name: '', host: ABB_SERVICE_PORT_IP, port: '', https: false, user: 'Default User', mechUnit: 'ROB_1' }),
@@ -113,15 +115,16 @@ export function abbConnectionKind(ctrls: AbbControllers): ConnectionKind {
       const started = Date.now();
       const ms = () => Date.now() - started;
       if (!p.host) return { ok: false, ms: 0, text: 'Enter the IP address first.' };
-      const pw = password ?? (originalName ? await ctrls.getPassword(originalName) : undefined);
-      if (pw === undefined) return { ok: false, ms: 0, text: 'Enter the password to test (robotics is the factory default).' };
+      // an empty password box: a saved controller's stored password, else the factory one
+      const pw = password ?? (originalName ? await ctrls.getPassword(originalName) : undefined) ?? FACTORY_PASSWORD;
       const client = new RwsClient({ host: p.host, port: p.port, family: p.family, https: p.https ?? p.family === 'omnicore', user: p.user ?? 'Default User', password: pw, timeoutMs: 8000 });
       try {
         const sys = await client.system();
         return { ok: true, ms: ms(), text: [sys.name, sys.robotWareName ? `RobotWare ${sys.robotWareName}` : undefined, sys.sysid ? `system ${sys.sysid}` : undefined].filter(Boolean).join(' · '), suggestedName: sys.name };
       } catch (e: any) {
         const msg = e?.message ?? String(e);
-        return { ok: false, ms: ms(), text: msg, hint: hintFor(msg, p) };
+        const triedFactory = password === undefined && pw === FACTORY_PASSWORD && /\b401\b/.test(msg);
+        return { ok: false, ms: ms(), text: msg, hint: triedFactory ? 'The password box is empty, so the factory password (robotics) was tried, and the controller refused it. Enter this controller\'s password.' : hintFor(msg, p) };
       } finally { await client.logout(); }
     },
 
@@ -129,5 +132,23 @@ export function abbConnectionKind(ctrls: AbbControllers): ConnectionKind {
       await vscode.commands.executeCommand('robotCode.abb.connect', name);
     },
     disconnect: name => ctrls.disconnect(name),
+
+    // a RobotStudio virtual controller's port changes at every start: find it and fill it in
+    actions: () => [{ id: 'findVirtual', label: 'Find virtual controllers', title: 'Look for RobotStudio virtual controllers running on this PC and fill in their address and port' }],
+    async runAction(id, form, password) {
+      if (id !== 'findVirtual') return undefined;
+      const p = profileFromForm(form);
+      let found: VcEndpoint[];
+      try {
+        found = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Looking for RobotStudio virtual controllers…' },
+          () => discoverVirtualControllers({ user: p.user, password: password ?? FACTORY_PASSWORD }));
+      } catch (e: any) { return { text: `Could not look for virtual controllers: ${e?.message ?? e}` }; }
+      if (!found.length) return { text: 'No RobotStudio virtual controller (vrchost64 / RobVC) with Robot Web Services is running on this PC. Start it in RobotStudio first.' };
+      const describe = (e: VcEndpoint) => `127.0.0.1:${e.port} · ${e.family === 'omnicore' ? 'OmniCore' : 'IRC5'}${e.error ? ` · ${e.error}` : ''}`;
+      const ep = found.length === 1 ? found[0]
+        : (await vscode.window.showQuickPick(found.map(e => ({ label: controllerLabel(e) ?? `${e.image} (PID ${e.pid})`, description: describe(e), e })), { title: `${found.length} virtual controllers on this PC: which one?` }))?.e;
+      if (!ep) return undefined;
+      return { values: formValuesForVc(ep, p.name), text: `${controllerLabel(ep) ?? 'Virtual controller'}: ${describe(ep)}` };
+    },
   };
 }

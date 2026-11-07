@@ -167,6 +167,13 @@ export function startMockRobot(dir, httpPort = 18080, ftpPort = 18021, opts = {}
             });
             break;
           }
+          case 'DELE': {
+            // only what a client STORed can go: the backup folder on disk is never touched
+            const name = arg.replace(/^.*[\\/:]/, '').toUpperCase();
+            if (uploads.delete(name)) send('250 DELE command successful');
+            else send('550 File not found');
+            break;
+          }
           case 'QUIT': send('221 Bye'); sock.end(); break;
           default: send('502 Command not implemented');
         }

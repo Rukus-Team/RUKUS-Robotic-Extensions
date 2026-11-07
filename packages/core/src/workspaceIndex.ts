@@ -282,6 +282,8 @@ export class WorkspaceIndex implements vscode.Disposable {
     if (uri.scheme === 'file') {
       const kind = this.partitionResolver(uri);
       if (kind === 'excluded') { this.remove(uri); this.changed(); return; }
+      // a file RUKUS Studio just put aside (replaced\<time>) or a download in progress is no backup
+      if (kind !== 'reference' && isHiddenBackup(path.dirname(uri.fsPath))) { this.remove(uri); this.changed(); return; }
     }
     this.pendingUris.set(uri.toString(), uri);
     if (this.pendingTimer) clearTimeout(this.pendingTimer);

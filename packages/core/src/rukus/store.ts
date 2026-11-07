@@ -136,6 +136,8 @@ export interface RukusRobot {
    * cell.json, never logged.
    */
   ftpPassword?: string;
+  /** a FANUC robot's web server port when it is not 80 (RUKUS Studio keeps it in the address, `127.0.0.9:3080`) */
+  httpPort?: number;
   isVirtual: boolean;
   isWriteLocked: boolean;
   notes?: string;
@@ -267,6 +269,7 @@ export function clusterControllers(c: RukusCluster): Record<string, CellControll
     // FANUC only: an ABB robot is not an FTP/HTTP FANUC controller (clusterAbbRobots is its way in)
     if (!r.host || r.make !== 'fanuc') continue;
     const spec: CellControllerSpec = { host: r.host, device: r.device };
+    if (r.httpPort) spec.httpPort = r.httpPort;
     if (r.ftpUser) spec.ftpUser = r.ftpUser;
     if (r.ftpUser && !/^anonymous$/i.test(r.ftpUser)) spec.useFtp = true;
     out[r.name] = spec;

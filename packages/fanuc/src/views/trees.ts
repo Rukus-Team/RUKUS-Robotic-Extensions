@@ -30,6 +30,7 @@ import {
   type RobotMarker, type SnapshotProvenance, type SnapshotFileEntry,
 } from '@core/robotContainers';
 import { findUses } from '@core/views/findUses';
+import { addBackupSection, shownBrands } from '@core/views/sideBar';
 
 export function registerViews(ctx: vscode.ExtensionContext, s: FanucServices) {
   const tp = new TpProgramsTree(s);
@@ -39,13 +40,19 @@ export function registerViews(ctx: vscode.ExtensionContext, s: FanucServices) {
   const data = new DataTree(s);
   // A view the running manifest does not know (an update awaiting a reload) is skipped, not crashed on.
   const mk = <T>(id: string, provider: vscode.TreeDataProvider<T>) => (viewDeclared(ctx, id) ? watchViewVisibility(vscode.window.createTreeView(id, { treeDataProvider: provider, showCollapseAll: true })) : undefined);
-  const views = {
-    snapshot: mk('robotCode.snapshot', snapshot),
-    tp: mk('robotCode.programs', tp),
-    pc: mk('robotCode.pcPrograms', pc),
-    macros: mk('robotCode.macros', macros),
-    data: mk('robotCode.registers', data),
-  };
+  const views = { snapshot: mk('robotCode.snapshot', snapshot) };
+  // Programs, PC programs, Macros and Data are top-level rows of the one Backups view (core
+  // views/sideBar.ts; VSC test 2026-11-07, items 2/8/22), each hidden while it has nothing to show.
+  const fanucShown = () => shownBrands().fanuc;
+  const desc = { tp: '', pc: '', macros: '', data: '' };
+  addBackupSection({ id: 'programs', label: 'Programs', order: 10, provider: tp, icon: 'symbol-event', expanded: true, visible: fanucShown,
+    tooltip: 'TP programs of the backups and the workspace, one row per robot backup.', description: () => desc.tp });
+  addBackupSection({ id: 'pcPrograms', label: 'PC programs', order: 20, provider: pc, icon: 'symbol-class', visible: fanucShown,
+    tooltip: 'KAREL sources (.kl) and compiled PC programs (.pc).', description: () => desc.pc });
+  addBackupSection({ id: 'macros', label: 'Macros', order: 30, provider: macros, icon: 'symbol-constant', visible: fanucShown,
+    tooltip: 'The macro table (sysmacro.va) of each backup.', description: () => desc.macros });
+  addBackupSection({ id: 'data', label: 'Data', order: 40, provider: data, icon: 'symbol-variable', visible: fanucShown,
+    tooltip: 'Registers, payloads and I/O comments from the .va files of each backup.', description: () => desc.data });
   ctx.subscriptions.push(
     // "Show N more…" at the end of a long Registers group (robotCode.views.listLimit)
     vscode.commands.registerCommand('robotCode.views._showMore', (key: string) => data.showMore(key)),
@@ -56,18 +63,18 @@ export function registerViews(ctx: vscode.ExtensionContext, s: FanucServices) {
     const all = s.index.list().filter(p => !p.reference);
     const tps = tpProgramsOnePerName(all);
     const raw = tps.reduce((n, p) => n + p.rawTokens, 0);
-    if (views.tp) views.tp.description = `${tps.length}${raw ? ` · ⚠ ${raw} raw` : ''}`;
+    desc.tp = `${tps.length}${raw ? ` · ⚠ ${raw} raw` : ''}`;
     const pcs = all.filter(p => p.kind === 'karel' || (p.kind === 'binary' && /KAREL/.test(p.programType ?? '')));
     // one per name PER ROBOT, the same dedupe the rows use - two backups each carrying MOV_HOME.pc are two rows
-    if (views.pc) views.pc.description = `${new Set(pcs.map(p => `${p.group}|${p.name}`)).size}`;
+    desc.pc = `${new Set(pcs.map(p => `${p.group}|${p.name}`)).size}`;
     const ds = s.data.datasets;
     const macroCount = ds.reduce((n, d) => n + d.macros.size, 0);
     const missing = ds.reduce((n, d) => n + [...d.macros.values()].filter(m => !s.index.get(m.progName, d.folder ? vscode.Uri.file(d.folder) : undefined)).length, 0);
-    if (views.macros) views.macros.description = macroCount ? `${macroCount}${missing ? ` · ⚠ ${missing} missing` : ''}` : '';
+    desc.macros = macroCount ? `${macroCount}${missing ? ` · ⚠ ${missing} missing` : ''}` : '';
     const robotCount = s.containers.markers.length;
     if (views.snapshot) views.snapshot.description = robotCount ? `${robotCount} robot${robotCount === 1 ? '' : 's'}` : '';
     const regs = ds.reduce((n, d) => n + d.numregs.size, 0), io = ds.reduce((n, d) => n + d.io.size, 0);
-    if (views.data) views.data.description = ds.length ? `${regs} R · ${io} I/O` : '';
+    desc.data = ds.length ? `${regs} R · ${io} I/O` : '';
   };
   ctx.subscriptions.push(
     ...Object.values(views).filter((v): v is vscode.TreeView<any> => !!v),
@@ -98,10 +105,10 @@ export function registerViews(ctx: vscode.ExtensionContext, s: FanucServices) {
       };
       return {
         snapshot: { description: views.snapshot?.description, rows: await rows(snapshot) },
-        tp: { description: views.tp?.description, rows: await rows(tp) },
-        pc: { description: views.pc?.description, rows: await rows(pc) },
-        macros: { description: views.macros?.description, rows: await rows(macros) },
-        data: { description: views.data?.description, rows: await rows(data) },
+        tp: { description: desc.tp, rows: await rows(tp) },
+        pc: { description: desc.pc, rows: await rows(pc) },
+        macros: { description: desc.macros, rows: await rows(macros) },
+        data: { description: desc.data, rows: await rows(data) },
       };
     }),
   );
@@ -338,7 +345,7 @@ class PcProgramsTree implements vscode.TreeDataProvider<PNode> {
       it.tooltip = new vscode.MarkdownString(`**${info.name}** — PC program (KAREL)${info.comment ? ` — ${info.comment}` : ''}\n\n${vscode.workspace.asRelativePath(info.uri)}\n\n${info.kind === 'binary' ? 'Only the compiled .pc is in this backup; CALLs to it resolve, there is no source to read.' : `${info.lineCount} lines of KAREL source${this.hasBinary(info) ? ', compiled .pc alongside' : ''}`}${snap ? `\n\n**${rel.symbol}** — ${rel.words}` : ''}${robotNote}`);
       it.iconPath = icon(info.kind === 'karel' ? 'symbol-class' : 'file-binary', rel.modified ? MODIFIED_COLOR : undefined);
       it.command = { command: 'robotCode.views.revealInEditor', title: 'Open', arguments: [info.uri] };
-      it.contextValue = snap?.state === 'modified' ? 'program-modified' : 'program';
+      it.contextValue = snap?.state === 'modified' ? 'program-pc-modified' : 'program-pc';   // one Backups view: TP-only menus (Compare Positions) tell the two apart
       return it;
     }
     if (el.type === 'group') {

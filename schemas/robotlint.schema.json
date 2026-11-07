@@ -2225,6 +2225,41 @@
             }
           ]
         },
+        "tp.missingOperand": {
+          "description": "an operator with nothing after it (\"R[1]=\" with no value): the controller will not load the program (check, default error)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
         "tp.missingProgram": {
           "description": "a CALL or macro to a program that is not there (check, default info)",
           "anyOf": [

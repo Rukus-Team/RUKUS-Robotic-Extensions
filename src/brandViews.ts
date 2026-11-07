@@ -16,6 +16,7 @@ import * as vscode from 'vscode';
 import type { Services } from '@core/services';
 import { config } from '@core/util';
 import { onDidShowRobotCodeView } from '@core/views/viewVisibility';
+import { setShownBrands } from '@core/views/sideBar';
 
 type Choice = 'auto' | 'fanuc' | 'abb' | 'both';
 const ASKED = 'robotCode.views.brandsAsked';
@@ -42,6 +43,8 @@ export function registerBrandViews(ctx: vscode.ExtensionContext, s: Services, lo
   let current = { fanuc: true, abb: true };
   const set = async (fanuc: boolean, abb: boolean) => {
     current = { fanuc, abb };
+    // the merged views (Cell, Backups) hide a brand's rows from the same answer
+    setShownBrands(fanuc, abb);
     await vscode.commands.executeCommand('setContext', 'robotCode.hideFanuc', !fanuc);
     await vscode.commands.executeCommand('setContext', 'robotCode.hideAbb', !abb);
   };

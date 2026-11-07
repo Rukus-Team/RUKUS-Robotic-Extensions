@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import type { Span } from '@core/span';
+import { isNonBackupFolder } from './rukus/studio';
+import { realFs } from './rukus/store';
 
 export function spanToRange(s: { line: number; col: number; len: number }): vscode.Range {
   return new vscode.Range(s.line, s.col, s.line, s.col + s.len);
@@ -68,8 +70,18 @@ export function onDidChangeBackupLists(fn: () => void): vscode.Disposable {
     vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration('robotCode.data.backupFolders') || e.affectsConfiguration('robotCode.data.hiddenBackupFolders')) fn(); }));
 }
 
-/** under one of the folders removed from the Backup panel */
+/** which folders are RUKUS Studio workspace roots, re-asked of the disk at most every 10 s */
+let studioRootCache = new Map<string, boolean>();
+let studioRootCacheAt = 0;
+
+/**
+ * Under one of the folders removed from the Backup panel, or in a folder that is no backup at
+ * all: RUKUS Studio's `replaced\<time>` safety copies and its other non-backup folders, a
+ * download still in progress (rukus/studio.ts).
+ */
 export function isHiddenBackup(fsPath: string): boolean {
+  if (Date.now() - studioRootCacheAt > 10_000) { studioRootCache = new Map(); studioRootCacheAt = Date.now(); }
+  if (isNonBackupFolder(fsPath, realFs, studioRootCache)) return true;
   const p = fsPath.replace(/[\\/]+$/, '').toLowerCase();
   return windowFolders('data.hiddenBackupFolders').some(h => {
     const f = h.replace(/[\\/]+$/, '').toLowerCase();
