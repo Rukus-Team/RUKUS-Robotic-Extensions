@@ -42,6 +42,13 @@ put('cmp/robot/cycle.ls', prog('CYCLE', cycle, { eol: '\r\n' }));
 put('cmp/edited/cycle.ls', prog('CYCLE', cycleB, { attr: l => l.replace('26-11-13  TIME 10:00:00', '26-11-14  TIME 08:15:00') }));
 put('cmp/edited/cycle_same.ls', prog('CYCLE', cycle.map(l => l.replace(/^ +(\d+):/, '    $1:').replace(/ ;$/, ''))));
 
+// a robot's backup folder: a .va file makes it one, and IOCONFIG.DG (upper case, as a controller names it) sits beside it
+put('io/numreg.va', fs.readFileSync(path.join(here, 'fixtures-cell', 'robotA', 'backups', 'numreg.va'), 'latin1'));
+put('io/IOCONFIG.DG', fs.readFileSync(path.join(here, 'fixtures-ioconfig', 'ioconfig.dg'), 'latin1'));
+put('io/iotest.ls', prog('IOTEST', ['   1:  WAIT DI[20]=ON ;', '   2:  GO[6]=R[1] ;', '   3:  IF GI[2]=1,JMP LBL[1] ;', '   4:  LBL[1] ;']));
+put('noio/numreg.va', fs.readFileSync(path.join(here, 'fixtures-cell', 'robotA', 'backups', 'numreg.va'), 'latin1'));
+put('noio/plain.ls', prog('PLAIN', ['   1:  WAIT DI[20]=ON ;']));
+
 // ---- VS Code ----
 fs.mkdirSync(cacheDir, { recursive: true });
 const userDataDir = path.join(cacheDir, 'editing-user-data');

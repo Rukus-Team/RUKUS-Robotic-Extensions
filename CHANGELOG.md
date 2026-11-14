@@ -1,5 +1,12 @@
 # Changelog
 
+## 26.119.5 - 2026-11-13 - Where a signal is assigned
+
+### Added
+- **Where a signal is assigned.** The hover on a signal in a TP program (`DI[20]`, `GO[6]` ...) adds its rack
+  by name, slot and port when the robot's backup folder has `ioconfig.dg`. A group adds its number of bits;
+  rack 35 reads *always on* / *always off*. The Data view lists the file as *I/O assignments*.
+
 ## 26.119.4 - 2026-11-13 - Editing: snippets, comments, rename, Knowledge view, compare
 
 ### Added

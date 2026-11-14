@@ -17,6 +17,7 @@ import { parseNumReg, parsePosReg, parseStrReg, parseIoComments, parseMacroTable
 import { windowFolders, isHiddenBackup, onDidChangeBackupLists } from '@core/util';
 import { classifyPath, markerOf, type RobotMarker } from '@core/robotContainers';
 import { errorDetail } from '@core/errors';
+import { parseIoConfig, assignmentOf, describeAssignment, type IoRange } from './ioConfig';
 
 export interface DataSource { file: string; kind: string; entries: number }
 
@@ -29,6 +30,13 @@ export class Dataset {
   readonly ualarms = new Map<number, UserAlarmEntry>();
   /** key "DI:25" */
   readonly io = new Map<string, IoEntry>();
+  /** where each signal is assigned (rack, slot, port), from the folder's ioconfig.dg */
+  ioRanges: IoRange[] = [];
+  /** "Rack 89 (EtherNet/IP ...), slot 1, port 20" for a signal the backup's ioconfig.dg lists */
+  assignment(kind: string, index: number): string | undefined {
+    const at = assignmentOf(this.ioRanges, kind, index);
+    return at ? describeAssignment(at) : undefined;
+  }
   /** upper-case macro name → entry */
   readonly macros = new Map<string, MacroEntry>();
   /**
@@ -200,6 +208,15 @@ export class DataStore implements vscode.Disposable {
         ds.activePayloadMass = e.activeMass;
         if (e.schedules.length) ds.sources.push({ file, kind: 'Payload schedules', entries: e.schedules.length });
       }
+    }
+    // where the signals are assigned: ioconfig.dg (any letter case) beside the .va files
+    for (const d of byFolder.values()) {
+      try {
+        const name = fs.readdirSync(d.folder).find(f => f.toLowerCase() === 'ioconfig.dg');
+        if (!name) continue;
+        d.ioRanges = parseIoConfig(fs.readFileSync(path.join(d.folder, name), 'latin1'));
+        if (d.ioRanges.length) d.sources.push({ file: path.join(d.folder, name), kind: 'I/O assignments', entries: d.ioRanges.length });
+      } catch (e) { this.log(`[data] ioconfig.dg not read in ${d.folder}: ${errorDetail(e)}`); }
     }
     // labels: disambiguate robots that appear in several folders with the parent folder name
     const byName = new Map<string, Dataset[]>();

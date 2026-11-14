@@ -165,6 +165,9 @@ export function dataHover(s: FanucServices, prog: TpProgram, ref: TpDataRef, uri
     lines.push('', `${dot} **Read from ${live.robot}:** \`${live.text}\` _(${secs < 60 ? `${secs} s` : `${Math.round(secs / 60)} min`} ago)_`);
   }
   if (ctrl) lines.push('', `Controller comment: **${ctrl}**${ds && s.data.datasets.length > 1 ? ` _(${ds.label})_` : ''}`);
+  // where the signal is assigned (rack by name, slot, port), when the backup folder has ioconfig.dg
+  const assigned = ds?.assignment(ref.kind, ref.index);
+  if (assigned) lines.push('', `Assigned: ${assigned}`);
   // a clickable link that writes the controller comment into the line: R[15] -> R[15:Speed].
   // This is the hover the reader actually sees over a register, so the link lives here, not
   // only on the decoration.

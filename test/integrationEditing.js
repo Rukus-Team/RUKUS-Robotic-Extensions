@@ -274,9 +274,28 @@ async function compare() {
   await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 }
 
+async function signals() {
+  const hover = async (doc, text) => {
+    const l = linesOf(doc).findIndex(x => x.includes(text));
+    const h = await vscode.commands.executeCommand('vscode.executeHoverProvider', doc.uri, new vscode.Position(l, doc.lineAt(l).text.indexOf(text) + 1));
+    const all = (h ?? []).flatMap(x => x.contents.map(c => (typeof c === 'string' ? c : c.value))).join('\n');
+    return { all, assigned: all.split('\n').find(x => /^Assigned:/.test(x)) };
+  };
+  const { doc } = await open('io', 'iotest.ls');
+  await sleep(3500);
+  const di = await hover(doc, 'DI[20]'), go = await hover(doc, 'GO[6]'), gi = await hover(doc, 'GI[2]');
+  check('signal hover: rack by name, slot and port from the folder\'s IOCONFIG.DG', di.assigned === 'Assigned: Rack 89 (EtherNet/IP (ControlNet over Ethernet) I/O), slot 1, port 20', di.assigned ?? di.all.slice(0, 200));
+  check('signal hover: a group adds its bits', go.assigned === 'Assigned: Rack 33 (internal relay/register), slot 3, port 889, 8 bits', go.assigned ?? go.all.slice(0, 200));
+  check('signal hover: a signal the file does not list has no line', gi.assigned === undefined && /GI\[2\]/.test(gi.all), gi.assigned);
+  const plain = (await open('noio', 'plain.ls')).doc;
+  await sleep(2000);
+  const none = await hover(plain, 'DI[20]');
+  check('signal hover: no line in a folder without the file', none.assigned === undefined && /DI\[20\]/.test(none.all), none.assigned);
+}
+
 exports.run = async () => {
   ws = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  for (const [name, part] of [['snippets', snippets], ['comments', comments], ['brackets', brackets], ['knowledge', knowledge], ['compare', compare], ['rename', rename]]) {
+  for (const [name, part] of [['snippets', snippets], ['comments', comments], ['brackets', brackets], ['knowledge', knowledge], ['compare', compare], ['signals', signals], ['rename', rename]]) {
     try { await part(); } catch (e) { check(`${name}: ran to the end`, false, e?.stack ?? e); }
   }
 };
