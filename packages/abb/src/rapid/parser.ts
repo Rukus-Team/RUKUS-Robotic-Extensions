@@ -848,7 +848,11 @@ export function parseRapid(text: string, opts: RapidParseOptions = {}): RapidMod
     }
 
     // assignment or procedure call
-    const end = scan(p, semi);
+    let end = scan(p, semi);
+    // a statement that runs into an assignment on a later line: `TPWrite "hello"` with no ";" and then
+    // `reg1 := 5;`. The first statement ends where the assignment's target starts; the assignment is the next one.
+    const runOn = runsIntoAssignment(p, end.at);
+    if (runOn > p) end = { at: runOn, hard: true };
     // `x := ...` is an assignment; the `:=` of an optional argument (`tool0\WObj:=wobj1`) is not
     const assign = (() => {
       let d = 0;
@@ -876,6 +880,50 @@ export function parseRapid(text: string, opts: RapidParseOptions = {}): RapidMod
       p = Math.max(end.at, p + 1);
     } else p = end.at + 1;
   };
+
+  /**
+   * Tokens [a, b) are one statement up to its ";". Does it hold a second statement, an assignment that starts a
+   * later line? Looked for: a `:=` outside brackets (not an optional argument's `\Name:=`), whose target - a name,
+   * with indexes or fields - is the first thing on its line and follows a complete operand (a name, a number, a
+   * string, a closing bracket). A value carried over to the next line (`x :=` / `1 +` / `,` at the end of a line)
+   * does not end with an operand, so it is left alone. Returns where the assignment's target starts, or -1.
+   */
+  function runsIntoAssignment(a: number, b: number): number {
+    let depth = 0;
+    for (let k = a; k < b; k++) {
+      const x = T[k];
+      if (x.kind === 'op' && OPEN_BR.has(x.text)) depth++;
+      else if (x.kind === 'op' && CLOSE_BR.has(x.text)) { if (depth > 0) depth--; }
+      else if (depth === 0 && isOp(x, ':=') && !isOp(T[k - 2], '\\')) {
+        const s = targetStart(a, k);
+        if (s <= a) continue;
+        const prev = T[s - 1];
+        const operand = prev.kind === 'num' || prev.kind === 'str' || (prev.kind === 'ident' && !WORD_OPS.has(prev.text.toUpperCase())) || (prev.kind === 'op' && CLOSE_BR.has(prev.text));
+        if (operand && T[s].line > prev.line) return s;
+      }
+    }
+    return -1;
+  }
+
+  /** Where the target left of the `:=` at <at> starts: `name`, `name{i}`, `name.field{i}.other`; -1 when it is not one. */
+  function targetStart(a: number, at: number): number {
+    let k = at - 1;
+    let start = -1;
+    while (k >= a) {
+      if (isOp(T[k], '}')) {
+        let d = 0;
+        for (; k >= a; k--) {
+          if (isOp(T[k], '}')) d++;
+          else if (isOp(T[k], '{') && --d === 0) break;
+        }
+        k--;
+      }
+      if (k < a || T[k].kind !== 'ident') return -1;
+      start = k;
+      if (k - 1 >= a && isOp(T[k - 1], '.')) k -= 2; else break;
+    }
+    return start;
+  }
 
   /**
    * Where does the condition of a compact `IF cond statement;` end? RAPID has no separator,

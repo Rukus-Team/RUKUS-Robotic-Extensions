@@ -195,6 +195,18 @@ export function run(check: Check): void {
   check(codes(d('LOCAL PROC Path_1()\r\nENDPROC\r\nPROC A()\r\n  CallByVar "Path_", 1;\r\nENDPROC')) === '', 'a LOCAL routine reached through CallByVar\'s prefix is used');
   check(codes(d('LOCAL TRAP T1\r\nENDTRAP\r\nPROC A()\r\n  CONNECT i WITH T1;\r\nENDPROC')) === '', 'a LOCAL TRAP named in CONNECT is used');
   check(codes(d('PROC A()\r\n  x := 1\r\nENDPROC')) === 'warning:rapid.missingSemicolon', 'missing ; before ENDPROC is a warning');
+  // a statement with no ";" that runs into an assignment on the next line (seen 2026-11-14: nothing was reported)
+  const runOn = d('PROC A()\r\n  TPWrite "hello"\r\n  reg1 := 5;\r\nENDPROC');
+  check(codes(runOn) === 'warning:rapid.missingSemicolon' && runOn[0].span.line === 2, `missing ; before an assignment on the next line: ${codes(runOn)} at line ${runOn[0]?.span.line}`);
+  check(codes(d('PROC A()\r\n  reg1 := 1\r\n  arr{2}.x := 2\r\n  reg3 := 3;\r\nENDPROC')) === 'warning:rapid.missingSemicolon warning:rapid.missingSemicolon', 'two assignments in a row without ; are two warnings');
+  check(parseRapid('MODULE M\r\nPROC A()\r\n  TPWrite "hello"\r\n  reg1 := 5;\r\nENDPROC\r\nENDMODULE').calls.some(c => c.name === 'TPWrite'), 'the statement before the missing ; is still a call');
+  for (const [what, ok] of [
+    ['a value carried over to the next line', 'PROC A()\r\n  reg1 :=\r\n    5;\r\nENDPROC'],
+    ['an expression broken after an operator', 'PROC A()\r\n  reg1 := 1 +\r\n    reg2;\r\nENDPROC'],
+    ['a call whose arguments go on over lines', 'PROC A()\r\n  MoveL p1,\r\n    v100, fine, tool0\\WObj:=wobj1;\r\nENDPROC'],
+    ['an optional argument on its own line', 'PROC A()\r\n  MoveL p1, v100, fine, tool0\r\n    \\WObj:=wobj1;\r\nENDPROC'],
+  ] as const) check(codes(d(ok)) === '', `${what} is one statement: ${codes(d(ok))}`);
+  check(codes(d('PROC A()\r\n  GOTO nowhere;\r\nENDPROC\r\nPROC A()\r\nENDPROC')) === 'error:rapid.duplicateName error:rapid.undefinedLabel', 'a GOTO in one of two routines of the same name is reported once');
 
   const t1 = parseRapid('MODULE T1\r\nPROC main()\r\n  Shared1;\r\n  Other;\r\n  Nowhere;\r\n  Local2;\r\n  MoveL p, v, z, t;\r\nENDPROC\r\nENDMODULE');
   const t2 = parseRapid('MODULE T2\r\nPROC Other()\r\nENDPROC\r\nLOCAL PROC Local2()\r\n  Other;\r\nENDPROC\r\nENDMODULE');

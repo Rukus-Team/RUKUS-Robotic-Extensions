@@ -66,12 +66,19 @@ export function diagnoseModule(mod: RapidModule): RapidIssue[] {
       if (local.has(k)) out.push({ code: 'rapid.duplicateName', severity: 'error', span: d.nameSpan, message: `"${d.name}" is already declared in ${r.name} (line ${local.get(k)! + 1}).` });
       else local.set(k, d.nameSpan.line);
     }
-    // ---- GOTO targets ----
-    const labels = new Set(r.labels.map(l => U(l.name)));
-    for (const g of mod.gotos) {
-      if (g.routine !== r.name) continue;
-      if (!labels.has(U(g.label))) out.push({ code: 'rapid.undefinedLabel', severity: 'error', span: g.span, message: `GOTO ${g.label}: ${r.name} has no label "${g.label}".` });
-    }
+  }
+
+  // ---- GOTO targets: a GOTO knows its routine by name, so two routines of one name (an error of its own, above)
+  // are looked at once, with the labels of both - the same GOTO was reported once for each of them ----
+  const labelsOf = new Map<string, Set<string>>();
+  for (const r of mod.routines) {
+    const set = labelsOf.get(U(r.name)) ?? new Set<string>();
+    for (const l of r.labels) set.add(U(l.name));
+    labelsOf.set(U(r.name), set);
+  }
+  for (const g of mod.gotos) {
+    const labels = g.routine ? labelsOf.get(U(g.routine)) : undefined;
+    if (labels && !labels.has(U(g.label))) out.push({ code: 'rapid.undefinedLabel', severity: 'error', span: g.span, message: `GOTO ${g.label}: ${g.routine} has no label "${g.label}".` });
   }
 
   // ---- LOCAL routines nobody in the module names ----

@@ -1,5 +1,14 @@
 # Changelog
 
+## 26.119.8 - 2026-11-14 - RAPID: a missing ";" before an assignment
+
+### Fixed
+- **RAPID: a statement with no `;` that runs into an assignment.** `TPWrite "hello"` followed on the next line by
+  `reg1 := 5;` was read as one statement, so nothing was reported. The first statement now ends where the
+  assignment starts, with *Missing ";"*. A value or an argument list carried over to the next line is still one
+  statement. `test/rapid.test.ts`.
+- **RAPID: a `GOTO` to a missing label was reported twice** when two routines of the module had the same name.
+
 ## 26.119.7 - 2026-11-14 - Flags listed two to a line
 
 ### Fixed
