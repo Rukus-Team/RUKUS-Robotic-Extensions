@@ -1,2 +1,3 @@
 # a real controller file, kept byte for byte: no line-ending conversion on any checkout
 test/fixtures-ioconfig/ioconfig.dg -text
+test/fixtures-ioconfig/ioconfig-v940-roboguide.dg -text

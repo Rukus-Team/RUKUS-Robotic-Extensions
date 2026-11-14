@@ -1,5 +1,12 @@
 # Changelog
 
+## 26.119.6 - 2026-11-14 - Analog signals show where they are assigned
+
+### Fixed
+- **Analog signals in `ioconfig.dg`.** A V9.40 controller lists each analog signal on a line of its own
+  (`AIN 1 RACK: 0 SLOT: 1 CHANNEL: 1`), which was not read, so the hover on `AI[...]` / `AO[...]` showed no
+  assignment. It now reads *Rack 0 (...), slot 1, channel 1*. `test/ioConfig.test.ts`.
+
 ## 26.119.5 - 2026-11-13 - Where a signal is assigned
 
 ### Added

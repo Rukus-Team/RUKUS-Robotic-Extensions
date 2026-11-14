@@ -7,7 +7,11 @@
  * RUKUS shows the same text for the same signal, so the wording and the rack names here stay
  * as they are.
  */
-export interface IoAssignment { rack: number; slot: number; port: number; bits?: number }
+export interface IoAssignment {
+  rack: number; slot: number; port: number; bits?: number;
+  /** an analog signal: `port` is its channel, and is said as one */
+  channel?: boolean;
+}
 export interface IoRange { kind: string; first: number; last: number; at: IoAssignment }
 
 /** the most text read: the sample is 40 KB, a file far beyond this is not an IOCONFIG.DG */
@@ -31,11 +35,13 @@ export const RACK_NAMES: Readonly<Record<number, string>> = {
   98: 'InterBus PxC Slave interface', 99: 'PROFINET I/O Controller', 100: 'PROFINET I/O Device',
 };
 
-// the file's two line shapes; every other line (header, signal comments) is passed over:
+// the file's three line shapes; every other line (header, signal comments) is passed over:
 //   DIN    1  -   8   RACK:  89   SLOT:   1   PORT:   1          a range
 //   GIN    1   RACK:  89   SLOT:   1   PORT:  17   #NUM:   8     a group and its number of bits
+//   AIN    1   RACK:   0   SLOT:   1   CHANNEL:   1              an analog signal (seen on a V9.40 controller)
 const RANGE = /^[ \t]*([A-Z]+)[ \t]+(\d{1,6})[ \t]*-[ \t]*(\d{1,6})[ \t]+RACK:[ \t]*(\d{1,6})[ \t]+SLOT:[ \t]*(\d{1,6})[ \t]+PORT:[ \t]*(\d{1,6})[ \t]*\r?$/gm;
 const GROUP = /^[ \t]*([A-Z]+)[ \t]+(\d{1,6})[ \t]+RACK:[ \t]*(\d{1,6})[ \t]+SLOT:[ \t]*(\d{1,6})[ \t]+PORT:[ \t]*(\d{1,6})[ \t]+#NUM:[ \t]*(\d{1,6})[ \t]*\r?$/gm;
+const CHANNEL = /^[ \t]*([A-Z]+)[ \t]+(\d{1,6})[ \t]+RACK:[ \t]*(\d{1,6})[ \t]+SLOT:[ \t]*(\d{1,6})[ \t]+CHANNEL:[ \t]*(\d{1,6})[ \t]*\r?$/gm;
 
 /** the assignments in IOCONFIG.DG's text; none for text that is not one */
 export function parseIoConfig(text: string | undefined): IoRange[] {
@@ -51,6 +57,11 @@ export function parseIoConfig(text: string | undefined): IoRange[] {
     const [index, rack, slot, port, bits] = m.slice(2, 7).map(n => parseInt(n, 10));
     if (kind) out.push({ kind, first: index, last: index, at: { rack, slot, port, bits } });
   }
+  for (const m of text.matchAll(CHANNEL)) {
+    const kind = PREFIX[m[1]];
+    const [index, rack, slot, port] = m.slice(2, 6).map(n => parseInt(n, 10));
+    if (kind) out.push({ kind, first: index, last: index, at: { rack, slot, port, channel: true } });
+  }
   return out;
 }
 
@@ -60,10 +71,10 @@ export function assignmentOf(ranges: readonly IoRange[], kind: string, index: nu
   return r ? { ...r.at, port: r.at.port + (index - r.first) } : undefined;
 }
 
-/** "Rack 89 (EtherNet/IP ...), slot 1, port 20"; a group adds its bits; rack 35 says the value its slot stands for */
+/** "Rack 89 (EtherNet/IP ...), slot 1, port 20"; a group adds its bits; an analog signal says channel; rack 35 says the value its slot stands for */
 export function describeAssignment(a: IoAssignment): string {
   if (a.rack === 35 && (a.slot === 0 || a.slot === 1)) return `Rack 35, slot ${a.slot} (always ${a.slot === 1 ? 'on' : 'off'})`;
   const name = RACK_NAMES[a.rack];
-  const place = `Rack ${a.rack}${name ? ` (${name})` : ''}, slot ${a.slot}, port ${a.port}`;
+  const place = `Rack ${a.rack}${name ? ` (${name})` : ''}, slot ${a.slot}, ${a.channel ? 'channel' : 'port'} ${a.port}`;
   return a.bits !== undefined ? `${place}, ${a.bits} bits` : place;
 }
