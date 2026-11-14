@@ -117,14 +117,27 @@ const IO_PREFIX: Record<string, string> = {
 /** IOSTATE.DG:  DIN[  25] OFF  ZONE 1 CLR   /  GIN[   1] 0  PROG SELECT BITS  /  "ON *" or "SIM" marks simulated */
 export function parseIoState(text: string): IoPoint[] {
   const out: IoPoint[] = [];
+  // a V9.40 controller lists its flags two to a line ("FLG[   1] OFF      FLG[ 513] OFF"): the second is a point of
+  // its own, of the same type, kept back until the type changes so the numbers stay in order
+  let second: IoPoint[] = [];
+  let columnKind: string | undefined;
+  const point = (kind: string, m: RegExpMatchArray, comment: string): IoPoint => {
+    const raw = m[4];
+    const value: 'ON' | 'OFF' | number = raw === 'ON' || raw === 'OFF' ? raw : parseInt(raw, 10);
+    return { kind, index: parseInt(m[2], 10), value, simulated: !!m[3] || !!m[5], comment: comment.trim() };
+  };
   // [ \t] rather than \s: a trailing \s* would swallow the newline and the next row when the comment is blank
   for (const m of text.matchAll(/^[ \t]*([A-Z]+)\[[ \t]*(\d+)\][ \t]+(SIM[ \t]+)?(ON|OFF|-?\d+)([ \t]*\*)?[ \t]{0,3}([^\r\n]*?)[ \t]*$/gm)) {
     const kind = IO_PREFIX[m[1]];
     if (!kind) continue;
-    const raw = m[4];
-    const value: 'ON' | 'OFF' | number = raw === 'ON' || raw === 'OFF' ? raw : parseInt(raw, 10);
-    out.push({ kind, index: parseInt(m[2], 10), value, simulated: !!m[3] || !!m[5], comment: m[6].trim() });
+    if (kind !== columnKind) { out.push(...second); second = []; columnKind = kind; }
+    // a second point on the same line: after two or more blanks, the same prefix, a value of its own (a comment
+    // that names a signal, "SND RBT TO DO[1]: MAINT", has none)
+    const next = [...m[6].matchAll(/[ \t]{2,}([A-Z]+)\[[ \t]*(\d+)\][ \t]+(SIM[ \t]+)?(ON|OFF|-?\d+)(?![^ \t*])([ \t]*\*)?[ \t]{0,3}(.*)$/g)].find(n => n[1] === m[1]);
+    out.push(point(kind, m, next ? m[6].slice(0, next.index) : m[6]));
+    if (next) second.push(point(kind, next, next[6]));
   }
+  out.push(...second);
   return out;
 }
 

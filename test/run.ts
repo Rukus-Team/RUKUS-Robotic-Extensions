@@ -520,6 +520,10 @@ if (backupDir && isRefBackup(backupDir)) {
   const di25 = io.find(p => p.kind === 'DI' && p.index === 25);
   check(di25?.value === 'OFF' && di25.comment === 'ZONE 1 CLR', `iostate DI[25]: ${JSON.stringify(di25)}`);
   check(io.some(p => p.kind === 'F') && io.some(p => p.kind === 'GO' && typeof p.value === 'number'), 'iostate flags and group values');
+  // a V9.40 virtual controller lists flags two to a line: each is a point, neither the other's comment, numbers in order
+  const twoFlags = parseIoState('DOUT[  13] ON   SND RBT TO  DO[1]: MAINT\nFLG[   1] OFF                            FLG[ 513] OFF                          \nFLG[   2] ON   Cycle done                 FLG[ 514] ON                           \n');
+  check(twoFlags.map(p => `${p.kind}[${p.index}]=${p.value}:${p.comment}`).join(' | ') === 'DO[13]=ON:SND RBT TO  DO[1]: MAINT | F[1]=OFF: | F[2]=ON:Cycle done | F[513]=OFF: | F[514]=ON:',
+    `iostate two flags to a line: ${twoFlags.map(p => `${p.kind}[${p.index}]=${p.value}:${p.comment}`).join(' | ')}`);
   const alarms = parseAlarms(rd('errall.ls'));
   check(alarms.length >= 50, `alarms: ${alarms.length}`);
   const a = alarms.find(x => x.seq === 798);

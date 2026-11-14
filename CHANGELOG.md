@@ -1,5 +1,12 @@
 # Changelog
 
+## 26.119.7 - 2026-11-14 - Flags listed two to a line
+
+### Fixed
+- **Flags in `IOSTATE.DG`.** A V9.40 controller lists its flags two to a line (`FLG[   1] OFF      FLG[ 513] OFF`).
+  Only the first of each line was read, with the second as its comment, so F[513] and up were missing from the live
+  I/O and the first 512 carried a false comment. Each is now a flag of its own. `test/run.ts`.
+
 ## 26.119.6 - 2026-11-14 - Analog signals show where they are assigned
 
 ### Fixed
