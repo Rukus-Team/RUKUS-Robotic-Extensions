@@ -8,6 +8,9 @@ import { KAREL_BUILTIN_DETAILS } from './karelReference';
 import { alarmAt, alarmHover } from '../alarms/alarmHover';
 import { builtinFooter, clip, escapeMd, languageEntryAt, languageHover, environmentInsert, registerKarelReference, ENV_NEEDS_DIRECTIVE } from './referenceDocs';
 import { FanucServices } from '../services';
+import { readSnippets, blockTails, blockContinuation, statementStart } from '@core/snippets';
+import { snippetCompletions, continuationCompletions } from '@core/snippetItems';
+import karelSnippets from '../../../../snippets/karel.json';
 import { spanToRange, config, md, debounce } from '@core/util';
 import { karelNameLimits, karelCoreVersionOf, type KarelCoreVersion, type KarelNameLimits } from './lint';
 import { compileKarel, ktransDiagnostics, findKtrans } from './ktrans';
@@ -20,7 +23,9 @@ const SEL = { language: 'fanuc-karel' };
 const WORD = /\$?[A-Za-z_][A-Za-z0-9_]*/;
 
 const STATEMENT_KEYWORDS = ['ABORT', 'ATTACH', 'BEGIN', 'CANCEL', 'CASE', 'CLOSE FILE', 'CLOSE HAND', 'CONDITION', 'CONNECT TIMER', 'CONST', 'CONTINUE', 'DELAY', 'DISABLE CONDITION', 'DISCONNECT TIMER', 'DOWNTO', 'ELSE', 'ENABLE CONDITION', 'END', 'ENDCONDITION', 'ENDFOR', 'ENDIF', 'ENDSELECT', 'ENDSTRUCTURE', 'ENDWHILE', 'FOR', 'FROM', 'GO TO', 'HOLD', 'IF', 'MOVE TO', 'MOVE NEAR', 'MOVE AWAY', 'MOVE RELATIVE', 'NOWAIT', 'OPEN FILE', 'OPEN HAND', 'PAUSE', 'PROGRAM', 'PULSE', 'PURGE CONDITION', 'READ', 'RELEASE', 'REPEAT', 'RESUME', 'RETURN', 'ROUTINE', 'SELECT', 'SIGNAL EVENT', 'SIGNAL SEMAPHORE', 'STOP', 'STRUCTURE', 'THEN', 'TYPE', 'UNHOLD', 'UNPAUSE', 'UNTIL', 'USING', 'VAR', 'WAIT FOR', 'WHEN', 'WHILE', 'WITH', 'WRITE'];
-const TYPE_KEYWORDS = ['INTEGER', 'REAL', 'BOOLEAN', 'STRING', 'BYTE', 'SHORT', 'ARRAY', 'POSITION', 'XYZWPR', 'XYZWPREXT', 'JOINTPOS', 'JOINTPOS6', 'VECTOR', 'PATH', 'FILE', 'CONFIG', 'CAM_SETUP', 'MODEL', 'VIS_PROCESS', 'QUEUE_TYPE'];
+const KAREL_SNIPPETS = readSnippets(karelSnippets);
+const KAREL_BLOCK_TAILS = blockTails(KAREL_SNIPPETS);
+const TYPE_KEYWORDS =['INTEGER', 'REAL', 'BOOLEAN', 'STRING', 'BYTE', 'SHORT', 'ARRAY', 'POSITION', 'XYZWPR', 'XYZWPREXT', 'JOINTPOS', 'JOINTPOS6', 'VECTOR', 'PATH', 'FILE', 'CONFIG', 'CAM_SETUP', 'MODEL', 'VIS_PROCESS', 'QUEUE_TYPE'];
 const DIRECTIVES = ['%ALPHABETIZE', '%CMOSVARS', '%CMOS2SHADOW', "%COMMENT = ''", '%CRTDEVICE', '%DEFGROUP = 1', '%DELAY = 0', '%ENVIRONMENT ', '%INCLUDE ', '%LOCKGROUP = 1', '%NOABORT = ERROR + COMMAND', '%NOBUSYLAMP', '%NOLOCKGROUP', '%NOPAUSE = ERROR + COMMAND + TPENABLE', '%NOPAUSESHFT', '%PRIORITY = 50', '%SHADOWVARS', '%STACKSIZE = 500', '%TIMESLICE = 8', '%TPMOTION', '%UNINITVARS'];
 const PORTS = ['DIN', 'DOUT', 'GIN', 'GOUT', 'AIN', 'AOUT', 'RDI', 'RDO', 'OPIN', 'OPOUT', 'TPIN', 'TPOUT', 'WDI', 'WDO', 'UIN', 'UOUT', 'FLG'];
 
@@ -344,6 +349,12 @@ class KCompletion implements vscode.CompletionItemProvider {
       return items;
     }
     if (/^\s*%INCLUDE\s+\S*$/i.test(before)) return items;
+
+    // `IF x TH`, `FOR i = 1 TO 10 D`: the statement is already there - the rest of its block, not a second one
+    const cont = blockContinuation('karel', KAREL_BLOCK_TAILS, { lineCount: doc.lineCount, lineAt: i => doc.lineAt(i).text }, pos.line, pos.character);
+    if (cont) items.push(...continuationCompletions(cont, pos, 'fanuc-karel', !STATEMENT_KEYWORDS.includes(cont.keyword)));
+    // the snippets, where a statement starts
+    if (statementStart('karel', line, pos.character) !== undefined) items.push(...snippetCompletions(KAREL_SNIPPETS, 'fanuc-karel', '5'));
 
     // user symbols in scope
     const routine = prog.routines.find(r => !r.from && r.line <= pos.line && (r.endLine ?? Number.MAX_SAFE_INTEGER) >= pos.line);

@@ -101,11 +101,11 @@ export function buildFlow(prog: TpProgram): FlowGraph {
   for (const l of body) {
     const t = l.body;
     if (l.kind === 'comment') {
-      const text = t.replace(/^--eg:?\s*/i, '').replace(/^!+\s*/, '').replace(/^[-*=_ ]+$/, '').trim();
+      const text = t.replace(/^--[a-z]{2}:?\s*/i, '').replace(/^!+\s*/, '').replace(/^[-*=_ ]+$/, '').trim();
       if (text && !/^[-*=_]{3,}/.test(text)) { if (!cur) { pendingComment = text; if (!nodes.length) leading.push(text); } else if (cur.lines.length < 40) addLine(cur, l, 'comment'); }
       continue;
     }
-    if (l.kind === 'continuation') { if (cur) addLine(cur, l, 'motion'); continue; }
+    if (l.kind === 'continuation') { if (cur) addLine(cur, l, cur.lines[cur.lines.length - 1]?.kind ?? 'motion'); continue; }
 
     // label starts a new block (merge point)
     const lbl = RE_LBL.exec(t);

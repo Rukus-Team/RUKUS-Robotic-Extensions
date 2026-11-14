@@ -2,7 +2,7 @@
   "name": "robot-code",
   "displayName": "RUKUS Robotic Extensions — FANUC & ABB (Beta)",
   "description": "BETA - in active development, not yet proven on a live cell. One extension for FANUC and ABB robots: FANUC TP (.ls) and KAREL (.kl), ABB RAPID (.mod/.sys/.prg) with hover docs, go-to-definition, diagnostics, linting, flowcharts and call graphs; controller backups and live controllers (FANUC over HTTP/FTP, ABB IRC5 and OmniCore over Robot Web Services) with registers, RAPID data, I/O, alarms and positions; ktrans integration and the RUKUS desktop app.",
-  "version": "26.119.3",
+  "version": "26.119.4",
   "publisher": "rukus-team",
   "license": "MIT",
   "repository": {
@@ -454,20 +454,6 @@
         "path": "./syntaxes/rapid.tmLanguage.json"
       }
     ],
-    "snippets": [
-      {
-        "language": "fanuc-tp",
-        "path": "./snippets/tp.json"
-      },
-      {
-        "language": "fanuc-karel",
-        "path": "./snippets/karel.json"
-      },
-      {
-        "language": "abb-rapid",
-        "path": "./snippets/rapid.json"
-      }
-    ],
     "themes": [
       {
         "id": "Robot Code Dark",
@@ -651,6 +637,30 @@
       }
     ],
     "commands": [
+      {
+        "command": "robotCode.compare.clean",
+        "title": "Compare Ignoring Line Numbers...",
+        "category": "RUKUS",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "robotCode.compare.options",
+        "title": "Compare Ignoring Line Numbers: Choose What to Ignore...",
+        "category": "RUKUS",
+        "icon": "$(settings)"
+      },
+      {
+        "command": "robotCode.knowledge.setKind",
+        "title": "Check This Program As... (macro, condition program, background logic)",
+        "category": "FANUC TP",
+        "icon": "$(book)"
+      },
+      {
+        "command": "robotCode.knowledge.insertBlock",
+        "title": "Insert a Building Block...",
+        "category": "FANUC TP",
+        "icon": "$(symbol-snippet)"
+      },
       {
         "command": "robotCode.tp.renumber",
         "title": "Renumber Lines (controller format)",
@@ -1919,6 +1929,11 @@
     "menus": {
       "editor/title": [
         {
+          "command": "robotCode.compare.options",
+          "when": "resourceScheme == robotcode-clean",
+          "group": "navigation@0"
+        },
+        {
           "command": "robotCode.live.downloadFile",
           "when": "resourceScheme == fanuc",
           "group": "navigation@0"
@@ -1980,6 +1995,11 @@
         }
       ],
       "editor/title/context": [
+        {
+          "command": "robotCode.compare.clean",
+          "when": "resourceExtname =~ /^\\.(ls|kl)$/i && !robotCode.hideFanuc && !robotCode.fanucOff",
+          "group": "3_compare@9"
+        },
         {
           "command": "robotCode.live.downloadFile",
           "when": "resourceScheme == fanuc",
@@ -3199,6 +3219,11 @@
       ],
       "explorer/context": [
         {
+          "command": "robotCode.compare.clean",
+          "when": "resourceExtname =~ /^\\.(ls|kl)$/i && !robotCode.hideFanuc && !robotCode.fanucOff",
+          "group": "3_compare@9"
+        },
+        {
           "command": "robotCode.live.sendFile",
           "when": "resourceScheme == file && resourceExtname =~ /^\\.ls$/i && config.robotCode.experimental.robotConnections",
           "group": "5_cutcopypaste@9"
@@ -3277,6 +3302,16 @@
           "contextualTitle": "RUKUS clusters",
           "visibility": "collapsed",
           "initialSize": 1
+        },
+        {
+          "id": "robotCode.knowledge",
+          "name": "Knowledge",
+          "type": "webview",
+          "icon": "media/activity.svg",
+          "contextualTitle": "TP knowledge",
+          "when": "!robotCode.hideFanuc && !robotCode.fanucOff",
+          "visibility": "visible",
+          "initialSize": 5
         },
         {
           "id": "robotCode.snapshot",
@@ -3561,6 +3596,23 @@
           "default": true,
           "description": "Automatically terminate TP instruction lines with ' ;' when renumbering."
         },
+        "robotCode.renameProgramWithFile": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Renaming a `.ls` or `.kl` file also renames the program inside it (`/PROG`, or `PROGRAM` and its `END`), when the two matched before - they have to match. The other way round: **F2** on the name in `/PROG` renames the program, its file and the `CALL`s to it."
+        },
+        "robotCode.compare.ignore": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["lineNumbers", "terminators", "spacing", "header", "names", "commentLines", "positions", "case"] },
+          "default": ["lineNumbers", "terminators", "spacing", "header"],
+          "markdownDescription": "What **Compare Ignoring Line Numbers** leaves out of both files (line endings never count): `lineNumbers`, `terminators` (the ` ;`), `spacing`, `header` (CREATE, MODIFIED, sizes, LINE_COUNT ...), `names` (the comment in `R[5:count]`), `commentLines`, `positions` (everything under `/POS`), `case`. *Compare Ignoring Line Numbers: Choose What to Ignore...* sets it from a list."
+        },
+        "robotCode.tp.guardBrackets": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "A `]` or `)` typed into an instruction that has nothing left to close is not added - the caret steps over one that is already there. Stops the extra bracket after picking a register from the list (`R[35:index]]`) or in an indirect register (`R[R[35]]]`)."
+        },
         "robotCode.tp.continueComments": {
           "type": "boolean",
           "default": true,
@@ -3568,9 +3620,9 @@
         },
         "robotCode.tp.extendedCommentWidth": {
           "type": "number",
-          "default": 78,
+          "default": 0,
           "minimum": 0,
-          "markdownDescription": "Widest line, in columns, of an `--eg:` extended comment. Renumbering re-wraps a comment with a longer line between words to this width, as the pendant's comment editor does; a line over it is flagged. **78** is what a ROBOGUIDE controller wrote (65 characters after `--eg: ` on the first line, 71 after `:  ` on each continuation). `0` switches both off."
+          "markdownDescription": "Widest line, in columns, of an `--eg:` extended comment. **`0` (the default): no limit** - an extended comment line is as long as you write it, which the controller loads. With a width set, renumbering re-wraps a comment with a longer line between words to it and a line over it is flagged; `78` is how the pendant's comment editor wraps (65 characters after `--eg: ` on the first line, 71 after `:  ` on each continuation). Only a `!` comment has a length limit (`robotCode.tp.diagnostics.commentLength`)."
         },
         "robotCode.tp.lineNumberWidth": {
           "type": "number",
@@ -4414,6 +4466,7 @@
     "smoke:abb": "node esbuild.mjs && node test/runAbbSmoke.mjs \".vscode-test\"",
     "smoke:live": "node esbuild.mjs && node test/runLiveSync.mjs",
     "smoke:vim": "node esbuild.mjs && node test/runVim.mjs",
+    "smoke:editing": "node esbuild.mjs && node test/runEditing.mjs",
     "smoke:shots": "node esbuild.mjs && node test/runIntegration.mjs \"../reference-backup\" \".vscode-test\" \".vscode-test/shots\" \"../Robotic Utility Kit/RUKUS.Tests/TestData/corpus/ir/irmath.kl\"",
     "dev": "node scripts/run-dev-host.mjs",
     "dev:debug": "node scripts/run-dev-host.mjs --debug",

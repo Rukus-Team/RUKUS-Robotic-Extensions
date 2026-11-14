@@ -3,6 +3,15 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { parseTp, type TpProgram, type TpDataRef, type Span, findLabel, findPosition, positionMarkdown, describePosition, IO_KINDS } from './parser';
 import { lookupTpDoc, lookupTpDocsAt, DATA_KIND_DOCS, TP_INSTRUCTION_COMPLETIONS, TP_OPERAND_COMPLETIONS, operandContext } from './docs';
+import { readSnippets, blockTails, blockContinuation, statementStart } from '@core/snippets';
+import { fileBaseName, programNameProblem } from '../programName';
+import { registerProgramRename, renameHandlesHeader } from '../programRename';
+import { registerBracketGuard } from './bracketGuard';
+import { snippetCompletions, continuationCompletions } from '@core/snippetItems';
+import tpSnippets from '../../../../snippets/tp.json';
+
+const TP_SNIPPETS = readSnippets(tpSnippets);
+const TP_BLOCK_TAILS = blockTails(TP_SNIPPETS);
 import { ualmSeverityName } from '../data/vaParser';
 import { FANUC_PROGRAMS, CATALOG_MACROS, CATALOG_DOCS } from './syntaxCatalog';
 import { renumber } from './renumber';
@@ -39,6 +48,8 @@ export function registerTpProviders(ctx: vscode.ExtensionContext, s: FanucServic
     vscode.languages.registerCodeLensProvider(SEL, new TpCodeLens(s)),
     vscode.languages.registerFoldingRangeProvider(SEL, new TpFolding(s)),
     vscode.languages.registerRenameProvider(SEL, new TpRename(s)),
+    registerProgramRename(),
+    registerBracketGuard(s),
     vscode.languages.registerDocumentFormattingEditProvider(SEL, new TpFormatter()),
     vscode.languages.registerDocumentHighlightProvider(SEL, new TpHighlights(s)),
   );
@@ -592,12 +603,21 @@ class TpCompletion implements vscode.CompletionItemProvider {
       return items;
     }
 
-    if (!inMain) return items;
     // Start of an instruction body (after "  12:  " or on a fresh line)
-    const atBodyStart = /^(\s*\d*:\s*|\s*)[A-Za-z!/]*$/.test(before);
-    if (atBodyStart) {
-      const wordStart = before.length - (/[A-Za-z!/]*$/.exec(before)?.[0].length ?? 0);
-      const replaceRange = new vscode.Range(pos.line, wordStart, pos.line, pos.character);
+    const typed = statementStart('tp', lineText, pos.character);
+    if (typed !== undefined) {
+      // The snippets, each where it belongs: the program skeleton in a file that has none, a
+      // position record under /POS, the instructions under /MN (anywhere in a file without sections).
+      const sec = prog.sections;
+      const bare = sec.mn === undefined && sec.pos === undefined;
+      const inPos = sec.pos !== undefined && pos.line > sec.pos;
+      const here = TP_SNIPPETS.filter(s => s.prefixes[0] === 'prog' ? bare && sec.prog === undefined
+        : /^posj?$/.test(s.prefixes[0]) ? inPos || bare : inMain || bare);
+      items.push(...snippetCompletions(here, 'fanuc-tp', '5', new vscode.Range(pos.line, pos.character - typed.length, pos.line, pos.character)));
+    }
+    if (!inMain) return items;
+    if (typed !== undefined) {
+      const replaceRange = new vscode.Range(pos.line, pos.character - typed.length, pos.line, pos.character);
       TP_INSTRUCTION_COMPLETIONS.forEach((c, i) => {
         const it = new vscode.CompletionItem(c.label, vscode.CompletionItemKind.Keyword);
         it.insertText = new vscode.SnippetString(c.insert); it.detail = c.detail; it.range = replaceRange;
@@ -625,6 +645,9 @@ class TpCompletion implements vscode.CompletionItemProvider {
 
     // An operand further along the line: `R[1]=PR`, `IF DI`, `WAIT (F`, `L P[1] 100mm/sec CN`.
     // Not in a comment or remark, not in a string, and not inside a bracket's `:comment`.
+    // `IF (R[1]=1) TH`: the IF is already there - THEN and the rest of its block, not a second IF
+    const cont = blockContinuation('tp', TP_BLOCK_TAILS, { lineCount: doc.lineCount, lineAt: i => doc.lineAt(i).text }, pos.line, pos.character);
+    if (cont) items.push(...continuationCompletions(cont, pos, 'fanuc-tp', true));
     const operand = operandContext(lineText, pos.character);
     if (operand) {
       const replaceRange = new vscode.Range(pos.line, pos.character - operand.word.length, pos.line, pos.character);
@@ -759,10 +782,16 @@ class TpFolding implements vscode.FoldingRangeProvider {
  * - a position NAME - the `Home` in `P[1:"Home"]` and `P[1:Home]` - within the file. Not
  *   PR[] names: those come from the controller (posreg.va) and are edited on the pendant.
  */
+function onHeaderName(prog: TpProgram, pos: vscode.Position): boolean {
+  const s = prog.header.nameSpan;
+  return !!s && !!prog.header.name && pos.line === s.line && pos.character >= s.col && pos.character <= s.col + s.len;
+}
+
 class TpRename implements vscode.RenameProvider {
   constructor(private s: FanucServices) {}
   prepareRename(doc: vscode.TextDocument, pos: vscode.Position): { range: vscode.Range; placeholder: string } {
     const prog = this.s.tp.get(doc);
+    if (onHeaderName(prog, pos)) return { range: spanToRange(prog.header.nameSpan!), placeholder: prog.header.name! };
     const t = targetAt(prog, pos);
     if (t?.kind === 'label') {
       const m = /LBL\[(\d+)/.exec(doc.getText(spanToRange(t.span)));
@@ -783,12 +812,43 @@ class TpRename implements vscode.RenameProvider {
       const numStart = t.span.col + 2;
       return { range: new vscode.Range(pos.line, numStart, pos.line, numStart + (m?.[1].length ?? 1)), placeholder: String(t.index) };
     }
-    throw new Error('Rename works on labels (renumber), positions (renumber, or rename the P[n:"name"]) and register/I-O comments.');
+    throw new Error('Rename works on the program name in /PROG, labels (renumber), positions (renumber, or rename the P[n:"name"]) and register/I-O comments.');
   }
   async provideRenameEdits(doc: vscode.TextDocument, pos: vscode.Position, newName: string): Promise<vscode.WorkspaceEdit | undefined> {
     const prog = this.s.tp.get(doc);
     const t = targetAt(prog, pos);
     const edit = new vscode.WorkspaceEdit();
+    if (onHeaderName(prog, pos)) {
+      // The program: /PROG, the file (the two have to match), and the CALL / RUN lines of the
+      // other programs in the same backup that name it.
+      const name = newName.trim().toUpperCase(), old = prog.header.name!;
+      const problem = programNameProblem(name);
+      if (problem) throw new Error(problem);
+      // The file first: VS Code runs an edit's file operations before its text edits, so what
+      // is written into this file has to be addressed to its new name.
+      const base = fileBaseName(doc.uri.path);
+      const moves = doc.uri.scheme === 'file' && base.toUpperCase() !== name;
+      const ext = /\.[^./]+$/.exec(doc.uri.path)?.[0] ?? '.ls';
+      const self = moves ? doc.uri.with({ path: doc.uri.path.replace(/[^/]+$/, name + ext) }) : doc.uri;
+      if (moves) {
+        let taken = false;
+        try { await vscode.workspace.fs.stat(self); taken = self.fsPath.toLowerCase() !== doc.uri.fsPath.toLowerCase(); } catch { /* free */ }
+        if (taken) throw new Error(`${name}${ext} already exists in this folder.`);
+        edit.renameFile(doc.uri, self);
+        renameHandlesHeader(doc.uri);   // the header is written here, not by the file-rename hook
+      }
+      edit.replace(self, spanToRange(prog.header.nameSpan!), name);
+      const swap = (text: string) => text.replace(new RegExp(`\\b${old}\\b`, 'i'), name);
+      for (const c of prog.calls) if (c.name.toUpperCase() === old.toUpperCase()) edit.replace(self, spanToRange(c.span), swap(doc.getText(spanToRange(c.span))));
+      for (const p of this.s.index.callers(old, doc.uri)) {
+        if (p.kind !== 'tp' || p.uri.toString() === doc.uri.toString()) continue;
+        try {
+          const d = await vscode.workspace.openTextDocument(p.uri);
+          for (const c of this.s.tp.get(d).calls) if (c.name.toUpperCase() === old.toUpperCase()) edit.replace(p.uri, spanToRange(c.span), swap(d.getText(spanToRange(c.span))));
+        } catch { /* unreadable, skip */ }
+      }
+      return edit;
+    }
     if (t?.kind === 'label') {
       const n = parseInt(newName, 10);
       if (!Number.isInteger(n) || n < 1 || n > 32767) throw new Error('Label numbers are 1–32767.');

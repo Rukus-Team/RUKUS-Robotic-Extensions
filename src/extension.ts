@@ -16,6 +16,8 @@ import { registerRapidView } from '@abb/views/rapidTree';
 import { registerAbbControllers } from '@abb/live/view';
 import { followRukusCluster } from '@abb/live/rukusCluster';
 import { registerTpProviders } from '@fanuc/tp/providers';
+import { registerKnowledgeView } from '@fanuc/views/knowledgeView';
+import { registerCleanCompare } from '@fanuc/cleanCompareCommands';
 import { registerTpDiagnostics } from '@fanuc/tp/diagnostics';
 import { registerTpCommands } from '@fanuc/tp/commands';
 import { registerKarelProviders } from '@fanuc/karel/providers';
@@ -102,6 +104,8 @@ export function activate(ctx: vscode.ExtensionContext) {
   if (abbControllers) ctx.subscriptions.push(followRukusCluster(abbControllers, s.rukus, s.output));
   if (fanuc) {
     registerViews(ctx, s);
+  registerKnowledgeView(ctx, s);
+  registerCleanCompare(ctx, s);
     registerTools(ctx, s);
     registerLiveDecorations(ctx, s);
     registerTypeDecorations(ctx, s);

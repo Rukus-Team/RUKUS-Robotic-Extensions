@@ -23,12 +23,10 @@
 /** Widest line, in columns, the pendant writes for an extended comment (the ` ;` excluded). */
 export const EXT_COMMENT_WIDTH = 78;
 
-/** the pendant writes a space after `--eg:` */
-const EG = '--eg: ';
 /** the continuation head the controller writes: four spaces, a colon, two spaces */
 const CONT_HEAD = '    :  ';
 
-const RE_FIRST = /^(\s*\d*:)(\s*)--eg:?/i;
+const RE_FIRST = /^(\s*\d*:)(\s*)(--[a-z]{2}):?/i;
 const RE_CONT = /^(\s*:)(\s*)/;
 
 /** columns a line occupies before its ` ;` terminator, if any */
@@ -96,11 +94,12 @@ export function reflowExtendedComment(rawLines: string[], width = EXT_COMMENT_WI
   if (!first) return undefined;
   const head = first[1] + (first[2] || '  ');   // `   6:  ` - the two spaces every instruction gets
   const text = extCommentText(rawLines);
-  const firstWidth = width - head.length - EG.length;
+  const tag = first[3] + ': ';   // the comment's own language tag, as written
+  const firstWidth = width - head.length - tag.length;
   const restWidth = width - CONT_HEAD.length;
   if (firstWidth < 8 || restWidth < 8) return undefined;   // an absurd width; do nothing rather than shred the text
   const pieces = wrapWords(text, firstWidth, restWidth);
-  const lines = pieces.map((p, i) => (i === 0 ? head + EG.trimEnd() + (p ? ' ' + p : '') : CONT_HEAD + p));
+  const lines = pieces.map((p, i) => (i === 0 ? head + tag.trimEnd() + (p ? ' ' + p : '') : CONT_HEAD + p));
   lines[lines.length - 1] += ' ;';
   return { lines };
 }

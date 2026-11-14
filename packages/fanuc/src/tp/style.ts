@@ -33,6 +33,7 @@ defineLintRules([
   check('tp.duplicatePosition', 'hint', 'two points at (nearly) the same place in one user frame'),
   check('tp.integerAxisValue', 'warning', 'a position value written as an integer'),
   check('tp.lineSequence', 'warning', 'line numbers out of sequence or missing'),
+  check('tp.programName', 'warning', '/PROG names a different program than the file does'),
   check('tp.lineCount', 'warning', 'LINE_COUNT does not match the program'),
   check('tp.missingTerminator', 'warning', 'a line without its " ;"'),
   check('tp.doubleTerminator', 'error', 'more than one ";" at the end of a line'),

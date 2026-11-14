@@ -1087,7 +1087,7 @@ class AutoRenumber implements vscode.Disposable {
   constructor(private s: FanucServices) {
     this.disposables.push(
       vscode.workspace.onDidChangeTextDocument(e => {
-        if (this.applying || e.document.languageId !== 'fanuc-tp' || !e.contentChanges.length) return;
+        if (this.applying || e.document.languageId !== 'fanuc-tp' || !e.contentChanges.length || e.document.uri.scheme === 'robotcode-clean') return;
         if (autoRenumberMode(e.document) === 'off') return;
         if (e.reason === vscode.TextDocumentChangeReason.Undo || e.reason === vscode.TextDocumentChangeReason.Redo) { this.afterUndoRedo(e.document, e.reason); return; }
         if (this.healSplitTerminator(e)) return;   // it schedules the renumber itself
@@ -1095,7 +1095,7 @@ class AutoRenumber implements vscode.Disposable {
       }),
       vscode.window.onDidChangeTextEditorSelection(e => {
         const doc = e.textEditor.document;
-        if (this.applying || doc.languageId !== 'fanuc-tp' || autoRenumberMode(doc) === 'off') return;
+        if (this.applying || doc.languageId !== 'fanuc-tp' || doc.uri.scheme === 'robotcode-clean' || autoRenumberMode(doc) === 'off') return;
         const key = doc.uri.toString();
         const lines = [...new Set(e.selections.map(s => s.active.line))].sort().join(',');
         if (this.lastActiveLines.get(key) !== lines) { this.lastActiveLines.set(key, lines); this.schedule(doc, 60); }
@@ -1270,8 +1270,10 @@ class AutoRenumber implements vscode.Disposable {
         const colon = text.indexOf(':');
         // Only when the line really did become an empty numbered line; if the user got a
         // keystroke in first, leave their caret exactly where they put it.
-        if (colon >= 0 && /^\s*(?:\d+|\s+):\s*;\s*$/.test(text)) {
-          const cont = await this.continueComment(editor, line, text);
+        if (colon >= 0 && /^\s*(?:\d+|\s+):\s*;?\s*$/.test(text)) {
+          // a line the renumber made the middle of an extended comment (`    :  `, no ` ;`) is
+          // already what it should be; only a terminated scaffold may still become a comment line
+          const cont = /;\s*$/.test(text) ? await this.continueComment(editor, line, text) : undefined;
           const col = cont ?? Math.min(colon + 3, text.length);
           const pos = new vscode.Position(line, col);
           editor.selection = new vscode.Selection(pos, pos);

@@ -12,7 +12,6 @@
 import * as vscode from 'vscode';
 import { config } from '@core/util';
 import type { RenumberOptions } from './renumber';
-import { EXT_COMMENT_WIDTH } from './extendedComment';
 
 export type AutoRenumberMode = 'on' | 'off' | 'custom' | 'scaffold' | 'zero';
 
@@ -34,9 +33,13 @@ export function controllerOptions(scope?: vscode.ConfigurationScope, extra: Part
   return { width: config<number>('tp.lineNumberWidth', 4, scope), autoSemicolon: config<boolean>('tp.autoSemicolon', true, scope), updateLineCount: true, extendedCommentWidth: extendedCommentWidth(scope), ...extra };
 }
 
-/** robotCode.tp.extendedCommentWidth: the pendant's 78 columns unless changed; 0 = off */
+/**
+ * robotCode.tp.extendedCommentWidth: 0 (the default) = no limit. A line has no length limit of
+ * its own - only a `!` comment's text does - and the controller loads an extended comment line of
+ * any length, so nothing is re-wrapped unless a width is asked for (78 is the pendant's).
+ */
 export function extendedCommentWidth(scope?: vscode.ConfigurationScope): number {
-  const v = config<number>('tp.extendedCommentWidth', EXT_COMMENT_WIDTH, scope);
+  const v = config<number>('tp.extendedCommentWidth', 0, scope);
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : 0;
 }
 

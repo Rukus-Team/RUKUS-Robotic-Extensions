@@ -660,7 +660,7 @@
     },
     "extended-comment": {
       "comment": "--eg: opens a multi-line comment; the text runs over \":\" continuation lines and only the last line ends with \";\"",
-      "begin": "^(\\s*)(\\d+)(:)(\\s*)(--eg:?)(?![A-Za-z0-9_])",
+      "begin": "^(\\s*)(\\d+)(:)(\\s*)(--[A-Za-z]{2}:?)(?![A-Za-z0-9_])",
       "beginCaptures": {
         "2": {
           "name": "constant.numeric.line-number.tp"

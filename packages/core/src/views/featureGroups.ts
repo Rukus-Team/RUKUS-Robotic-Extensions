@@ -23,7 +23,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
   },
   {
     title: 'Edit this TP program', hint: 'numbering, comments, motion lines',
-    commands: ['robotCode.tp.renumber', 'robotCode.tp.toggleAutoRenumber', 'robotCode.tp.renumberOnes', 'robotCode.tp.applyCustomStyle', 'robotCode.tp.applyControllerStyle', 'robotCode.tp.renumberLabels', 'robotCode.tp.gotoLabel', 'robotCode.tp.toggleRemark', 'robotCode.tp.insertBanner', 'robotCode.tp.insertHeader', 'robotCode.tp.insertTemplate', 'robotCode.tp.syncCommentsFromController', 'robotCode.tp.convertMotion', 'robotCode.tp.scaleSpeeds', 'robotCode.tp.setTermination'],
+    commands: ['robotCode.compare.clean', 'robotCode.compare.options', 'robotCode.knowledge.insertBlock', 'robotCode.knowledge.setKind', 'robotCode.tp.renumber', 'robotCode.tp.toggleAutoRenumber', 'robotCode.tp.renumberOnes', 'robotCode.tp.applyCustomStyle', 'robotCode.tp.applyControllerStyle', 'robotCode.tp.renumberLabels', 'robotCode.tp.gotoLabel', 'robotCode.tp.toggleRemark', 'robotCode.tp.insertBanner', 'robotCode.tp.insertHeader', 'robotCode.tp.insertTemplate', 'robotCode.tp.syncCommentsFromController', 'robotCode.tp.convertMotion', 'robotCode.tp.scaleSpeeds', 'robotCode.tp.setTermination'],
   },
   {
     title: 'Positions and frames', hint: 'teach, offset, convert, mirror, clean up',

@@ -1,5 +1,88 @@
 # Changelog
 
+## 26.119.4 - 2026-11-13 - Editing: snippets, comments, rename, Knowledge view, compare
+
+### Added
+- **A program's file and its name stay together.** Renaming a `.ls` or `.kl` file also renames the program inside it
+  (`/PROG`, or `PROGRAM` and its `END`) when the two matched before (`robotCode.renameProgramWithFile`). **F2** on the
+  name in `/PROG` renames the program: `/PROG`, the file, and the `CALL` / `RUN` lines of the other programs in the
+  robot folder. A `/PROG` that names something else than its file is flagged (`tp.programName`) - a V9.40 virtual
+  controller refuses such a file (ASBN-002); a source library that names its files otherwise on purpose can switch the
+  rule off in `.robotlint.json` - with a quick fix
+  each way: *Rename the file to ...* or *Change /PROG to ...*. `test/programName.test.ts`.
+- **Knowledge view** (side bar, under the robot views). *This program is a* TP program / Macro / Condition program /
+  Background logic: the rules of that kind, each with the manual page it was checked against (R-30iB Basic Function manual
+  B-83284EN/10, sections 9.1, 9.9 and 9.12); the one left that is common practice rather than a quoted rule is marked
+  **to confirm**. The open program is checked
+  against its kind - a marker assigned or a jump back in background logic, a line that is not a `WHEN` in a Cond
+  program - with the line to click. Macro and Cond are read from the `/PROG` line; background logic is not in the
+  file, so it is picked (*FANUC TP: Check This Program As...*) and remembered for that file.
+- **Building blocks.** In the same view: pick a group (IF, Motion, WAIT, Registers, I/O ...) and click a block to put it
+  in at the caret - into an empty line, else on a new line under it. Blocks that do not belong in the kind of program
+  being written are greyed out. From the keyboard: *FANUC TP: Insert a Building Block...*. `test/knowledge.test.ts`.
+- **Compare Ignoring Line Numbers.** Two programs side by side with the line numbers, the ` ;` terminators, spacing,
+  line endings and the header's bookkeeping (CREATE, MODIFIED, sizes, LINE_COUNT ...) taken out of both, so a line
+  added near the top is one difference instead of every line under it. Select two `.ls` / `.kl` files in the Explorer,
+  or run it on the open program and pick the other copy (the same program elsewhere in the workspace, another open
+  program, or browse). *Choose What to Ignore...* adds register and I/O names (`R[5:count]` = `R[5]`), comment lines,
+  position data and case (`robotCode.compare.ignore`). Both panes are read-only views that follow the files as they
+  are edited; nothing is written. `test/cleanCompare.test.ts`.
+
+### Fixed
+- **A statement that is already half written is finished, not written again.** Typing the `THEN` of
+  `IF (R[1]=1) TH` offered the `ifthen` snippet, and taking it put a second, whole `IF ... ENDIF` into the line (the
+  same for `ELSE`, `ENDIF`, `DO` and the other words a snippet prefix happens to contain). The snippets are now
+  offered only where their statement can start - TP: after the line number, the program skeleton only in a file
+  without one, position records only under `/POS`; KAREL and RAPID: at the start of a statement.
+- **`THEN … ENDIF` from where you are.** With the `IF` and its condition already there, the list offers the rest of
+  the block (`THEN … ENDIF`, `THEN … ELSE … ENDIF`; KAREL and RAPID also `DO … ENDFOR`, `DO … ENDWHILE`, KAREL
+  `OF … ENDSELECT`), and the keyword alone when the block's closing line is already in the file. TP offers `THEN` only
+  after a parenthesised condition, the form that takes it.
+- **An extended comment stays one comment while you edit it.** A line under an `--eg:` line that has no ` ;` yet is
+  the comment's next line, so it gets the `:` head and never a number: Enter in the middle of a comment used to put
+  a terminated `    :   ;` there, which ended the comment and numbered every line under it; text typed under an open
+  `--eg:` line was numbered as an instruction of its own. A blank line in the middle of a comment keeps no ` ;`.
+  (With terminators off - the custom style's default - nothing marks a comment's end, so only `:` lines are taken.)
+- **No line length limit.** An `--eg:` comment line is no longer re-wrapped at 78 columns or flagged for its width:
+  `robotCode.tp.extendedCommentWidth` now defaults to `0` (no limit; set `78` for the pendant's wrapping, CLI
+  `--eg-width 78`). Only a `!` comment's text has a limit (`robotCode.tp.diagnostics.commentLength`, 32).
+- `test/extendedCommentLines.test.ts` covers both.
+- **No bracket one too many.** A `]` or `)` typed into an instruction that has nothing left to close is not added;
+  the caret steps over one that is already there (counted over the whole instruction, wrapped lines included).
+  Picking a register from the list writes its `]`, and typing the
+  `]` out of habit left `R[35:index]]`; an indirect register ended as `R[R[35]]]`. Comments, remarks and strings
+  take any text. `robotCode.tp.guardBrackets` switches it off.- **A long instruction the controller wrapped is one instruction.** A controller writes a long line over several:
+  `28:L P[3] 1000mm/sec FINE` then `:  SPOT[S=1 ] ;`, or an `IF ((... OR` carried on over two `:` lines, with the one
+  ` ;` at the end. The renumber used to finish the first line with a ` ;` and give the `:` lines numbers of their own -
+  two or three instructions where there was one (116 such lines in 62 programs of a 1,152-program V9.40 backup). A
+  `:` line under an unterminated numbered line is now the rest of that line, in a program that ends its lines with
+  ` ;` and has no numberless lines of its own (the scaffold and custom styles are unchanged). No missing-terminator
+  or line-number finding on them either.
+- **A comment in several languages.** `--eg:` is the English text of a comment; `--kn:`, `--jp:`, `--ch:`, `--dn:` are
+  the others, and a comment can start with any of them and carry the rest on its `:` lines. Only `--eg` was known,
+  so a comment starting `--kn:` was split into numbered lines. Any two-letter tag opens one now (also remarked out,
+  `//--kn:`), in the parser, the renumber, the highlighting and the compare; re-wrapping keeps the comment's own tag.
+- **Checked against a controller.** The same things were loaded as `.LS` into a ROBOGUIDE V9.40 virtual controller.
+  It takes a wrapped instruction, a multi-language comment and a 165-character `--eg:` line; it refuses the split form
+  the old renumber wrote, a file whose name differs from `/PROG`, a `]` too many, a line with no number, and - in a
+  Cond program - an assignment, AND mixed with OR, and a sixth condition; a macro with IF and a backward jump loads; a
+  `!comment` over 32 characters is cut off silently. The Knowledge view marks those rules **tested**.
+- **From an independent review.** The compare could call two different programs equal (comment text on a `:` line
+  against the instruction it looks like; a wrapped or circular instruction against its two halves as separate lines):
+  a continuation line now keeps a mark (`…`) where its number field was, and spacing inside a quoted string counts.
+  One stranded `:` line no longer switches wrapped-line handling off for the whole file. A building block asked for
+  on a wrapped line, a circular move or an extended comment goes under the whole of it. A compare pane is not
+  renumbered, bracket-guarded or taken for the program being written. Moving a folder of programs no longer opens
+  each one. An apostrophe in a bracket name (`R[1:a's]`) is not a string to the bracket guard. F2 on `/PROG` writes
+  the header itself and refuses a name that is already a file. `r=`, `r++`, `pr=`, `sr=` can be typed in full again.
+- **A second ` ;` at the end of a line is taken out.** `R[1]=1 ; ;` - a terminator typed where the line already had one - was
+  flagged (the controller refuses it, ASBN-031) but left for the quick fix; the renumber now makes it one when the caret
+  leaves the line. Comments, remarks and strings keep their text; nothing changes with auto-semicolon off.
+- `npm run smoke:editing` (test/runEditing.mjs, test/integrationEditing.js): 63 checks of all of the above in a real
+  VS Code, on a workspace the script writes itself - no backup, corpus or robot needed.
+- `test/snippets.test.ts` covers where each is offered. The snippets moved from `contributes.snippets` into the
+  completion providers, so *Insert Snippet* no longer lists them.
+
 ## 26.119.3 - 2026-11-07
 
 - First Marketplace release of 26.119.1's changes; Studio's non-backup folders (replaced, snapshots, ...) are recognised the same way on a Linux build machine.

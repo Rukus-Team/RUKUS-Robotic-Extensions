@@ -206,6 +206,38 @@ export function parseTp(text: string): TpProgram {
   let lastMotionLine: TpLine | undefined;
   /** inside a `--eg:` extended comment whose ` ;` has not arrived yet */
   let extComment = false;
+  // Does this program end its lines with ` ;`? Then a numbered line WITHOUT one is not finished,
+  // and the `:` line under it is the rest of it - the controller wraps a long instruction that way:
+  //     28:L P[3] 1000mm/sec FINE
+  //       :  SPOT[S=1 ]    ;
+  // In a program written without terminators (the custom style) nothing says so, and a `:`
+  // line stays what it was: an instruction written without its number.
+  // And only in a program that has no numberless lines of its own: where a `:` line also
+  // stands after a FINISHED line (the scaffold / numberless styles write new lines that way),
+  // a `:` line is an instruction, and one under a line still being typed must not be taken
+  // for the rest of it.
+  // (More than the wrapped ones, that is: Enter after a wrapped line's first part strands its :`n  // line under a blank one, and that single line must not switch the rule off for every other
+  // wrapped instruction in the file.)
+  // Whether terminators are in use is read off the lines that END something - every numbered
+  // or `:` line with no `:` line under it. One of them may be without its ` ;` (the line being
+  // typed); more than that, and a fifth of them, and the program is one written without.
+  let ends = 0, unterminated = 0, freeColonLines = 0, wrappedHeads = 0;
+  { let inMn = false, aboveDone = true;
+    for (let k = 0; k < rawLines.length; k++) {
+      const l = rawLines[k];
+      if (/^\/MN\b/.test(l)) { inMn = true; continue; }
+      if (!inMn) continue;
+      if (/^\/(POS|END)\b/.test(l)) break;
+      const done = /;\s*$/.test(l), numbered = /^\s*\d+:/.test(l), colon = !numbered && /^\s*:/.test(l);
+      const colonBelow = /^\s*:/.test(rawLines[k + 1] ?? '');
+      if (numbered || colon) {
+        if (!colonBelow) { ends++; if (!done) unterminated++; }
+        else if (numbered && !done) wrappedHeads++;
+        if (colon && aboveDone) freeColonLines++;
+      }
+      aboveDone = done || l.trim() === '';
+    } }
+  const usesTerminators = ends > 0 && unterminated <= Math.max(1, ends * 0.2) && freeColonLines <= wrappedHeads;
 
   for (let i = 0; i < rawLines.length; i++) {
     const raw = rawLines[i];
@@ -279,7 +311,7 @@ export function parseTp(text: string): TpProgram {
     // number - the editor's numberless style - and is counted and parsed as one.
     const prev = prog.lines[prog.lines.length - 1];
     const openCont = !!prev && prev.line === i - 1 && !/;\s*$/.test(prev.raw) && prev.kind !== 'comment' && prev.kind !== 'remark'
-      && (prev.kind === 'continuation' || /^[CA]\s/.test(prev.body));
+      && (prev.kind === 'continuation' || /^[CA]\s/.test(prev.body) || (usesTerminators && prev.num !== undefined && prev.kind !== 'blank'));
     let bodyCol: number;
     let num: number | undefined;
     if (numbered) { bodyCol = numbered[0].length; num = parseInt(numbered[2], 10); }
@@ -304,8 +336,12 @@ export function parseTp(text: string): TpProgram {
       prog.lines.push(tpLine); continue;
     }
     extComment = false;
-    if (!cont && /^--eg(?::|\b)/i.test(bodyText)) {
-      tpLine.kind = 'comment'; tpLine.ext = true;
+    // The tag is the language of the text: --eg English, --jp, --kn, --ch, --dn ... A comment
+    // written in several languages starts with any of them and carries the others on its `:`
+    // lines (FANUC's own programs start theirs with --kn). `//--kn:` is the same thing remarked out.
+    const extStart = cont ? null : /^(\/\/)?--[a-z]{2}(?::|\b)/i.exec(bodyText);
+    if (extStart) {
+      tpLine.kind = extStart[1] ? 'remark' : 'comment'; tpLine.ext = true;
       tpLine.seq = ++prog.numberedLineCount;
       extComment = !/;\s*$/.test(raw);
       prog.lines.push(tpLine); continue;

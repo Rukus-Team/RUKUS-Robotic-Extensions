@@ -7,7 +7,7 @@
 import { type TpProgram } from './parser';
 import { integerAxisValues } from './teach';
 import { COMMENT_WIDTH, commentOverrun } from './headers';
-import { extCommentColumns, EXT_COMMENT_WIDTH } from './extendedComment';
+import { extCommentColumns } from './extendedComment';
 import { FANUC_PROGRAMS, CATALOG_MACROS } from './syntaxCatalog';
 import { tpStyleChecks } from './style';
 import { DEFAULT_SETTINGS, lineSpan, type LintFinding, type LintRelated, type LintSettings, type LintSeverity } from '@core/lint/types';
@@ -42,6 +42,7 @@ export const CODES = {
   integerAxis: 'tp.integerAxisValue',
   doubleTerminator: 'tp.doubleTerminator',
   missingOperand: 'tp.missingOperand',
+  programName: 'tp.programName',
 } as const;
 
 /**
@@ -86,6 +87,8 @@ export interface TpCheckEnv {
   /** the editor renumbers lines itself: line-number findings would only flicker (a missing terminator is still reported) */
   autoRenumber?: boolean;
   extCommentWidth?: number;
+  /** the file's name without its extension, when the program is a file on disk: /PROG has to say the same */
+  fileName?: string;
   /** cross-reference notes keyed `KIND:index` (needs every program of the robot) */
   xref?: { findings: Map<string, string[]>; self?: string };
   /** CALL targets. Undefined = cannot tell, so nothing is said. */
@@ -133,6 +136,15 @@ export function tpChecks(text: string, prog: TpProgram, env: TpCheckEnv = {}): L
 
   // ---- header ----
   if (!prog.header.name) add(lineRange(0), 'Missing "/PROG <name>" header line.', 'warning', CODES.header);
+  // The file and /PROG name the same program; the quick fixes rename one to the other. The
+  // controller refuses the file otherwise (ASBN-002 on a V9.40 virtual controller, 2026-11-13:
+  // RCFILE.LS holding /PROG RCOTHER did not load under either name). A library of sources that
+  // keeps files under longer names on purpose (FANUC's own product tree does) can switch the rule
+  // off in .robotlint.json.
+  if (env.fileName && prog.header.name && prog.header.nameSpan && prog.header.name.toUpperCase() !== env.fileName.toUpperCase()) {
+    const s = prog.header.nameSpan;
+    add(range(s.line, s.col, s.col + s.len), `/PROG says ${prog.header.name} but the file is named ${env.fileName} - the controller will not load a file whose name differs (ASBN-002). Rename one of them (quick fix).`, 'warning', CODES.programName);
+  }
   if (prog.sections.mn === undefined) { add(lineRange(0), 'Missing "/MN" section.', 'error', CODES.header); return out; }
   if (prog.sections.end === undefined) add(lineRange(lines.length - 1), 'Missing "/END" marker.', 'warning', CODES.header);
 
@@ -197,7 +209,7 @@ export function tpChecks(text: string, prog: TpProgram, env: TpCheckEnv = {}): L
   const blockStack: Array<{ kind: 'IF' | 'FOR'; line: number }> = [];
   const mnLines = prog.lines.filter(l => l.line > prog.sections.mn! && (prog.sections.pos === undefined || l.line < prog.sections.pos) && l.kind !== 'section');
   const commentLimit = setting('tp.diagnostics.commentLength', COMMENT_WIDTH);
-  const extWidth = env.extCommentWidth ?? EXT_COMMENT_WIDTH;
+  const extWidth = env.extCommentWidth ?? 0;   // no limit unless a width is set
   const fineExtra = setting<string[]>('tp.diagnostics.fineRequiredPatterns', []);
   for (let idx = 0; idx < mnLines.length; idx++) {
     const l = mnLines[idx];
@@ -231,7 +243,7 @@ export function tpChecks(text: string, prog: TpProgram, env: TpCheckEnv = {}): L
     const raw = l.raw;
     if (!/;\s*$/.test(raw) && l.kind !== 'blank') {
       const next = mnLines[idx + 1];
-      const isCircFirst = /^[CA]\s/.test(l.body) && next?.kind === 'continuation';
+      const isCircFirst = next?.kind === 'continuation';   // a circular move's second point, or the rest of a wrapped instruction
       // an extended comment ends with one ` ;`, on its last line - but only a `:` continuation
       // is its next line; a second numbered `--eg` line is a new comment and the first one is unterminated
       const extMiddle = l.ext && next?.ext && next.seq === undefined;

@@ -211,7 +211,8 @@ export async function runTree(check: Check): Promise<void> {
 export function runManifest(check: Check, repo: string): void {
   const manifest = JSON.parse(fs.readFileSync(path.join(repo, 'package.json'), 'utf8'));
   const views: Array<{ id: string; name: string; visibility?: string }> = manifest.contributes.views.robotCode;
-  check(views.length <= 4, `the side bar has at most 4 views (${views.map(v => v.name).join(', ')})`);
+  // four robot views, and Knowledge (2026-11-13: asked for as a second panel beside the robot ones)
+  check(views.length <= 5, `the side bar has at most 5 views (${views.map(v => v.name).join(', ')})`);
   check(views[0]?.id === 'robotCode.cell', 'robot first: Cell is the top view');
   const ids = new Set(views.map(v => v.id));
   for (const id of ['robotCode.cell', 'robotCode.backups', 'robotCode.rukusClusters', 'robotCode.snapshot']) check(ids.has(id), `${id} is declared`);

@@ -80,9 +80,21 @@ export function renumber(text: string, opts: RenumberOptions): RenumberResult {
   // does document line `j` continue the line above it? (the parser decides, by context)
   const continues = (j: number) => { const nx = lineAt.get(j); return !!nx && (nx.kind === 'continuation' || (nx.ext === true && nx.seq === undefined)); };
 
+  // An `--eg` comment runs until its ` ;`. While terminators are being written, a line under
+  // an unterminated one that carries no number is therefore the comment's next line, colon or
+  // not (a line just typed, a blank one from Enter): it gets the `:` head, never a number.
+  // Without terminators (the custom style's default) nothing marks the end, so only a `:`
+  // line the parser took as a continuation is one.
+  const isEg = (s: string) => /^\s*(\/\/)?--[a-z]{2}(?::|\b)/i.test(s);
+  const joinable = (j: number) => opts.autoSemicolon && j < posOrEnd && !RE_NUMBERED.test(lines[j]) && !isEg(lines[j]);
+  /** does line `j` continue the line above it, which is (`openExt`) an extended comment line without its terminator? */
+  const follows = (j: number, openExt: boolean) => continues(j) || (openExt && joinable(j));
+  const contHead = (opts.indent ?? '') + ' '.repeat(Math.max(opts.width || 0, 4)) + ':';
+
   const scaffoldW = opts.number === 'scaffold' || opts.number === 'zero' ? scaffoldWidth(lines, mn, posOrEnd, opts.width || 4) : 0;
 
   let n = 0;
+  let extOpen = false;   // the line above belongs to an extended comment and has no ` ;` yet
   for (let i = mn + 1; i < posOrEnd; i++) {
     const raw = lines[i];
     const skip = opts.skipLines?.has(i) ?? false;
@@ -92,8 +104,10 @@ export function renumber(text: string, opts: RenumberOptions): RenumberResult {
     // other `:` line is a numberless instruction - the `spaces` style writes exactly that.
     const colon = numbered ? null : RE_CONT.exec(raw);
     const parsed = colon ? lineAt.get(i) : undefined;
-    const cont = colon && (parsed?.kind === 'continuation' || (parsed?.ext && parsed.seq === undefined)) ? colon : null;
-    const bare = colon && !cont ? colon : null;   // numberless line written with its colon
+    const joins: boolean = !numbered && extOpen && joinable(i);
+    const inExt: boolean = joins || (!!colon && !!parsed?.ext && parsed.seq === undefined);
+    const cont: RegExpExecArray | null = colon && (parsed?.kind === 'continuation' || inExt) ? colon : null;
+    const bare: RegExpExecArray | null = colon && !cont ? colon : null;   // numberless line written with its colon
 
     let body: string;
     let isContinuation = false;
@@ -103,14 +117,28 @@ export function renumber(text: string, opts: RenumberOptions): RenumberResult {
     else body = raw;
 
     const inRange = !opts.lines || (i >= opts.lines.start && i <= opts.lines.end);
-    if (isContinuation) {
-      // never numbered, but may need a terminator
-      const fixed = skip || opts.onlyNew || !inRange ? raw : ensureTerminator(raw, continues(i + 1), opts.autoSemicolon);
+    if (isContinuation || joins) {
+      // never numbered, but may need its `:` head and a terminator
+      let fixed = raw;
+      if (!skip && inRange && !(opts.onlyNew && colon)) {
+        let lined = raw;
+        if (!colon) {
+          // typed without the head: `more words` -> `    :  more words`
+          const t = raw.trim().replace(/\s*;$/, '');
+          lined = contHead + (t ? '  ' + t : '') + (/;\s*$/.test(raw) ? (t ? ' ;' : '   ;') : '');
+        }
+        if (opts.autoSemicolon && !inExt) lined = oneTerminator(lined);   // the last part of a wrapped instruction
+        fixed = ensureTerminator(lined, follows(i + 1, inExt && !/;\s*$/.test(lined)), opts.autoSemicolon);
+      }
       if (fixed !== raw) edits.push({ line: i, newText: fixed });
+      extOpen = inExt && !/;\s*$/.test(fixed);
       continue;
     }
 
     n++;
+    // (the parser's rule: a numberless `:  --eg` line is not an extended comment's first line)
+    const eg: boolean = !bare && isEg(body);
+    extOpen = eg && !/;\s*$/.test(raw);
     if (skip || !inRange) continue;
     if (opts.onlyNew && (numbered || bare)) continue;   // a numberless line with its colon is styled already
 
@@ -142,8 +170,12 @@ export function renumber(text: string, opts: RenumberOptions): RenumberResult {
     // A blank line keeps its prefix when that prefix carries a number: controller format,
     // the zero mode, and scaffold with auto-semicolon on. A spaces/none prefix does not.
     const numberedHead = style === 'show' || style === 'zero' || (style === 'scaffold' && opts.autoSemicolon);
-    const newRaw = withTerminator(head, newBody, continues(i + 1), opts.autoSemicolon, numberedHead);
+    // ` ; ;` at the end - a second ; typed out of habit - is one terminator: the controller refuses
+    // the program otherwise (ASBN-031). Not in a comment or remark, whose text may end in a ; of its own.
+    if (opts.autoSemicolon && !eg && !/^\s*(!|\/\/)/.test(newBody)) newBody = oneTerminator(newBody);
+    const newRaw = withTerminator(head, newBody, follows(i + 1, extOpen), opts.autoSemicolon, numberedHead);
     if (newRaw !== raw) edits.push({ line: i, newText: newRaw });
+    extOpen = eg && !/;\s*$/.test(newRaw);
   }
 
   if (opts.extendedCommentWidth) reflowExtendedComments(lines, prog.lines, mn, posOrEnd, opts, edits);
@@ -176,13 +208,20 @@ function withTerminator(head: string, body: string, nextContinues: boolean, addT
   return head + trimmed + ' ;';
 }
 
+/** `R[1]=1 ; ;` -> `R[1]=1 ;` (a blank line's `   ;` is left as it is) */
+function oneTerminator(s: string): string {
+  return /\S\s*;(\s*;)+\s*$/.test(s.replace(/^\s*\d*:/, '')) || /;(\s*;)+\s*$/.test(s) ? s.replace(/\s*;(\s*;)+\s*$/, ' ;').replace(/^(\s*\d*:)? ;$/, '$1   ;') : s;
+}
+
 function ensureTerminator(raw: string, nextContinues: boolean, enabled: boolean): string {
   if (!enabled) return raw;
   const bodyMatch = /^(\s*\d*:)(.*)$/.exec(raw);
   if (!bodyMatch) return raw;
   const body = bodyMatch[2];
   const trimmed = body.trimEnd();
-  if (trimmed === '') return bodyMatch[1] + '   ;';
+  // a blank line in the middle of an extended comment stays open: a ` ;` here would end the
+  // comment and turn the lines under it into numbered instructions
+  if (trimmed === '') return nextContinues ? bodyMatch[1] + '  ' : bodyMatch[1] + '   ;';
   if (trimmed.endsWith(';')) return raw;
   // The next line continues this one - the second half of a circular move, or the next line
   // of a `--eg:` extended comment - and the terminator belongs on the last line of the
@@ -294,7 +333,7 @@ export function commentScaffold(prev: TpLine | undefined, scaffoldRaw: string): 
   const head = /^(\s*(?:\d+|\s*):)/.exec(scaffoldRaw)?.[1];
   if (!head) return undefined;
   if (prev.ext) {
-    const text = prev.body.replace(/^--eg:?\s*/i, '').replace(/^:\s*/, '').trim();
+    const text = prev.body.replace(/^(\/\/)?--[a-z]{2}:?\s*/i, '').replace(/^:\s*/, '').trim();
     if (!text) return undefined;
     // the continuation head mirrors the number field: `  12:` -> `    :`
     const contHead = head.replace(/\d/g, ' ');

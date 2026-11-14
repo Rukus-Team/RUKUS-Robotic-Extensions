@@ -2365,6 +2365,41 @@
             }
           ]
         },
+        "tp.programName": {
+          "description": "/PROG names a different program than the file does (check, default warning)",
+          "anyOf": [
+            {
+              "enum": [
+                "off",
+                "error",
+                "warning",
+                "info",
+                "hint"
+              ]
+            },
+            {
+              "type": "array",
+              "items": [
+                {
+                  "enum": [
+                    "off",
+                    "error",
+                    "warning",
+                    "info",
+                    "hint"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              ],
+              "minItems": 1,
+              "maxItems": 2
+            }
+          ]
+        },
         "tp.speed": {
           "description": "speeds and CNT values out of range (check, default error)",
           "anyOf": [

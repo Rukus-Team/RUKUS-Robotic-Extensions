@@ -4,7 +4,7 @@
  * code as the extension - renumber.ts, teach.ts, parser.ts - with no vscode import, so a
  * file edited in Notepad++ comes out byte-for-byte as the extension would write it.
  *
- *   node robotcode.js renumber  <file.ls> [--width 4] [--no-semicolon]
+ *   node robotcode.js renumber  <file.ls> [--width 4] [--no-semicolon] [--eg-width 78]
  *   node robotcode.js labels    <file.ls> [--start 10] [--step 10]
  *   node robotcode.js format    <file.ls>      lay /POS out the controller's way
  *   node robotcode.js strip     <file.ls>      a copy without position data, <name>_nopos.ls
@@ -18,7 +18,6 @@ import * as path from 'node:path';
 import { renumber, renumberLabels, applyLineEdits, stripPositions } from '@fanuc/tp/renumber';
 import { formatPositions, applyTeachEdits } from '@fanuc/tp/teach';
 import { parseTp } from '@fanuc/tp/parser';
-import { EXT_COMMENT_WIDTH } from '@fanuc/tp/extendedComment';
 
 function arg(name: string, fallback: number): number {
   const i = process.argv.indexOf(`--${name}`);
@@ -42,7 +41,7 @@ function main(): number {
 
   switch (cmd) {
     case 'renumber': {
-      const r = renumber(text, { width: arg('width', 4), autoSemicolon: !process.argv.includes('--no-semicolon'), updateLineCount: true, extendedCommentWidth: EXT_COMMENT_WIDTH });
+      const r = renumber(text, { width: arg('width', 4), autoSemicolon: !process.argv.includes('--no-semicolon'), updateLineCount: true, extendedCommentWidth: arg('eg-width', 0) });
       write(applyLineEdits(text, r.edits), `renumbered, ${r.lineCount} lines`);
       return 0;
     }

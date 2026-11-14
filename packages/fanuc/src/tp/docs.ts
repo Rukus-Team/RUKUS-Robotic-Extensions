@@ -25,7 +25,7 @@ function add(match: RegExp, title: string, syntax: string, description: string, 
 }
 
 // ---- Comments ----
-add(/^--eg\b/i, 'Extended comment (multi-line)', '--eg:<text>\n    :  <more text> ;',
+add(/^--[a-z]{2}\b/i, 'Extended comment (multi-line)', '--eg:<text>\n    :  <more text> ;',
   'A comment that runs over several lines. The controller ignores it, like a ! comment, but it can hold far more than 32 characters: the text carries on over ":" continuation lines and only the last line carries the " ;".',
   ['Only the first line takes a line number; the continuation lines are part of it.', 'Written from the pendant\'s EDCMD > Comment editor on newer software.']);
 
@@ -388,7 +388,7 @@ export function operandContext(lineText: string, col: number): { word: string; m
   const before = lineText.slice(0, col);
   const head = /^\s*\d*:\s*|^\s*/.exec(before)![0];
   const body = before.slice(head.length);
-  if (/^(!|\/\/|--eg)/.test(body)) return undefined;
+  if (/^(!|\/\/|--[a-z]{2}\b)/i.test(body)) return undefined;
   const m = /(?:^|[\s=<>(),+\-*/])([A-Za-z_]+)$/.exec(body);
   if (!m || m[1].length === body.length) return undefined;
   if (body.lastIndexOf('[') > body.lastIndexOf(']')) return undefined;

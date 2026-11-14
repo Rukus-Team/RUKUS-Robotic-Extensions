@@ -24,6 +24,12 @@ import { registerRapidNavigation } from './navigation';
 import { formatRapid, detectRapidIndent, type RapidIndent } from './format';
 import { rapidRef, rapidRefEntries, rapidRefMarkdown, instructionSnippet, positionalArgs, callContext, PREDEFINED, type RapidRefEntry, type RapidRefArg } from './reference';
 import { config } from '@core/util';
+import { readSnippets, blockTails, blockContinuation, statementStart } from '@core/snippets';
+import { snippetCompletions, continuationCompletions } from '@core/snippetItems';
+import rapidSnippets from '../../../../snippets/rapid.json';
+
+const RAPID_SNIPPETS = readSnippets(rapidSnippets);
+const RAPID_BLOCK_TAILS = blockTails(RAPID_SNIPPETS);
 import { backupRootOf } from '../backupInfo';
 import { backupSignals, liveSignals, signalFits, type IoSignal } from '../signals';
 
@@ -335,6 +341,11 @@ export function registerRapidProviders(ctx: vscode.ExtensionContext, _s: Service
         ...(routine?.data ?? []).map(d => ({ name: d.name, type: d.type, detail: d.detail })),
         ...mods.flatMap(m => m.data.filter(d => m === t.own || d.scope !== 'LOCAL').map(d => ({ name: d.name, type: d.type, detail: d.detail }))),
       ];
+      // `IF x TH`, `WHILE x D`: the statement is already there - the rest of its block, not a second one
+      const cont = blockContinuation('rapid', RAPID_BLOCK_TAILS, { lineCount: doc.lineCount, lineAt: i => doc.lineAt(i).text }, pos.line, pos.character);
+      if (cont) { items.push(...continuationCompletions(cont, pos, 'abb-rapid', true)); seen.add(U(cont.keyword)); }
+      // the snippets, where a statement starts
+      if (statementStart('rapid', doc.lineAt(pos).text, pos.character) !== undefined) items.push(...snippetCompletions(RAPID_SNIPPETS, 'abb-rapid', '8'));
       const c = callContext(textBefore(doc, pos));
       // I/O signals: the backup's EIO.cfg, then whatever connected controllers have read
       let signals: IoSignal[] | undefined;

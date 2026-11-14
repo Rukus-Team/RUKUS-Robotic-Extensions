@@ -17,8 +17,8 @@ const eol = raw.includes('\r\n') ? '\r\n' : '\n';
 const lines = raw.split(/\r?\n/);
 
 const start = lines.findIndex(l => l === '  "activationEvents": [');
-const end = lines.findIndex((l, i) => i > start && l === '    "snippets": [');
-if (start < 0 || end < 0) { console.error('sync-file-icon-manifest: could not find the activationEvents / snippets anchors in package.json'); process.exit(1); }
+const end = lines.findIndex((l, i) => i > start && l === '    "themes": [');
+if (start < 0 || end < 0) { console.error('sync-file-icon-manifest: could not find the activationEvents / themes anchors in package.json'); process.exit(1); }
 
 const { languages, grammars, activation } = manifestBlocks();
 // whatever activates the extension besides a language stays exactly as it was

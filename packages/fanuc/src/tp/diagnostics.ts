@@ -7,6 +7,7 @@ import { autoRenumberMode } from './renumberSettings';
 import { formatPositions } from './teach';
 import { extendedCommentWidth } from './renumberSettings';
 import { tpChecks, CODES, type TpCheckEnv } from './checks';
+import { fileBaseName, programNameProblem } from '../programName';
 import { lintDiagnostics, lintSettingsFor, onDidChangeLintConfig } from '@core/lint/vscodeLint';
 
 export { CODES };
@@ -16,12 +17,14 @@ export function registerTpDiagnostics(ctx: vscode.ExtensionContext, s: FanucServ
   ctx.subscriptions.push(coll);
   const timers = new Map<string, ReturnType<typeof debounce>>();
 
+  // a compare view shows a program with its numbers and terminators taken out: not a program to check
+  const isView = (doc: vscode.TextDocument) => doc.uri.scheme === 'robotcode-clean';
   const run = (doc: vscode.TextDocument) => {
-    if (doc.languageId !== 'fanuc-tp') return;
+    if (doc.languageId !== 'fanuc-tp' || isView(doc)) return;
     coll.set(doc.uri, computeTpDiagnostics(doc, s));
   };
   const schedule = (doc: vscode.TextDocument) => {
-    if (doc.languageId !== 'fanuc-tp') return;
+    if (doc.languageId !== 'fanuc-tp' || isView(doc)) return;
     const key = doc.uri.toString();
     let t = timers.get(key);
     if (!t) { t = debounce(() => run(doc), 350); timers.set(key, t); }
@@ -58,6 +61,7 @@ export function computeTpDiagnostics(doc: vscode.TextDocument, s: FanucServices)
     setting: (key, fallback) => config(key, fallback, doc),
     autoRenumber: autoRenumberMode(doc) !== 'off',
     extCommentWidth: extendedCommentWidth(doc),
+    fileName: doc.uri.scheme === 'file' ? fileBaseName(doc.uri.path) : undefined,
     xref: s.index.programCount > 1 ? { findings: s.index.findings(doc.uri), self: s.index.forUri(doc.uri)?.name } : undefined,
     calls: (s.index.programCount > 0 || robot) && listingKnown ? {
       robot,
@@ -90,6 +94,18 @@ class TpCodeActions implements vscode.CodeActionProvider {
         const a = new vscode.CodeAction('Renumber lines', vscode.CodeActionKind.QuickFix);
         a.command = { command: 'robotCode.tp.renumber', title: 'Renumber lines' }; a.diagnostics = [d]; a.isPreferred = true;
         out.push(a);
+      }
+      if (d.code === CODES.programName && doc.uri.scheme === 'file') {
+        const inProg = doc.getText(d.range), file = fileBaseName(doc.uri.path);
+        const ext = /\.[^./]+$/.exec(doc.uri.path)?.[0] ?? '.ls';
+        const a = new vscode.CodeAction(`Rename the file to ${inProg}${ext}`, vscode.CodeActionKind.QuickFix);
+        a.edit = new vscode.WorkspaceEdit(); a.edit.renameFile(doc.uri, doc.uri.with({ path: doc.uri.path.replace(/[^/]+$/, inProg + ext) })); a.diagnostics = [d];
+        out.push(a);
+        if (!programNameProblem(file)) {
+          const b = new vscode.CodeAction(`Change /PROG to ${file.toUpperCase()}`, vscode.CodeActionKind.QuickFix);
+          b.edit = new vscode.WorkspaceEdit(); b.edit.replace(doc.uri, d.range, file.toUpperCase()); b.diagnostics = [d];
+          out.push(b);
+        }
       }
       if (d.code === CODES.doubleTerminator) {
         const a = new vscode.CodeAction('Keep one " ;"', vscode.CodeActionKind.QuickFix);

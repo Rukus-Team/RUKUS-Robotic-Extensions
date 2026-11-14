@@ -25,3 +25,4 @@ data/karel-reference.json
 public/**
 eslint.config.mjs
 .nvmrc
+snippets/**
