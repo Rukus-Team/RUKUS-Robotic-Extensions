@@ -24,6 +24,7 @@ import { placeBackup, backupManifest, RUKUS_MANIFEST } from '../rukus/store';
 import * as os from 'node:os';
 import { FETCH_KINDS } from './types';
 import { config, windowFolders, setWindowFolders, showRecoverableError } from '../util';
+import { stripTpListingStates } from '../robotContainers';
 import { gated, robotConnectionsEnabled, ROBOT_CONNECTIONS_SETTING } from '../experimental';
 import { createCellView, shownBrands } from '../views/sideBar';
 import { commandRegistrar } from '../commandBoundary';
@@ -387,13 +388,17 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     if (!name) return;
     const c = robots.get(name)!;
     if (!file) {
-      const files = await robots.listFiles(c.profile).catch(() => [] as { name: string }[]);
+      const files = await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Listing ${c.profile.device} on ${name}` },
+        () => robots.listFiles(c.profile).catch(() => [] as { name: string }[]));
       const items = files.length ? files.map(f => ({ label: f.name })) : ['CURPOS.DG', 'PRGSTATE.DG', 'IOSTATE.DG', 'NUMREG.VA', 'POSREG.VA', 'ERRALL.LS', 'SUMMARY.DG', 'MEMORY.DG', 'VERSION.DG'].map(l => ({ label: l }));
       const pick = await vscode.window.showQuickPick(items, { placeHolder: `File on ${name} ${c.profile.device}`, matchOnDescription: true });
       if (!pick) return; file = pick.label;
     }
     fs.invalidate(robotUri(name, c.profile.device, file));
-    const doc = await vscode.workspace.openTextDocument(robotUri(name, c.profile.device, file));
+    const doc = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: `Opening ${file} from ${name}` },
+      () => vscode.workspace.openTextDocument(robotUri(name, c.profile.device, file)));
     await vscode.window.showTextDocument(doc, { preview: true });
   });
 
@@ -415,11 +420,21 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     const target = await vscode.window.showSaveDialog({ defaultUri: vscode.Uri.file(dir ? path.join(dir, fileName) : fileName), title: `Download ${fileName} from ${robot}`, saveLabel: 'Download' });
     if (!target) return;
     try {
-      fs.invalidate(source);   // the copy on the robot now, not the one opened a while ago
-      const data = await vscode.workspace.fs.readFile(source);
-      await vscode.workspace.fs.writeFile(target, data);
-      await ctx.workspaceState.update('robotCode.live.downloadDir', path.dirname(target.fsPath));
-      robots.log(robot, `downloaded ${fileName} (${data.byteLength} bytes) to ${target.fsPath}`);
+      await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Downloading ${fileName} from ${robot}` },
+        async () => {
+          fs.invalidate(source);   // the copy on the robot now, not the one opened a while ago
+          const data = await vscode.workspace.fs.readFile(source);
+          let written: Uint8Array = data;
+          if (config<boolean>('tp.stripListingStatesOnDownload', false) && /\.ls$/i.test(fileName)) {
+            const text = Buffer.from(data).toString('latin1');
+            const stripped = stripTpListingStates(text);
+            if (stripped !== text) written = Buffer.from(stripped, 'latin1');
+          }
+          await vscode.workspace.fs.writeFile(target, written);
+          await ctx.workspaceState.update('robotCode.live.downloadDir', path.dirname(target.fsPath));
+          robots.log(robot, `downloaded ${fileName} (${written.byteLength} bytes) to ${target.fsPath}`);
+        });
     } catch (e: any) {
       void showRecoverableError(`Could not download ${fileName} from ${robot}: ${e?.message ?? e}`, s.output, () => vscode.commands.executeCommand('robotCode.live.downloadFile', arg));
       return;
@@ -459,7 +474,11 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     const prog = brandForFile(target.path)?.indexProgram(target.path, doc.getText())?.name ?? path.basename(target.fsPath).replace(/\.[^.]+$/, '');
     const remote = robotUri(name, c.profile.device, `${prog.toUpperCase()}.LS`);
     fs.invalidate(remote);
-    try { await vscode.workspace.fs.stat(remote); } catch (e: any) { vscode.window.showWarningMessage(`${prog} is not on ${name}: ${e?.message ?? e}`); return; }
+    try {
+      await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Reading ${prog} from ${name}` },
+        () => vscode.workspace.fs.stat(remote));
+    } catch (e: any) { vscode.window.showWarningMessage(`${prog} is not on ${name}: ${e?.message ?? e}`); return; }
     await vscode.commands.executeCommand('vscode.diff', remote, target, `${prog}: ${name} ⟷ local`);
   });
 
@@ -500,7 +519,12 @@ export function registerLive(ctx: vscode.ExtensionContext, s: Services): RobotMa
     const dest = place ? vscode.Uri.file(place.archiveFolder) : vscode.Uri.joinPath(picked![0], `${name}_${stamp}`);
     await vscode.workspace.fs.createDirectory(dest);
     let files: { name: string; isDir: boolean }[];
-    try { files = (await robots.listFiles(c.profile, c.profile.device, undefined, { bulk: true })).filter(f => !f.isDir && match.test(f.name)); }
+    try {
+      const listed = await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Listing ${c.profile.device} on ${name}` },
+        () => robots.listFiles(c.profile, c.profile.device, undefined, { bulk: true }));
+      files = listed.filter(f => !f.isDir && match.test(f.name));
+    }
     catch (e: any) { void showRecoverableError(`Could not list ${c.profile.device} on ${name}: ${e?.message ?? e}. Set an FTP user for listing.`, s.output); return; }
     if (!files.length) { vscode.window.showInformationMessage(`Nothing on ${name} ${c.profile.device} matches ${pattern}.`); return; }
     let ok = 0, failed = 0;

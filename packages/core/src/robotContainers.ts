@@ -426,6 +426,28 @@ export function buildRankComparator(
 
 // ── Text normalization (TP comparison) ──────────────────────────────────────
 
+const TP_DATA_KINDS = 'PR|SR|AR|VR|GP|TIMER|UALM|DR|PL|R|DI|DO|RI|RO|GI|GO|AI|AO|UI|UO|SI|SO|F|M|WI|WO|WSI|WSO|SPI|SPO';
+const TP_LISTING_STATE = new RegExp(`\\b(${TP_DATA_KINDS})\\[(\\d+(?:,\\d+)?):\\s*(ON|OFF|\\*|-?\\d+(?:\\.\\d+)?)\\s*(?::\\s*([^:\\]]*))?\\]`, 'gi');
+
+export function stripTpListingStates(text: string): string {
+  if (!/\[(?:\d+(?:,\d+)?):\s*(?:ON|OFF|\*|-?\d)/i.test(text)) return text;
+  const eol = text.includes('\r\n') ? '\r\n' : '\n';
+  const lines = text.split(/\r?\n/);
+  let inMn = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*\/MN\s*$/i.test(line)) { inMn = true; continue; }
+    if (inMn && /^\s*\/(?:POS|END)\s*$/i.test(line)) { inMn = false; continue; }
+    if (!inMn) continue;
+    if (/^\s*(?:\d+\s*)?(?:!|\/\/|--eg(?::|\b))/i.test(line)) continue;
+    lines[i] = line.replace(TP_LISTING_STATE, (_m, kind: string, index: string, _state: string, comment: string | undefined) => {
+      const c = (comment ?? '').replace(/^\s+/, '');
+      return c ? `${kind}[${index}:${c}]` : `${kind}[${index}]`;
+    });
+  }
+  return lines.join(eol);
+}
+
 /**
  * Normalize a TP .ls file for comparison against another copy.
  * Strips line-number fields, blanks LINE_COUNT, normalizes whitespace and terminators.
@@ -433,7 +455,7 @@ export function buildRankComparator(
  */
 export function normalizeTpForCompare(text: string): string {
   // 1. Normalize line endings + strip trailing whitespace globally
-  let t = text.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '');
+  let t = stripTpListingStates(text).replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '');
 
   // 2. Find /MN section bounds (simple scan, no parser)
   const lines = t.split('\n');

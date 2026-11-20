@@ -39,6 +39,15 @@ export function registerTpProviders(ctx: vscode.ExtensionContext, s: FanucServic
       completion.macroMode = { uri: uri ?? ed?.document.uri.toString() ?? '', line: line ?? ed?.selection.active.line ?? -1 };
       await vscode.commands.executeCommand('editor.action.triggerSuggest');
     }),
+    vscode.commands.registerCommand('robotCode.tp.showDataReferences', async (uriString: string, line: number, col: number) => {
+      if (typeof uriString !== 'string' || typeof line !== 'number' || typeof col !== 'number') return;
+      const uri = vscode.Uri.parse(uriString);
+      const doc = await vscode.workspace.openTextDocument(uri);
+      const target = targetAt(s.tp.get(doc), new vscode.Position(line, col));
+      if (!target || target.kind !== 'data') return;
+      const locs = await dataSitesOf(s, doc, target.ref, config<boolean>('tp.references.includeSnapshot', false));
+      await vscode.commands.executeCommand('editor.action.showReferences', uri, new vscode.Position(line, col), locs);
+    }),
     vscode.languages.registerHoverProvider(SEL, new TpHover(s)),
     vscode.languages.registerDefinitionProvider(SEL, new TpDefinition(s)),
     vscode.languages.registerReferenceProvider(SEL, new TpReferences(s)),
@@ -99,6 +108,45 @@ function dataLocations(prog: TpProgram, uri: vscode.Uri, ref: TpDataRef): vscode
   return prog.dataRefs.filter(d => d.kind === ref.kind && d.index === ref.index).map(d => new vscode.Location(uri, spanToRange(d.span)));
 }
 
+interface SnapshotTpProgram { uri: vscode.Uri; prog: TpProgram }
+
+const snapshotProgramCache = new Map<string, { mtimeMs: number; prog: TpProgram }>();
+
+async function dataSnapshotPrograms(s: FanucServices, doc: vscode.TextDocument): Promise<SnapshotTpProgram[]> {
+  if (doc.uri.scheme !== 'file') return [];
+  const group = s.index.groupOf(doc.uri);
+  const open = new Map(vscode.workspace.textDocuments.map(d => [d.uri.toString().toLowerCase(), d]));
+  const out: SnapshotTpProgram[] = [];
+  for (const p of s.index.list(doc.uri)) {
+    if (!p.reference || p.kind !== 'tp' || p.group !== group || !/\.ls$/i.test(p.uri.fsPath)) continue;
+    const od = open.get(p.uri.toString().toLowerCase());
+    if (od) { out.push({ uri: p.uri, prog: s.tp.get(od) }); continue; }
+    try {
+      const st = await fs.promises.stat(p.uri.fsPath);
+      const key = p.uri.toString().toLowerCase();
+      const hit = snapshotProgramCache.get(key);
+      let prog: TpProgram;
+      if (hit && hit.mtimeMs === st.mtimeMs) prog = hit.prog;
+      else {
+        prog = parseTp(await fs.promises.readFile(p.uri.fsPath, 'latin1'));
+        snapshotProgramCache.set(key, { mtimeMs: st.mtimeMs, prog });
+      }
+      out.push({ uri: p.uri, prog });
+    } catch { continue; }
+  }
+  return out;
+}
+
+function dedupeLocations(locs: vscode.Location[]): vscode.Location[] {
+  const seen = new Set<string>();
+  return locs.filter(l => {
+    const key = `${l.uri.toString()}|${l.range.start.line}:${l.range.start.character}:${l.range.end.line}:${l.range.end.character}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /**
  * Every use of `DO[12]` (any register or I/O) in the robot the file belongs to - not just the
  * open program (beta list 4, item 10). "The robot" is the file's backup group in the index
@@ -106,7 +154,7 @@ function dataLocations(prog: TpProgram, uri: vscode.Uri, ref: TpDataRef): vscode
  * the index has not finished reading still finds its neighbours. An open document is read
  * from the editor, so unsaved edits count; the rest are parsed from disk.
  */
-async function dataSitesOf(s: FanucServices, doc: vscode.TextDocument, ref: TpDataRef): Promise<vscode.Location[]> {
+async function dataSitesOf(s: FanucServices, doc: vscode.TextDocument, ref: TpDataRef, includeSnapshot = false): Promise<vscode.Location[]> {
   const files = new Map<string, vscode.Uri>();
   const add = (u: vscode.Uri) => { if (!files.has(u.toString().toLowerCase())) files.set(u.toString().toLowerCase(), u); };
   add(doc.uri);
@@ -127,7 +175,10 @@ async function dataSitesOf(s: FanucServices, doc: vscode.TextDocument, ref: TpDa
     else { try { prog = parseTp(await fs.promises.readFile(uri.fsPath, 'latin1')); } catch { continue; } }
     out.push(...dataLocations(prog, uri, ref));
   }
-  return out;
+  if (includeSnapshot) {
+    for (const p of await dataSnapshotPrograms(s, doc)) out.push(...dataLocations(p.prog, p.uri, ref));
+  }
+  return dedupeLocations(out);
 }
 
 /** Where a program name resolves: the index, else the robot the file was opened from. */
@@ -209,6 +260,8 @@ export function dataHover(s: FanucServices, prog: TpProgram, ref: TpDataRef, uri
   }
   const uses = prog.dataRefs.filter(d => d.kind === ref.kind && d.index === ref.index).length;
   lines.push('', `_${uses} use${uses === 1 ? '' : 's'} in this program._`);
+  const refCmd = `command:robotCode.tp.showDataReferences?${encodeURIComponent(JSON.stringify([uri.toString(), ref.span.line, ref.span.col]))}`;
+  lines.push('', `[$(references) Find all references](${refCmd})`);
   if (kd) lines.push('', kd.description, kd.range ? `\n_${kd.range}_` : '');
   return md(...lines);
 }
@@ -363,7 +416,7 @@ class TpReferences implements vscode.ReferenceProvider {
     switch (t.kind) {
       case 'label': return labelLocations(prog, doc.uri, t.num, ctx.includeDeclaration);
       case 'position': return positionLocations(prog, doc.uri, t.index, ctx.includeDeclaration);
-      case 'data': return dataSitesOf(this.s, doc, t.ref);
+      case 'data': return dataSitesOf(this.s, doc, t.ref, config<boolean>('tp.references.includeSnapshot', false));
       case 'call': return callSitesOf(this.s, t.name, doc.uri);
       case 'program': return callSitesOf(this.s, t.name, doc.uri);
       case 'macro': return prog.macros.filter(m => m.name === t.name).map(m => new vscode.Location(doc.uri, spanToRange(m.span)));
@@ -718,18 +771,6 @@ class TpCodeLens implements vscode.CodeLensProvider {
       out.push(new vscode.CodeLens(spanToRange(l.span), locs.length
         ? { title: `${locs.length} jump${locs.length === 1 ? '' : 's'}`, command: 'editor.action.showReferences', arguments: [doc.uri, new vscode.Position(l.span.line, l.span.col), locs] }
         : { title: 'no jumps', command: 'robotCode.tp.gotoLabel' }));
-    }
-    if (prog.header.name && prog.header.nameSpan) {
-      const callers = this.s.index.callers(prog.header.name, doc.uri);
-      const lens = new vscode.CodeLens(spanToRange(prog.header.nameSpan));
-      lens.command = {
-        title: callers.length ? `called from ${callers.length} program${callers.length === 1 ? '' : 's'}` : 'no callers indexed',
-        command: callers.length ? 'robotCode.tp.showCallers' : 'robotCode.tp.showCallGraph',
-        arguments: [doc.uri, prog.header.name],
-      };
-      out.push(lens);
-      const callees = new Set(prog.calls.map(c => c.name.toUpperCase()));
-      if (callees.size) out.push(new vscode.CodeLens(spanToRange(prog.header.nameSpan), { title: `calls ${callees.size} program${callees.size === 1 ? '' : 's'}`, command: 'robotCode.tp.showCallGraph', arguments: [doc.uri] }));
     }
     return out;
   }

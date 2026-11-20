@@ -119,7 +119,7 @@ export function programNameFromUri(uri: vscode.Uri): string {
  */
 export const HOVER_COMMANDS: readonly string[] = [
   'robotCode.data.addBackupFolder', 'robotCode.karel.showReference',
-  'robotCode.live.getTasks', 'robotCode.tp.insertRegisterComment',
+  'robotCode.live.getTasks', 'robotCode.tp.insertRegisterComment', 'robotCode.tp.showDataReferences',
 ];
 
 /** Trust for a hover: its links may run HOVER_COMMANDS and nothing else. */

@@ -327,6 +327,7 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
         files: snapshotFileTimes(marker.snapshotDir, now),
       });
       await refreshAfterSnapshot();
+      void vscode.window.showInformationMessage(`Snapshot of ${marker.name}: ${count} files from ${path.basename(srcDir)}.`);
       vscode.window.setStatusBarMessage(`RUKUS: ${marker.name} snapshot — ${count} files from ${path.basename(srcDir)}`, 5000);
     } catch (e: unknown) {
       void showRecoverableError(`Snapshot failed: ${e instanceof Error ? e.message : String(e)}`, s.output, () => vscode.commands.executeCommand('robotCode.data.snapshotFromBackup', node));
@@ -382,8 +383,12 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
       fs.mkdirSync(tmpDir, { recursive: true });
       const matchAll = globToRegExp('*.*');  // a complete, verbatim backup
       let files: { name: string; isDir: boolean }[];
-      try { files = (await live.listFiles(profile, profile.device, undefined, { bulk: true })).filter(f => !f.isDir && matchAll.test(f.name)); }
-      catch (e: unknown) {
+      try {
+        const listed = await vscode.window.withProgress(
+          { location: vscode.ProgressLocation.Notification, title: `Listing ${profile.device} on ${profile.name}` },
+          () => live.listFiles(profile, profile.device, undefined, { bulk: true }));
+        files = listed.filter(f => !f.isDir && matchAll.test(f.name));
+      } catch (e: unknown) {
         void showRecoverableError(`Could not list ${profile.device} on ${profile.name}: ${e instanceof Error ? e.message : String(e)}`, s.output, () => vscode.commands.executeCommand('robotCode.data.snapshotFromRobot', node));
         return;
       }
@@ -426,6 +431,8 @@ export function registerContainerCommands(ctx: vscode.ExtensionContext, s: Servi
       });
       await refreshAfterSnapshot();
       live.log(profile.name, `snapshot into ${marker.name}: ${ok} files, ${failed} failed`);
+      if (failed) void vscode.window.showWarningMessage(`Snapshot of ${marker.name}: ${ok} files from ${profile.name}, ${failed} failed.`, 'Open Output').then(p => { if (p) s.output.show(true); });
+      else void vscode.window.showInformationMessage(`Snapshot of ${marker.name}: ${ok} files from ${profile.name}.`);
       vscode.window.setStatusBarMessage(`RUKUS: ${marker.name} snapshot — ${ok} files from ${profile.name}${failed ? `, ${failed} failed (see Output)` : ''}`, 5000);
     } catch (e: unknown) {
       try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* best effort */ }

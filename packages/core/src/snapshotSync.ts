@@ -23,7 +23,7 @@ import {
   readSnapshotFile, writeSnapshotFile, pushSnapshotFileToHistory,
   pruneSnapshotHistory, listSnapshotFiles, snapshotRelKey, readProvenance, writeProvenance,
   verbatimCompare, readSnapshotProgram, roundTripCompare, findSnapshotProgram, isCompiledProgram,
-  pairedProgramName, shouldFetchCompiledPartner, type VerbatimDiff, type RobotMarker, type SnapshotProvenance,
+  pairedProgramName, shouldFetchCompiledPartner, stripTpListingStates, type VerbatimDiff, type RobotMarker, type SnapshotProvenance,
 } from './robotContainers';
 import { snapshotRefFor } from './containerCompare';
 import { isMissingOnRobotError } from './live/connectionHints';
@@ -247,7 +247,7 @@ export interface FetchProgress {
  */
 export async function fetchFilesFromRobot(
   s: Services, marker: RobotMarker, conn: RobotConnection, deviceNames: string[], progress?: FetchProgress,
-  listing?: Array<{ name: string; size?: number; mtime?: number }>,
+  listing?: Array<{ name: string; size?: number; mtime?: number }>, opts: { forceRead?: boolean } = {},
 ): Promise<FetchOutcome> {
   const live = s.live;
   if (!live) return { ok: 0, failed: 0, changed: 0, unchanged: 0, errors: ['no robot connection'] };
@@ -255,7 +255,7 @@ export async function fetchFilesFromRobot(
   const at = new Date();
   const out: FetchOutcome = { ok: 0, failed: 0, changed: 0, unchanged: 0, errors: [] };
   const provBefore = readProvenance(marker.root);
-  const mode = config<string>('containers.unchangedCheck', 'auto');
+  const mode = opts.forceRead ? 'never' : config<string>('containers.unchangedCheck', 'auto');
   const sizes = new Map((listing ?? []).map(f => [f.name.toUpperCase(), f]));
   const skipped = new Set<string>();
   const toRead: string[] = [];
@@ -381,9 +381,10 @@ function defaultProvenance(marker: RobotMarker, at: Date): SnapshotProvenance {
  * Replace the working file with the given text in one undoable step: through the editor when
  * the file is open, else written straight to disk and the editor reloaded if it appears.
  */
-export async function writeWorkingCopy(uri: vscode.Uri, text: string, eol: '\n' | '\r\n', opts: { preserveFocus?: boolean } = {}): Promise<void> {
+export async function writeWorkingCopy(uri: vscode.Uri, text: string, eol: '\n' | '\r\n', opts: { preserveFocus?: boolean; stripListingStates?: boolean } = {}): Promise<void> {
+  const body = opts.stripListingStates && /\.ls$/i.test(uri.fsPath) ? stripTpListingStates(text) : text;
   const open = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
-  const normalised = text.replace(/\r\n?/g, eol);
+  const normalised = body.replace(/\r\n?/g, eol);
   if (open) {
     const editor = await vscode.window.showTextDocument(open, { preserveFocus: !!opts.preserveFocus });
     const whole = new vscode.Range(0, 0, open.lineCount, 0);
@@ -391,15 +392,15 @@ export async function writeWorkingCopy(uri: vscode.Uri, text: string, eol: '\n' 
     await open.save();
     return;
   }
-  const eolForFile = text.includes('\r\n') ? '\r\n' : eol;
-  await vscode.workspace.fs.writeFile(uri, Buffer.from(text.replace(/\r\n?/g, eolForFile), 'latin1'));
+  const eolForFile = body.includes('\r\n') ? '\r\n' : eol;
+  await vscode.workspace.fs.writeFile(uri, Buffer.from(body.replace(/\r\n?/g, eolForFile), 'latin1'));
 }
 
 /** Revert the working copy from the snapshot. Returns false when the snapshot has no copy. */
 export async function revertFromSnapshot(s: Services, marker: RobotMarker, fileName: string, uri: vscode.Uri): Promise<boolean> {
   const snap = snapshotCopy(s, marker, fileName);
   if (snap === undefined) return false;
-  await writeWorkingCopy(uri, snap, '\n');
+  await writeWorkingCopy(uri, snap, '\n', { stripListingStates: config<boolean>('tp.stripListingStatesOnPull', false) });
   clearRobotCompare(uri.fsPath);
   await s.index.refreshUri(uri);
   comparedChanged.fire();
@@ -519,7 +520,7 @@ export async function completePush(s: Services, marker: RobotMarker, conn: Robot
       opts.onPhase?.('Syncing the working copy');
       if (opts.cancelPull?.()) pullError = 'cancelled';
       else {
-        try { await writeWorkingCopy(vscode.Uri.file(opts.workingPath), back, '\n', { preserveFocus: opts.preserveFocus }); pulled = true; }
+        try { await writeWorkingCopy(vscode.Uri.file(opts.workingPath), back, '\n', { preserveFocus: opts.preserveFocus, stripListingStates: config<boolean>('tp.stripListingStatesOnPull', false) }); pulled = true; }
         catch (e) { pullError = e instanceof Error ? e.message : String(e); }
       }
     }

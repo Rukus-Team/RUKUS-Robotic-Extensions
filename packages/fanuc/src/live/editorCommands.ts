@@ -764,7 +764,7 @@ ${file} goes to ${c.profile.device} on ${name} (${c.profile.host}) over FTP. If 
       `${progName} is on ${name}, but the controller's copy differs from what you sent (${verdict}). Your working file was left unchanged.`,
       'Pull Robot Copy', 'Show Diff');
     if (pick === 'Pull Robot Copy') {
-      await writeWorkingCopy(target, robotText, '\n');
+      await writeWorkingCopy(target, robotText, '\n', { stripListingStates: config<boolean>('tp.stripListingStatesOnPull', false) });
       await s.index.refreshUri(target);
       comparedChanged.fire();
       vscode.window.setStatusBarMessage(`$(cloud-upload) ${progName}: working copy synced to ${name}'s copy · Ctrl+Z undoes it`, 8000);
@@ -813,9 +813,11 @@ async function restorePrePush(s: FanucServices, robots: RobotManager, uri?: vsco
   const progName = file.replace(/\.[^.]+$/, '').toUpperCase();
   const data = Buffer.from(backup.text.replace(/\r?\n/g, '\r\n'), 'latin1');
   try {
-    const snapPath = await robots.withTransfer(name,
-      { kind: 'restore', label: `Restore ${file} → ${name}`, file },
-      () => withSyncLock(marker.root.toLowerCase(), () => robots.withSession(c.profile, c.profile.device, async session => {
+    const snapPath = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: `Restoring ${file} on ${name}` },
+      () => robots.withTransfer(name,
+        { kind: 'restore', label: `Restore ${file} �+' ${name}`, file },
+        () => withSyncLock(marker.root.toLowerCase(), () => robots.withSession(c.profile, c.profile.device, async session => {
         await robots.verifyIdentity(name, session);
         await robots.fetch(name, ['tasks'], session).catch(() => undefined);
         const active = robots.activeTpTasks().find(t => t.robot === name && t.task.stack.some(f => f.program.toUpperCase() === progName));
@@ -829,13 +831,14 @@ async function restorePrePush(s: FanucServices, robots: RobotManager, uri?: vsco
         const rel = recordSnapshotFile(s, marker, file, back);
         robots.log(name, `RESTORE ${file} from the pre-push copy (${data.length} bytes)`);
         return path.join(marker.snapshotDir, rel);
-      }, { write: true })));
+      }, { write: true }))));
     if (snapPath === undefined) return;
     if (typeof snapPath !== 'string') { await showRefused(s, c.profile, undefined, file, progName, snapPath.refused); return; }
     await s.index.refreshUri(vscode.Uri.file(snapPath));
     await s.containers.refresh();
     comparedChanged.fire();
     vscode.window.setStatusBarMessage(`$(history) ${file} restored on ${name} from the pre-push copy`, 8000);
+    void vscode.window.showInformationMessage(`Restored ${file} on ${name} from the pre-push copy.`);
   } catch (e: any) {
     const why = e?.message ?? String(e);
     const hint = connectionHint(why, c.profile);

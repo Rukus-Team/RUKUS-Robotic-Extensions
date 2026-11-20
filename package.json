@@ -2,7 +2,7 @@
   "name": "robot-code",
   "displayName": "RUKUS Robotic Extensions — FANUC & ABB (Beta)",
   "description": "BETA - in active development, not yet proven on a live cell. One extension for FANUC and ABB robots: FANUC TP (.ls) and KAREL (.kl), ABB RAPID (.mod/.sys/.prg) with hover docs, go-to-definition, diagnostics, linting, flowcharts and call graphs; controller backups and live controllers (FANUC over HTTP/FTP, ABB IRC5 and OmniCore over Robot Web Services) with registers, RAPID data, I/O, alarms and positions; ktrans integration and the RUKUS desktop app.",
-  "version": "26.119.8",
+  "version": "26.119.9",
   "publisher": "rukus-team",
   "license": "MIT",
   "repository": {
@@ -732,6 +732,11 @@
         "command": "robotCode.tp.stripPositions",
         "title": "Copy Program Without Position Data",
         "category": "FANUC TP"
+      },
+      {
+        "command": "robotCode.tp.removeListingStates",
+        "title": "Remove Listing States (ON/OFF from download)",
+        "category": "RUKUS"
       },
       {
         "command": "robotCode.tp.showCallGraph",
@@ -2168,6 +2173,11 @@
         {
           "command": "robotCode.tp.stripPositions",
           "group": "c@1"
+        },
+        {
+          "command": "robotCode.tp.removeListingStates",
+          "when": "!editorReadonly",
+          "group": "c@1a"
         },
         {
           "command": "robotCode.tp.showCallGraph",
@@ -3700,7 +3710,22 @@
         "robotCode.tp.codeLens": {
           "type": "boolean",
           "default": true,
-          "description": "Show CodeLens on labels (jump count) and on the program header (call sites)."
+          "description": "Show CodeLens on labels (jump count)."
+        },
+        "robotCode.tp.references.includeSnapshot": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "When Find All References opens on a data/IO reference, include every `.ls` in the snapshot of the robot linked to the program. Other robots and other working programs are not included."
+        },
+        "robotCode.tp.stripListingStatesOnPull": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Remove the export-time state from `.ls` data/IO references when a pull writes a working copy, e.g. `F[537:OFF:vision_init]` becomes `F[537:vision_init]`. The snapshot stays exactly as downloaded. Use **RUKUS: Remove Listing States** to clean a file by hand."
+        },
+        "robotCode.tp.stripListingStatesOnDownload": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Remove the export-time state from a `.ls` saved by **Download** from a controller. Snapshots and backup exports stay byte-for-byte as downloaded."
         },
         "robotCode.karel.ktransPath": {
           "type": "string",
@@ -3975,7 +4000,7 @@
         "robotCode.containers.guardUpload": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Before a push, fetch the program from the robot and compare it to the snapshot **normalized**. Line numbers and metadata (DATE/MODIFIED) are not a change; real text is. If they differ, someone changed the program on the pendant since the last fetch; the push is refused until the snapshot is updated, so uncaptured robot changes are never silently overwritten."
+          "markdownDescription": "Before a push, fetch the program from the robot and compare it to the snapshot **normalized**. Line numbers, download listing states and metadata (DATE/MODIFIED) are not a change; real text is. If they differ, someone changed the program on the pendant since the last fetch; the push is refused until the snapshot is updated, so uncaptured robot changes are never silently overwritten."
         },
         "robotCode.containers.prePushBackup": {
           "type": "boolean",

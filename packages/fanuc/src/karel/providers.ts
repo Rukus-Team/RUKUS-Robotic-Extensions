@@ -15,7 +15,7 @@ import { spanToRange, config, md, debounce } from '@core/util';
 import { karelNameLimits, karelCoreVersionOf, type KarelCoreVersion, type KarelNameLimits } from './lint';
 import { compileKarel, ktransDiagnostics, findKtrans } from './ktrans';
 import { detectTabWidth } from './tabWidth';
-import { karelSupportDirs } from './includes';
+import { includedPrograms, karelSupportDirs } from './includes';
 import { karelChecks } from './checks';
 import { lintDiagnostics, lintSettingsFor, onDidChangeLintConfig } from '@core/lint/vscodeLint';
 
@@ -246,11 +246,65 @@ function refsOf(prog: KProgram, uri: vscode.Uri, upper: string, atLine: number):
   return out;
 }
 
+let karelIncludeDirsCache: string[] | undefined;
+function karelIncludeDirs(): string[] {
+  if (karelIncludeDirsCache) return karelIncludeDirsCache;
+  const ini = config<string>('karel.ktransConfig', '').trim();
+  let robotIni: string | undefined;
+  if (ini) try { robotIni = fs.readFileSync(ini, 'latin1'); } catch { robotIni = undefined; }
+  return (karelIncludeDirsCache = karelSupportDirs(findKtrans(), robotIni));
+}
+
+function dedupeKarelLocations(locs: vscode.Location[]): vscode.Location[] {
+  const seen = new Set<string>();
+  return locs.filter(l => {
+    const key = `${l.uri.toString()}|${l.range.start.line}:${l.range.start.character}:${l.range.end.line}:${l.range.end.character}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function includeRoutineLocations(doc: vscode.TextDocument, prog: KProgram, upper: string): vscode.Location[] {
+  if (doc.isUntitled || doc.uri.scheme !== 'file') return [];
+  const inc = includedPrograms(prog, path.dirname(doc.uri.fsPath), karelIncludeDirs());
+  if (!inc.complete) return [];
+  const routine = prog.routines.some(r => r.upper === upper)
+    || inc.programs.some(p => p.prog.routines.some(r => r.upper === upper && !r.from));
+  if (!routine) return [];
+  const out: vscode.Location[] = [];
+  for (const p of inc.programs) {
+    const uri = vscode.Uri.file(p.file);
+    for (const r of p.prog.routines) if (r.upper === upper && !r.from) out.push(new vscode.Location(uri, spanToRange(r.span)));
+    for (const r of p.prog.refs) if (r.upper === upper) out.push(new vscode.Location(uri, spanToRange(r.span)));
+  }
+  return out;
+}
+
+async function fromVariableLocations(s: FanucServices, doc: vscode.TextDocument, sym: KSymbol, upper: string): Promise<vscode.Location[]> {
+  if (sym.kind !== 'variable' || !sym.from) return [];
+  const info = s.index.get(sym.from, doc.uri);
+  if (!info || info.reference || !/\.kl$/i.test(info.uri.fsPath)) return [];
+  try {
+    const other = await vscode.workspace.openTextDocument(info.uri);
+    const op = s.karel.get(other);
+    if (op.compiled) return [];
+    const provider = op.symbols.find(x => x.upper === upper && x.kind === 'variable' && !x.scope && !x.from);
+    return provider ? refsOf(op, info.uri, upper, provider.line) : [];
+  } catch { return []; }
+}
+
 class KReferences implements vscode.ReferenceProvider {
   constructor(private s: FanucServices) {}
-  provideReferences(doc: vscode.TextDocument, pos: vscode.Position): vscode.Location[] {
+  async provideReferences(doc: vscode.TextDocument, pos: vscode.Position): Promise<vscode.Location[]> {
     const w = wordAt(doc, pos); if (!w || w.word.startsWith('$')) return [];
-    return refsOf(this.s.karel.get(doc), doc.uri, w.word.toUpperCase(), pos.line);
+    const prog = this.s.karel.get(doc);
+    const upper = w.word.toUpperCase();
+    const out = refsOf(prog, doc.uri, upper, pos.line);
+    const sym = resolveSymbol(prog, upper, pos.line);
+    if (sym?.kind === 'variable' && sym.from) out.push(...await fromVariableLocations(this.s, doc, sym, upper));
+    else if (!sym || sym.kind === 'routine') out.push(...includeRoutineLocations(doc, prog, upper));
+    return dedupeKarelLocations(out);
   }
 }
 class KHighlights implements vscode.DocumentHighlightProvider {

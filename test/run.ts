@@ -9,6 +9,7 @@ import * as path from 'node:path';
 import { registerBrand } from '@core/brand';
 import { fanucBrand } from '@fanuc/brand';
 import { parseTp, frameLabel, frameHintFields, describePosition, positionMarkdown, isIndirectLabelIndex } from '@fanuc/tp/parser';
+import { stripListingStates } from '@fanuc/tp/listingStates';
 import { renumber, applyLineEdits, renumberLabels, commentScaffold } from '@fanuc/tp/renumber';
 import { reflowExtendedComment, extCommentColumns, extCommentText, wrapWords } from '@fanuc/tp/extendedComment';
 import { buildFlow, flowToMermaid, edgeText, edgeCaption } from '@fanuc/tp/flow';
@@ -23,7 +24,7 @@ import { parseCurPos, parsePrgState, parseIoState, parseAlarms, parseControllerI
 import { planTeach, planRewriteBlock, applyTeachEdits, sourceFromCurrentPosition, buildPositionBlock, posSectionBounds, nextFreePositionIndex, planOffset, parseAxisOffsets, positionDistance, planFrameShift, planMirror, planRelabelFrames } from '@fanuc/tp/teach';
 import { planRemap, planExtract, planInline, planCombine, applyLineChanges } from '@fanuc/tp/refactor';
 import { lintKarel, countArgs, LINT_CODES, identifierLengthIssues, karelNameLimits, karelCoreVersionOf } from '@fanuc/karel/lint';
-import { includedNames } from '@fanuc/karel/includes';
+import { includedNames, includedPrograms } from '@fanuc/karel/includes';
 import { detectTabWidth, indentWidth } from '@fanuc/karel/tabWidth';
 import { LIST_LIMIT_JS } from '@core/webviewStyle';
 import { convertUserFrame, convertToolFrame, toPose, fromPose, mirror, sameOrientation, IDENTITY } from '@fanuc/tp/frameMath';
@@ -51,7 +52,7 @@ import { run as runProgramTemplates } from './programTemplates.test';
 import {
   parseRobotJson, parseCellJson, classifyPath, markerOf, markersWithOverlap,
   normalizeTpForCompare, normalizeKarelForCompare, normalizedTextHash, lineDiffCount,
-  stripTpMetadata, roundTripCompare,
+  stripTpMetadata, roundTripCompare, stripTpListingStates,
   buildRankComparator,
   copySnapshot, readProvenance, writeProvenance,
   underPath, ROBOT_DIR, CELL_DIR, SNAPSHOT_DIR, ROBOT_JSON, CELL_JSON,
@@ -344,6 +345,9 @@ console.log(`KAREL undeclared check: ${kJudged} programs judged, ${kUndeclared.l
   check(add?.returnType === 'INTEGER', 'karel add return type');
   check(add?.endLine === 22, `karel add endLine ${add?.endLine}`);
   check(prog.routines.find(r => r.upper === 'EXT_RTN')?.from === 'other_prog', 'karel FROM');
+  const fromVar = parseKarel('PROGRAM main\nVAR\n  counter FROM provider : INTEGER\nBEGIN\n  counter = 1\nEND main\n');
+  const counter = fromVar.symbols.find(s => s.upper === 'COUNTER');
+  check(counter?.kind === 'variable' && counter.from === 'provider', `karel variable FROM: ${JSON.stringify(counter)}`);
   check(prog.symbols.some(s => s.kind === 'structure' && s.upper === 'ITEM_T' && s.fields?.length === 2), 'karel structure fields');
   check(prog.symbols.some(s => s.kind === 'constant' && s.upper === 'GREETING' && s.value?.includes('not a comment')), 'karel string const with --');
   check(prog.diagnostics.filter(d => d.code === 'karel.unbalanced').length === 0, `karel balanced: ${JSON.stringify(prog.diagnostics)}`);
@@ -354,6 +358,25 @@ console.log(`KAREL undeclared check: ${kJudged} programs judged, ${kUndeclared.l
   const longName = parseKarel('PROGRAM x\nVAR\n  this_name_is_way_too_long : INTEGER\nBEGIN\nEND x');
   check(identifierLengthIssues(longName, karelNameLimits('V6')).length === 1, 'karel ident length: 25 characters is too long on V6');
   check(identifierLengthIssues(longName, karelNameLimits('V9')).length === 0, 'karel ident length: 25 characters is fine on V9');
+}
+
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rc-karel-includes-'));
+  try {
+    fs.writeFileSync(path.join(dir, 'MAIN.kl'), 'PROGRAM main\n%INCLUDE INC\nBEGIN\n  CALL_WORK\nEND main\n');
+    fs.writeFileSync(path.join(dir, 'INC.kl'), 'ROUTINE CALL_WORK\nBEGIN\nEND CALL_WORK\n');
+    fs.writeFileSync(path.join(dir, 'NESTED.kl'), '%INCLUDE INC\n');
+    const main = parseKarel(fs.readFileSync(path.join(dir, 'MAIN.kl'), 'utf8'));
+    const inc = includedPrograms(main, dir, []);
+    check(inc.complete && inc.programs.length === 1 && inc.programs[0].prog.routines.some(r => r.upper === 'CALL_WORK'), `includedPrograms exposes routine declarations: ${JSON.stringify(inc.programs.map(p => p.file))}`);
+    const nested = parseKarel('%INCLUDE NESTED\n');
+    const deep = includedPrograms(nested, dir, []);
+    check(deep.complete && deep.programs.length === 2 && deep.programs.some(p => p.prog.routines.some(r => r.upper === 'CALL_WORK')), `includedPrograms follows nested includes: ${JSON.stringify(deep.programs.map(p => p.file))}`);
+    const missing = includedPrograms(parseKarel('%INCLUDE NOPE\n'), dir, []);
+    check(!missing.complete && missing.missing.includes('NOPE') && missing.programs.length === 0, 'includedPrograms reports a missing include instead of guessing');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 // ---------- long webview lists: the shared "Show 10 / 50 / 100 / 250 / All" picker ----------
@@ -1419,6 +1442,24 @@ if (backupDir) {
   check(st('DO', 900).state === 'ON' && st('DO', 900).comment === 'CLROFZONE1', `DO[900:ON :CLROFZONE1]: ${JSON.stringify(st('DO', 900))}`);
   check(st('GI', 28).state === '*' && st('GI', 28).comment === 'LOAD POS SEL BITS' && st('GO', 5).state === '12', 'GI[28: * :…] and GO[5:12:…] states');
   check(v830.dataRefs.every(r => !r.extra), 'no state segment is reported as an unknown shape');
+  const stateText = (k: string, i: number) => {
+    const r = st(k, i);
+    const s = r.stateSpan!;
+    return v830.lines[s.line].raw.slice(s.col, s.col + s.len);
+  };
+  check(stateText('DI', 45) === 'OFF' && stateText('DO', 900) === 'ON' && stateText('GI', 28) === '*' && stateText('GO', 5) === '12', 'state spans point at the exported state text');
+  const bare = parseTp(['/PROG  T', '/MN', '   1:  DO[33:OFF]=ON ;', '   2:  GO[5:12]=R[1] ;', '/POS', '/END', ''].join('\n'));
+  const bareDo = bare.dataRefs.find(r => r.kind === 'DO' && r.index === 33)!;
+  const bareGo = bare.dataRefs.find(r => r.kind === 'GO' && r.index === 5)!;
+  check(bareDo.state === 'OFF' && bareDo.comment === undefined && bareGo.state === '12' && bareGo.comment === undefined, `uncommented export states are fields: ${JSON.stringify([bareDo, bareGo])}`);
+  const bareDoSpan = bareDo.stateSpan!;
+  check(bare.lines[bareDoSpan.line].raw.slice(bareDoSpan.col, bareDoSpan.col + bareDoSpan.len) === 'OFF', 'uncommented state span points at the state text');
+  const stripped = stripListingStates(v830.lines.map(l => l.raw).join('\n'));
+  check(stripped.removed === 4 && stripped.text.includes('DI[45:BIN 1 TRIG]') && stripped.text.includes('DO[900:CLROFZONE1]') && stripped.text.includes('GI[28:LOAD POS SEL BITS]') && stripped.text.includes('GO[5:PART TYPE]'), `stripListingStates removes only the state segments: ${JSON.stringify(stripped)}`);
+  const commentOn = stripListingStates(['/PROG  T', '/MN', '   1:  F[1:Count]=1 ;', '   2:  GO[10:curr value:PROG FEEDBACK]=1 ;', '/POS', '/END', ''].join('\n'));
+  check(commentOn.removed === 0 && commentOn.text.includes('F[1:Count]') && commentOn.text.includes('GO[10:curr value:PROG FEEDBACK]'), 'stripListingStates leaves comments and unknown middle segments alone');
+  const bareStrip = stripListingStates(['/PROG  T', '/MN', '   1:  DO[33:OFF]=ON ;', '   2:  GO[5:12]=R[1] ;', '/POS', '/END', ''].join('\n'));
+  check(bareStrip.removed === 2 && bareStrip.text.includes('DO[33]=ON') && bareStrip.text.includes('GO[5]=R[1]'), `stripListingStates removes uncommented states: ${JSON.stringify(bareStrip)}`);
 
   // instruction keywords inside a reference comment are text, not code
   const kwCmt = parseTp(['/PROG  T', '/MN', '   1:  DO[1:RUN INTRPT ACK]=(ON) ;', '   2:  DO[2:CALL SUB PROG]=OFF ;', '   3:  R[3:JMP LBL[9] HERE]=1 ;', '/POS', '/END', ''].join('\n'));
@@ -2111,6 +2152,18 @@ await runProtocol(check);
   const withLc = '/PROG  T\n/ATTR\nLINE_COUNT\t= 5;\n/MN\n   1:  R[1]=1 ;\n/POS\n/END\n';
   const lcNorm = normalizeTpForCompare(withLc);
   check(lcNorm.includes('LINE_COUNT = #'), `LINE_COUNT blanked: ${JSON.stringify(lcNorm)}`);
+
+  const stateful = '/PROG  T\n/MN\n   1:  IF (F[537:OFF:vision_init] AND DO[23:ON :at_cam_snap]=ON) THEN ;\n   2:  GO[5:12:PART TYPE]=R[1] ;\n/POS\n/END\n';
+  const statefree = '/PROG  T\n/MN\n   1:  IF (F[537:vision_init] AND DO[23:at_cam_snap]=ON) THEN ;\n   2:  GO[5:PART TYPE]=R[1] ;\n/POS\n/END\n';
+  check(normalizeTpForCompare(stateful) === normalizeTpForCompare(statefree), 'normalizeTpForCompare ignores exported listing state');
+  check(roundTripCompare(stateful, statefree, 'tp').equal, 'roundTripCompare ignores exported listing state');
+  check(stripTpListingStates(stateful) === statefree, `stripTpListingStates matches the stripped program: ${JSON.stringify(stripTpListingStates(stateful))}`);
+  const stateComment = '/PROG  T\n/MN\n   1:  F[1:Count]=1 ;\n   2:  GO[10:curr value:PROG FEEDBACK]=1 ;\n/POS\n/END\n';
+  check(stripTpListingStates(stateComment) === stateComment, 'stripTpListingStates leaves comments and unknown middle segments alone');
+  const bareState = '/PROG  T\n/MN\n   1:  DO[33:OFF]=ON ;\n   2:  GO[5:12]=R[1] ;\n/POS\n/END\n';
+  check(stripTpListingStates(bareState) === '/PROG  T\n/MN\n   1:  DO[33]=ON ;\n   2:  GO[5]=R[1] ;\n/POS\n/END\n', `stripTpListingStates removes uncommented states: ${JSON.stringify(stripTpListingStates(bareState))}`);
+  const extraState = '/PROG  T\n/MN\n   1:  R[2:OFF:name:more]=1 ;\n/POS\n/END\n';
+  check(stripTpListingStates(extraState) === extraState, 'stripTpListingStates leaves an unknown multi-segment shape alone');
 
   // --eg: extended comments stripped
   const eg = '/PROG  T\n/MN\n   1:  --eg:one line only ;\n   2:  R[1]=1 ;\n/POS\n/END\n';

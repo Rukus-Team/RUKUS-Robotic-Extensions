@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'node:path';
 import { renumber, stripPositions, renumberLabels, commentScaffold, type RenumberOptions } from './renumber';
+import { stripListingStates } from './listingStates';
 import { autoRenumberMode, renumberOptions, customOptions, controllerOptions, MODE_LABEL, type AutoRenumberMode } from './renumberSettings';
 import { frameLabel, describePosition, type TpProgram } from './parser';
 import { findStalePositions, planPositionRemoval } from './cleanup';
@@ -895,6 +896,19 @@ export function registerTpCommands(ctx: vscode.ExtensionContext, s: FanucService
     const ed = tpEditor(); if (!ed) return;
     const doc = await vscode.workspace.openTextDocument({ language: 'fanuc-tp', content: stripPositions(ed.document.getText()) });
     await vscode.window.showTextDocument(doc, { preview: false, viewColumn: vscode.ViewColumn.Beside });
+  });
+
+  reg('robotCode.tp.removeListingStates', async () => {
+    const ed = tpEditor(); if (!ed) return;
+    const doc = ed.document;
+    const result = stripListingStates(doc.getText());
+    if (!result.removed) {
+      vscode.window.showInformationMessage('This program has no download listing states to remove.');
+      return;
+    }
+    const whole = new vscode.Range(0, 0, doc.lineCount, 0);
+    await ed.edit(b => b.replace(whole, result.text));
+    vscode.window.setStatusBarMessage(`$(clear-all) removed ${result.removed} listing state${result.removed === 1 ? '' : 's'}`, 6000);
   });
 
   reg('robotCode.tp.showCallGraph', (uri?: vscode.Uri) => {

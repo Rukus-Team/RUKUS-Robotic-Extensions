@@ -13,6 +13,8 @@ import * as path from 'node:path';
 import { parseKarel, type KProgram } from './parser';
 
 export interface IncludedNames { names: Set<string>; complete: boolean; missing: string[] }
+export interface IncludedProgram { file: string; prog: KProgram }
+export interface IncludedPrograms { programs: IncludedProgram[]; complete: boolean; missing: string[] }
 
 const cache = new Map<string, { mtimeMs: number; prog: KProgram }>();
 
@@ -37,7 +39,19 @@ export function resolveInclude(arg: string, fromDir: string, supportDirs: readon
 }
 
 export function includedNames(prog: KProgram, fromDir: string, supportDirs: readonly string[]): IncludedNames {
-  const out: IncludedNames = { names: new Set(), complete: true, missing: [] };
+  const inc = includedPrograms(prog, fromDir, supportDirs);
+  const names = new Set<string>();
+  for (const { prog: sub } of inc.programs) {
+    for (const s of sub.symbols) {
+      names.add(s.upper);
+      for (const f of s.fields ?? []) names.add(f.upper);
+    }
+  }
+  return { names, complete: inc.complete, missing: inc.missing };
+}
+
+export function includedPrograms(prog: KProgram, fromDir: string, supportDirs: readonly string[]): IncludedPrograms {
+  const out: IncludedPrograms = { programs: [], complete: true, missing: [] };
   const seen = new Set<string>();
   const walk = (p: KProgram, dir: string, depth: number) => {
     for (const inc of p.includes) {
@@ -48,10 +62,7 @@ export function includedNames(prog: KProgram, fromDir: string, supportDirs: read
       seen.add(key);
       const sub = load(file);
       if (!sub || sub.compiled) { out.complete = false; out.missing.push(inc); continue; }
-      for (const s of sub.symbols) {
-        out.names.add(s.upper);
-        for (const f of s.fields ?? []) out.names.add(f.upper);
-      }
+      out.programs.push({ file, prog: sub });
       if (depth < 8) walk(sub, path.dirname(file), depth + 1);
       else out.complete = false;
     }

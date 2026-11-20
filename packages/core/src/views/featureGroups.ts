@@ -31,7 +31,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
   },
   {
     title: 'Restructure', hint: 'move lines into a program, pull one in, renumber a register everywhere',
-    commands: ['robotCode.tp.extractProgram', 'robotCode.tp.inlineProgram', 'robotCode.tp.combinePrograms','robotCode.tp.remapRegister'],
+    commands: ['robotCode.tp.extractProgram', 'robotCode.tp.inlineProgram', 'robotCode.tp.combinePrograms','robotCode.tp.remapRegister', 'robotCode.tp.removeListingStates'],
   },
   {
     title: 'Understand the cell', hint: 'flow, who calls what, who uses which register, what changed',

@@ -58,8 +58,8 @@ They are different questions and must not be conflated:
 
 | Compare | Used for | Rule |
 |---|---|---|
-| **W ↔ S** (working vs snapshot) | the tree marker, the status bar, the snapshot view | **normalized** - line numbers, terminators and `LINE_COUNT` are ignored, so a renumber reads as identical |
-| **R′ ↔ S** (robot vs snapshot) | the **push gate** | **normalized** - line numbers, `DATE`/`MODIFIED`/`TIME`, `LINE_COUNT` and the controller's own stamps are ignored; a real text change still blocks |
+| **W ↔ S** (working vs snapshot) | the tree marker, the status bar, the snapshot view | **normalized** - line numbers, terminators, download listing states and `LINE_COUNT` are ignored, so a renumber reads as identical |
+| **R′ ↔ S** (robot vs snapshot) | the **push gate** | **normalized** - line numbers, download listing states, `DATE`/`MODIFIED`/`TIME`, `LINE_COUNT` and the controller's own stamps are ignored; a real text change still blocks |
 
 The normalized rule is the safety feature without the false conflicts: a pendant touch-up that
 changes a taught position is a real text change and is seen; a robot that only renumbered lines
@@ -205,12 +205,15 @@ file's mtime. `updatedAt` is the last time any part changed.
 | `robotCode.containers.prePushBackup` | `true` | keep the last pre-push copy in `.robocode-robot/push-backup/` |
 | `robotCode.containers.pullPartnerAfterPush` | `always` | read the partner representation after a push |
 | `robotCode.containers.pullCompiledAfterSourcePush` | `true` | read the compiled `.TP`/`.PC` after a source `.LS`/`.KL` push, fetch or pull |
-| `robotCode.containers.unchangedCheck` | `auto` | skip a fetch when size/mtime match the last one |
+| `robotCode.containers.unchangedCheck` | `auto` | skip a fetch when size/mtime match the last one; Folder Pull always reads the current copies |
 | `robotCode.live.protocolFallback` | `auto` | read-only fallback between HTTP and FTP (network or FTP login refusal) |
 | `robotCode.transfers.preferFtp` | `true` | bulk transfers try FTP first, regardless of the profile protocol |
 | `robotCode.transfers.recentSeconds` | `120` | how long a finished queue entry stays in the QuickPick |
 | `robotCode.containers.snapshotHistory` | `50` | reflog stamps to keep (0 = all) |
 | `robotCode.containers.gitAware` | `false` | on push, note uncommitted git changes |
+| `robotCode.tp.stripListingStatesOnPull` | `false` | remove V8.30 download listing states from the working copy after a pull; the snapshot stays raw |
+| `robotCode.tp.stripListingStatesOnDownload` | `false` | remove the states from a `.ls` saved by live Download; snapshots and backup exports stay raw |
+| `robotCode.tp.references.includeSnapshot` | `false` | data/IO Find All References also searches the linked robot's snapshot `.ls` files |
 
 ## Out of scope / follow-ups
 

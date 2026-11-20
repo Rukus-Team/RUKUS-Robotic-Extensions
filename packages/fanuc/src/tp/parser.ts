@@ -93,6 +93,7 @@ export interface TpDataRef {
   span: Span;
   /** span of the comment text inside the brackets (after the colon) */
   commentSpan?: Span;
+  stateSpan?: Span;
   line: number;
   /**
    * Colon-separated segments between the index and the comment that this parser has no
@@ -103,10 +104,10 @@ export interface TpDataRef {
    */
   extra?: string[];
   /**
-   * The point's state when the listing was exported, which V8.30 controllers write as a
-   * middle segment: `DI[45:OFF:BIN 1 TRIG]`, `GI[28: * :LOAD POS SEL BITS]`. `ON`, `OFF`,
-   * a number, or `*` for "not connected". Informational - it is not the comment, and it
-   * is not a value that can be trusted now.
+   * The point's state when the listing was exported, which controllers write as the only
+   * segment or as a middle segment: `DO[33:OFF]`, `DI[45:OFF:BIN 1 TRIG]`,
+   * `GI[28: * :LOAD POS SEL BITS]`. `ON`, `OFF`, a number, or `*` for "not connected".
+   * Informational - it is not the comment, and it is not a value that can be trusted now.
    */
   state?: string;
 }
@@ -449,25 +450,38 @@ export function parseTp(text: string): TpProgram {
       };
       if (dm[4] !== undefined) {
         const colonAt = dm[0].indexOf(':');
-        let commentCol = bodyCol + dm.index + colonAt + 1;
-        let commentText = dm[4];
+        const contentCol = bodyCol + dm.index + colonAt + 1;
+        const segs = dm[4].split(':');
         // More than one colon inside the brackets is a shape this parser was not written
         // for. The LAST segment is taken as the comment - that is where FANUC puts the name
         // in every documented form - and the rest is kept as `extra` for the diagnostics to
         // mention. A general rule, so the next undocumented shape degrades the same way
         // instead of needing its own special case.
-        const segs = dm[4].split(':');
-        if (segs.length > 1) {
-          commentText = segs[segs.length - 1];
-          commentCol += dm[4].length - commentText.length;
+        if (segs.length === 1) {
+          const text = segs[0];
+          const value = text.trim();
+          if (/^(ON|OFF|\*|-?\d+(?:\.\d+)?)$/.test(value)) {
+            ref.state = value;
+            const stateOffset = text.indexOf(value);
+            if (stateOffset >= 0) ref.stateSpan = { line: i, col: contentCol + stateOffset, len: value.length };
+            ref.comment = undefined;
+          } else {
+            ref.comment = value || undefined;
+            ref.commentSpan = { line: i, col: contentCol, len: text.length };
+          }
+        } else {
+          const commentText = segs[segs.length - 1];
           ref.comment = commentText.trim() || undefined;
+          ref.commentSpan = { line: i, col: contentCol + dm[4].length - commentText.length, len: commentText.length };
           const middle = segs.slice(0, -1).map(s => s.trim());
           // V8.30's `[index:state:comment]`: exactly one middle segment that is ON, OFF, a
           // number or `*` is the exported state, not an unknown shape.
-          if (middle.length === 1 && /^(ON|OFF|\*|-?\d+(?:\.\d+)?)$/.test(middle[0])) ref.state = middle[0];
-          else ref.extra = middle;
+          if (middle.length === 1 && /^(ON|OFF|\*|-?\d+(?:\.\d+)?)$/.test(middle[0])) {
+            ref.state = middle[0];
+            const stateOffset = segs[0].indexOf(ref.state);
+            if (stateOffset >= 0) ref.stateSpan = { line: i, col: contentCol + stateOffset, len: ref.state.length };
+          } else ref.extra = middle;
         }
-        ref.commentSpan = { line: i, col: commentCol, len: commentText.length };
       }
       prog.dataRefs.push(ref);
     }

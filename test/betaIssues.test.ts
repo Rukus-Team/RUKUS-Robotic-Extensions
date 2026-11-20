@@ -102,6 +102,21 @@ export function run(check: (cond: unknown, msg: string) => void): void {
     const ghosts = [...listed, ...NOT_LISTED].filter(c => !contributed.includes(c));
     check(ghosts.length === 0, `FEATURE_GROUPS names commands that are not contributed: ${ghosts.join(', ')}`);
     check(new Set(listed).size === listed.length, 'no command is listed twice');
+    const props = manifest.contributes.configuration.properties;
+    check(props['robotCode.tp.stripListingStatesOnPull']?.default === false, 'listing-state stripping on pull is opt-in');
+    check(props['robotCode.tp.stripListingStatesOnDownload']?.default === false, 'listing-state stripping on live download is opt-in');
+    const removeStates = manifest.contributes.commands.find((c: { command: string }) => c.command === 'robotCode.tp.removeListingStates');
+    check(removeStates?.category === 'RUKUS', 'the Remove Listing States command uses the RUKUS category');
+    check(!('robotCode.tp.codeLens.dataRefs' in props), 'data/IO CodeLens is removed; CodeLens stays on labels');
+    check(props['robotCode.tp.references.includeSnapshot']?.default === false, 'snapshot references are opt-in');
+    const tpProviders = fs.readFileSync(path.join(__dirname, '..', 'packages', 'fanuc', 'src', 'tp', 'providers.ts'), 'utf8');
+    check(/robotCode\.tp\.showDataReferences/.test(tpProviders) && /Find all references/.test(tpProviders), 'data/IO references are offered from the hover, not CodeLens');
+    const utilSrc = fs.readFileSync(path.join(__dirname, '..', 'packages', 'core', 'src', 'util.ts'), 'utf8');
+    check(/HOVER_COMMANDS[\s\S]*robotCode\.tp\.showDataReferences/.test(utilSrc), 'the data/IO hover reference command is trusted');
+    const liveSrc = fs.readFileSync(path.join(__dirname, '..', 'packages', 'core', 'src', 'live', 'index.ts'), 'utf8');
+    check(/stripListingStatesOnDownload/.test(liveSrc), 'live Download honours the listing-state setting');
+    const syncSrc = fs.readFileSync(path.join(__dirname, '..', 'packages', 'core', 'src', 'syncCommands.ts'), 'utf8');
+    check(/forceRead:\s*pull/.test(syncSrc), 'folder pull always reads the controller copy instead of reusing an unchanged snapshot');
     check(prettyKey('ctrl+alt+shift+t') === 'Ctrl+Alt+Shift+T' && prettyKey('ctrl+/') === 'Ctrl+/', 'keys read as the shortcuts editor writes them');
 
     // #7: a shortcut is for one thing

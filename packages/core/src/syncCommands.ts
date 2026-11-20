@@ -15,7 +15,7 @@ import type { RobotMarker } from './robotContainers';
 import { markerBoundRobot, profileNamed } from './robotBinding';
 import { snapshotStatus } from './containerCompare';
 import {
-  isSnapshotDataFile, isSnapshotProgramFile, findSnapshotFile, listSnapshotHistory, verbatimCompare, isCompiledProgram, pairedProgramName, snapshotNamesUnder, snapshotFetchedWithin,
+  isSnapshotDataFile, isSnapshotProgramFile, findSnapshotFile, listSnapshotHistory, verbatimCompare, isCompiledProgram, pairedProgramName, snapshotNamesUnder, snapshotFetchedWithin, stripTpListingStates,
 } from './robotContainers';
 import {
   fetchFilesFromRobot, fetchFileFromRobot, revertFromSnapshot, withContainerLock,
@@ -231,7 +231,9 @@ async function fetchMatching(s: Services, marker: RobotMarker, conn: RobotConnec
   if (!live) return;
   let listing;
   try {
-    listing = await live.listFiles(conn.profile, conn.profile.device, undefined, { bulk: true });
+    listing = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: `Listing ${conn.profile.device} on ${conn.profile.name}` },
+      () => live.listFiles(conn.profile, conn.profile.device, undefined, { bulk: true }));
   } catch (e: unknown) {
     vscode.window.showWarningMessage(`Could not list ${conn.profile.device} on ${conn.profile.name}: ${e instanceof Error ? e.message : String(e)}`);
     return;
@@ -256,6 +258,9 @@ async function fetchMatching(s: Services, marker: RobotMarker, conn: RobotConnec
   if (!outcome) { vscode.window.setStatusBarMessage('$(circle-slash) Fetch removed from the queue', 5000); return; }
   await refreshAfterSync(s);
   reportOutcome(s, marker, conn, outcome, what);
+  if (!outcome.failed) {
+    void vscode.window.showInformationMessage(`Fetched ${outcome.ok} file${outcome.ok === 1 ? '' : 's'} from ${conn.profile.name} into ${marker.name}'s snapshot.`);
+  }
 }
 
 /**
@@ -372,8 +377,11 @@ async function folderCommand(s: Services, arg: unknown, pull: boolean): Promise<
   const live = s.live;
   if (!live) return;
   let listing;
-  try { listing = await live.listFiles(conn.profile, conn.profile.device, undefined, { bulk: true }); }
-  catch (e: unknown) { vscode.window.showWarningMessage(`Could not list ${conn.profile.device} on ${conn.profile.name}: ${e instanceof Error ? e.message : String(e)}`); return; }
+  try {
+    listing = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: `Listing ${conn.profile.device} on ${conn.profile.name}` },
+      () => live.listFiles(conn.profile, conn.profile.device, undefined, { bulk: true }));
+  } catch (e: unknown) { vscode.window.showWarningMessage(`Could not list ${conn.profile.device} on ${conn.profile.name}: ${e instanceof Error ? e.message : String(e)}`); return; }
   const files = listing.filter(f => !f.isDir);
   const local = localFilesUnder(s, scope.marker, scope.scope ? undefined : scope.dir);
   let names: string[];
@@ -410,7 +418,7 @@ async function folderCommand(s: Services, arg: unknown, pull: boolean): Promise<
             onFile: (done, total, name) => { item.report(`${done}/${total} · ${name}`, done / total); progress.report({ increment: 100 / total, message: `${done}/${total} · ${name}` }); },
             isCancelled: () => token.isCancellationRequested || signal.aborted,
             signal: ac.signal,
-          }, listing);
+          }, listing, { forceRead: pull });
         });
       let written = 0;
       if (pull) {
@@ -424,7 +432,7 @@ async function folderCommand(s: Services, arg: unknown, pull: boolean): Promise<
               if (dest === undefined) continue;
               const snap = snapshotCopy(s, scope.marker, name);
               if (snap === undefined) continue;
-              try { await writeWorkingCopy(vscode.Uri.file(dest), snap, '\n'); written++; } catch { /* the snapshot still advanced */ }
+              try { await writeWorkingCopy(vscode.Uri.file(dest), snap, '\n', { stripListingStates: config<boolean>('tp.stripListingStatesOnPull', false) }); written++; } catch { /* the snapshot still advanced */ }
               progress.report({ increment: 100 / targets.length, message: `${written}/${targets.length} · ${name}` });
             }
           });
@@ -443,6 +451,7 @@ async function folderCommand(s: Services, arg: unknown, pull: boolean): Promise<
   vscode.window.setStatusBarMessage(`$(cloud-download) ${scope.label} over ${proto} · ${bits.join(' · ')} · ${conn.profile.name}`, 8000);
   s.output.appendLine(`[RUKUS] ${pull ? 'pull' : 'fetch'} ${scope.label} from ${conn.profile.name} over ${proto}: ${bits.join(', ')}${outcome.errors.length ? `\n  ${outcome.errors.join('\n  ')}` : ''}`);
   if (outcome.failed) void vscode.window.showWarningMessage(`${outcome.failed} file(s) could not be read from ${conn.profile.name}. See the RUKUS Robotic Extensions output.`, 'Open Output').then(p => { if (p) s.output.show(true); });
+  else void vscode.window.showInformationMessage(`${pull ? 'Pulled' : 'Fetched'} ${outcome.ok} file${outcome.ok === 1 ? '' : 's'} under ${scope.label} from ${conn.profile.name}${pull ? ` (${pulled} written)` : ''}.`);
 }
 
 /**
@@ -486,7 +495,7 @@ async function fetchCompareAllCommand(s: Services, arg?: unknown): Promise<void>
         // only byte-for-byte (a boolean) - never a source against its compiled copy
         const d = isCompiledProgram(name)
           ? { same: robotText === snap, changed: 0, added: 0, deleted: 0, metadataOnly: false }
-          : verbatimCompare(robotText, snap);
+          : verbatimCompare(stripTpListingStates(robotText), stripTpListingStates(snap));
         compared++;
         if (!d.same) differs++;
         noteRobotCompare(info.uri.fsPath, { differs: !d.same, metadataOnly: d.metadataOnly, changed: d.changed + d.added + d.deleted });
@@ -500,6 +509,7 @@ async function fetchCompareAllCommand(s: Services, arg?: unknown): Promise<void>
   if (failed) bits.push(`${failed} failed`);
   vscode.window.setStatusBarMessage(`$(sync) ${marker.name} over ${(proto ?? 'ftp').toUpperCase()}: ${bits.join(' · ')}`, 8000);
   if (failed) void vscode.window.showWarningMessage(`${failed} program(s) could not be read from ${conn.profile.name}. See the RUKUS Robotic Extensions output.`, 'Open Output').then(p => { if (p) s.output.show(true); });
+  else void vscode.window.showInformationMessage(`Compared ${compared} program${compared === 1 ? '' : 's'} with ${conn.profile.name}: ${differs ? `${differs} differ` : 'all match'}.`);
 }
 
 // ── pull / revert ───────────────────────────────────────────────────────────
@@ -524,7 +534,7 @@ async function pullFileCommand(s: Services, arg?: unknown): Promise<void> {
     proto = res.protocol;
     const snap = snapshotCopy(s, target.marker, target.fileName!);
     if (snap === undefined) { vscode.window.showWarningMessage(`The snapshot has no copy of ${target.fileName}.`); return false; }
-    await writeWorkingCopy(uri, snap, '\n');
+    await writeWorkingCopy(uri, snap, '\n', { stripListingStates: config<boolean>('tp.stripListingStatesOnPull', false) });
     return true;
   }));
   if (!ok) return;
@@ -587,7 +597,12 @@ async function pullToWorkingCommand(s: Services, arg?: unknown): Promise<void> {
   if (!dest) return;
   try {
     await fs.promises.mkdir(path.dirname(dest), { recursive: true });
-    await fs.promises.copyFile(src, dest);
+    if (config<boolean>('tp.stripListingStatesOnPull', false) && /\.ls$/i.test(src)) {
+      const text = await fs.promises.readFile(src, 'latin1');
+      await writeWorkingCopy(vscode.Uri.file(dest), text, '\n', { stripListingStates: true });
+    } else {
+      await fs.promises.copyFile(src, dest);
+    }
   } catch (e: unknown) {
     void showRecoverableError(`Could not pull ${path.basename(src)} into the working folders: ${e instanceof Error ? e.message : String(e)}`, s.output, () => pullToWorkingCommand(s, arg));
     return;

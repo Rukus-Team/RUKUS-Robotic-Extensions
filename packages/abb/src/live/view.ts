@@ -384,7 +384,12 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
       if (pw === undefined) return;
       await ctrls.setPassword(name, pw);
     }
-    try { await ctrls.connect(name); await ctrls.refresh(name); }
+    try {
+      await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Connecting to ${name}` },
+        async () => { await ctrls.connect(name); await ctrls.refresh(name); });
+      vscode.window.setStatusBarMessage(`$(plug) ${name} connected`, 5000);
+    }
     catch (e: any) {
       // a virtual controller on this PC moved to a new port: offer to find it
       const c = ctrls.get(name);
@@ -522,7 +527,11 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
   };
   reg('robotCode.abb.refresh', async (node?: any) => {
     const name = await nameOf(node, c => c.state === 'connected'); if (!name) return;
-    try { await ctrls.refresh(name); } catch (e) { show(e); }
+    try {
+      await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Refreshing ${name}` },
+        () => ctrls.refresh(name));
+    } catch (e) { show(e); }
   });
   reg('robotCode.abb.disconnect', async (node?: any) => {
     const name = await nameOf(node, c => c.state === 'connected'); if (!name) return;
@@ -557,7 +566,9 @@ export function registerAbbControllers(ctx: vscode.ExtensionContext, s: Services
     const name = await nameOf(node, c => c.state === 'connected'); if (!name) return;
     const uri = infoUri(name, which);
     onDidChangeInfo.fire(uri);   // read again when it is already open
-    const doc = await vscode.workspace.openTextDocument(uri);
+    const doc = await vscode.window.withProgress(
+      { location: vscode.ProgressLocation.Notification, title: `Reading ${which} from ${name}` },
+      () => vscode.workspace.openTextDocument(uri));
     await vscode.window.showTextDocument(doc, { preview: false });
   };
   reg('robotCode.abb.openPage', async (node?: any) => { const name = await nameOf(node); if (name) openAbbPage(ctx, ctrls, name); });

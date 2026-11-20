@@ -1,5 +1,48 @@
 # Changelog
 
+## 26.119.9 - 2026-11-20 - TP listing states, references and pull feedback
+
+### TP listing states
+- **RUKUS: Remove Listing States** (`robotCode.tp.removeListingStates`) cleans the open `.ls`:
+  `F[537:OFF:vision_init]` becomes `F[537:vision_init]`, `DO[23:ON :at_cam_snap]` becomes
+  `DO[23:at_cam_snap]`, and an uncommented `DO[33:OFF]` becomes `DO[33]`. It removes only the
+  exported state; comments and unknown middle segments stay, and the edit is undoable.
+- `robotCode.tp.stripListingStatesOnPull` (default off) does the same whenever a pull writes a
+  working copy - pull, folder pull, post-push pull, pull-to-working and revert. Snapshots stay
+  byte-for-byte as downloaded.
+- `robotCode.tp.stripListingStatesOnDownload` (default off) strips a `.ls` saved by live Download;
+  backup exports and snapshots stay raw.
+- Post-push verification, working-vs-snapshot and compare-all ignore the state, so a stripped
+  working copy does not read as modified.
+- Live value hints are unchanged; the hover still explains the listing state.
+
+### Find All References
+- Hovering a register/I-O shows a **Find all references** link; Shift+F12 and right-click still work.
+  `robotCode.tp.references.includeSnapshot` (default off) adds every `.ls` in the linked robot's
+  snapshot to the result. The default keeps the existing folder-wide working search; CodeLens stays
+  on labels only.
+
+### Folder pull
+- **Folder Pull always reads the controller's current copies.** It no longer reuses the
+  size/mtime "unchanged" skip used by Fetch and then writes the older snapshot back over the
+  working file. This fixes program/register comments that changed on the controller but stayed
+  the same size, where an individual Pull updated the file and a folder Pull did not.
+
+### Feedback for long-running actions
+- Folder Pull/Fetch, Fetch…, Compare All, Snapshot from Robot/Backup, Download Backup, live
+  Download, Open/Compare Robot File, Restore Pre-Push and ABB connect/refresh/readouts now show a
+  progress notification and a completion toast. Listings show progress before reading.
+- Single-file reads and quick local edits keep the quieter status-bar feedback.
+
+### KAREL cross-file references
+- `%INCLUDE` now contributes routine declarations and references from the resolved include files.
+- A variable declared `FROM` another program expands into that program's source when the `.kl` is in
+  the workspace. Missing includes, compiled files and snapshot-only providers are skipped.
+- Rename and document highlights remain file-local.
+
+`test/run.ts`, `test/betaIssues.test.ts`: state spans and exact strip output, state-insensitive
+normalization/round trip, included-program walking and settings defaults.
+
 ## 26.119.8 - 2026-11-14 - RAPID: a missing ";" before an assignment
 
 ### Fixed
@@ -112,7 +155,6 @@
   VS Code, on a workspace the script writes itself - no backup, corpus or robot needed.
 - `test/snippets.test.ts` covers where each is offered. The snippets moved from `contributes.snippets` into the
   completion providers, so *Insert Snippet* no longer lists them.
-
 ## 26.119.3 - 2026-11-07
 
 - First Marketplace release of 26.119.1's changes; Studio's non-backup folders (replaced, snapshots, ...) are recognised the same way on a Linux build machine.

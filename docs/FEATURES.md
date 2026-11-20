@@ -35,7 +35,7 @@ says which part.
 - [x] In-line hints, wrapped in `{ }` and muted (decorations, so no theme can tint them): `P[1]{JNT}{UF1}{UT2}` next to every `P[n]` (representation and frames as separate badges, narrowed by `robotCode.tp.decorations.positionFields` to any of type / user frame / user tool, or none); `R[15]{Speed}` controller comment after a register written without one (hover → **Insert it**); live value `R[151]{2}`. `robotCode.tp.inlineHints` turns them off.
 - [x] Diagnostics: duplicate / undefined / unused labels, untaught / unused / duplicate positions, IF-THEN/FOR balance, speed and CNT ranges, missing CALL targets, unknown macros, comment mismatch (vs controller and vs other lines), header problems, line-number sequence and LINE_COUNT when auto-renumber is off.
 - [x] Quick fixes: use controller comment, renumber, remove unused label, remove unused position data.
-- [x] CodeLens: jump count on labels, caller count on the header.
+- [x] CodeLens: jump count on labels.
 - [x] Auto-renumber with LINE_COUNT and ` ;` fix-up, cursor line left alone, merged into your undo step.
 - [x] Rename (`F2`): label number, position number, register/I-O comment across the file.
 - [x] Format Document = renumber.
@@ -169,6 +169,21 @@ Kept in full because what each one **refuses** to do is the part worth not re-de
       (Explorer, or a robot folder / snapshot scope / snapshot sub-folder in the views) to read
       everything at or under it off the controller. Fetch updates the snapshot only; Pull updates
       the snapshot, then overwrites the matching working files.
+- [x] **Long-running action feedback** - Folder Pull/Fetch, Fetch…, Compare All, Snapshot from
+      Robot/Backup, Download Backup, live Download, Open/Compare Robot File, Restore Pre-Push and
+      ABB connect/refresh/readouts show progress while working and a completion toast. Listings
+      show progress before the reads start.
+- [x] **Download listing states** (issue #85) - V8.30 writes `F[537:OFF:vision_init]` into a
+      listing, including uncommented forms such as `DO[33:OFF]`. **RUKUS: Remove Listing States**
+      cleans the open program by hand; with
+      `robotCode.tp.stripListingStatesOnPull` a pull also cleans the working copy, and
+      `robotCode.tp.stripListingStatesOnDownload` does the same for a live Download. Snapshots and
+      backup exports stay exactly as downloaded, and all three comparisons (post-push,
+      working-vs-snapshot, compare-all) ignore the state.
+- [x] **Data/IO references and snapshot scope** (issue #85) - hovering a register/I-O shows a
+      **Find all references** link; the same command is available as usual (Shift+F12 / right-click).
+      `robotCode.tp.references.includeSnapshot` adds every `.ls` in the linked robot's snapshot.
+      The default stays the existing folder-wide working search; CodeLens stays on labels only.
 - [ ] Container-first migration (cells/clusters by directory; retire `robotCode.robots` /
       `data.backupFolders`) - follow-up.
 - [ ] Full RUKUS cluster -> robot cell import - follow-up.
@@ -233,6 +248,10 @@ the back up and it's just math - no kinematics needed."* The distinction that ha
 - [ ] **System variable dumps** (frames half shipped 0.13.0: sysframe.va hover, Data view groups, register table tabs; dcs*.va open): outline and hover for `sysvars.va`, `dcs*.va`, frames (`sysframe.va`) with a frames table view.
 
 ### KAREL
+- [x] **Cross-file references, source only** (issue #85): `%INCLUDE` expands routine declarations and
+      references from the resolved include files; a `FROM` variable expands into the provider
+      program's source when that `.kl` is in the workspace. Missing includes, compiled files and
+      snapshot-only providers are skipped rather than guessed. Rename and highlights stay file-local.
 - [ ] **Project-wide symbol index** (routines exported by each program, `%INCLUDE` graph) → cross-file references and rename.
 - [ ] **Type checking light**: argument count/type mismatches on routine calls, INTEGER↔REAL assignments.
 - [ ] **Dictionary (.ftx/.utx) support**: grammar, element hover, "go to dictionary element" from `READ_DICT`.
